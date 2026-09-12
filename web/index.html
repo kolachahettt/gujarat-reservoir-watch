@@ -247,6 +247,12 @@ code{overflow-wrap:anywhere;word-break:break-word}
 .views button:last-child{border-right:0}
 .views button[aria-current="true"]{background:var(--now);color:#fff;
   font-weight:600}
+.hdrow{display:flex;gap:7px;align-items:stretch;margin-top:9px;flex-wrap:wrap}
+.dlbtn{background:var(--surface-1);border:1px solid var(--border);
+  border-radius:6px;cursor:pointer;font-family:inherit;font-size:11.5px;
+  padding:5px 11px;color:var(--text-secondary);white-space:nowrap}
+.dlbtn:hover{color:var(--text-primary);border-color:var(--muted)}
+.dlbtn:disabled{opacity:.6;cursor:default}
 .filters{display:flex;gap:7px;align-items:center;margin:13px 0 5px;
   flex-wrap:wrap}
 .filters span.lb{font-size:10.5px;text-transform:uppercase;
@@ -300,9 +306,15 @@ code{overflow-wrap:anywhere;word-break:break-word}
       <input id="q" type="text" placeholder="Name or district — e.g. Dholidhaja, Kachchh"
              autocomplete="off" spellcheck="false">
       <div class="results" id="res"></div>
-      <div class="views" role="group" aria-label="View">
-        <button id="vSeason" aria-current="true">Season</button>
-        <button id="vSchemes" aria-current="false">Schemes</button>
+      <div class="hdrow">
+        <div class="views" role="group" aria-label="View">
+          <button id="vSeason" aria-current="true">Season</button>
+          <button id="vSchemes" aria-current="false">Schemes</button>
+        </div>
+        <button id="dlCsv" class="dlbtn" type="button"
+                title="Download all 206 schemes for this report date as CSV">
+          &darr; CSV
+        </button>
       </div>
     </div>
   </header>
@@ -541,6 +553,95 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
     <rect class="hit" x="${G.PADL}" y="0" width="${G.W-G.PADL-G.PADR}" height="${hitH}"
       fill="transparent" style="cursor:crosshair"/>
   </svg>`;
+}
+
+/* ---------------- CSV download ----------------
+   A real file the browser saves, via a Blob and an object URL — not a
+   `data:` URL. A data URL of this size opens in a tab on several browsers
+   (mobile Safari among them) instead of downloading, which is exactly the
+   failure this is meant to avoid.
+
+   The provenance rides INSIDE the file as comment lines, because a CSV that
+   has been emailed on twice has lost every bit of context this page provides:
+   which report date it is, where the data came from, and when it was fetched.
+   A file that cannot say where it came from is not much use as evidence. */
+function csvCell(v){
+  if(v === null || v === undefined || v === "") return "";
+  const s = String(v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+/* Round to the precision the arithmetic actually carries. The source
+   publishes storage to two decimals, so a percentage derived from it is not
+   meaningful to ten — writing `-53.3524904215` into a file someone will treat
+   as data asserts precision that is not there. */
+function csvNum(v, dp){
+  if(v === null || v === undefined || v === "" || isNaN(v)) return "";
+  return Number(Number(v).toFixed(dp));
+}
+
+function buildCsv(){
+  const m = DATA.meta;
+  const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+  const P = [
+    ["Gujarat Reservoir Watch - per-scheme snapshot"],
+    ["report_date", m.report_date],
+    ["source", m.source],
+    ["source_url", m.source_url],
+    ["report_sha256", m.report_sha256 || ""],
+    ["report_bytes", m.report_bytes || ""],
+    ["view_built_utc", m.built_utc],
+    ["downloaded_utc", now],
+    ["daily_reports_loaded", m.dates_loaded],
+    ["season_window", m.season_window],
+    ["rows", DATA.schemes.length],
+    ["capacity_tolerance_pct", m.capacity_tolerance_pct],
+    ["NOTE", "days_of_water_at_todays_release is EMPTY where canal release "
+           + "is zero. That is undefined, not zero and not infinite - "
+           + m.n_no_release + " of " + m.n_schemes + " schemes on this date."],
+    ["NOTE", "deviation_pp compares against the mean of prior years whose "
+           + "PUBLISHED capacity matches this date's within the tolerance "
+           + "above. n_prior_years gives how many survived."],
+    ["NOTE", "Nothing here is a forecast. Every figure is an observed "
+           + "reading or a comparison of observed readings."],
+    ["NOTE", "Comment lines start with #. pandas: read_csv(f, comment='#')"],
+  ];
+  const cols = ["scheme_id", "scheme_name", "district", "region",
+                "pct_filling", "present_live_mcm", "design_gross_mcm",
+                "outflow_canal_cusecs", "days_water_at_release", "warning",
+                "mean_prior_pct", "n_prior_years", "deviation_pp"];
+  const lines = P.map(r => "# " + r.map(String).join(","));
+  lines.push(["report_date", ...cols].join(","));
+  for(const s of DATA.schemes){
+    lines.push([
+      m.report_date, s.scheme_id, s.scheme_name, s.district, regName(s.region),
+      csvNum(s.pct_filling, 2), csvNum(s.present_live_mcm, 2),
+      csvNum(s.design_gross_mcm, 2), csvNum(s.outflow_canal_cusecs, 1),
+      csvNum(s.days_water_at_release, 1), s.warning,
+      csvNum(s.mean_prior, 2), s.n_prior, csvNum(s.dev_pp, 2),
+    ].map(csvCell).join(","));
+  }
+  // A BOM so Excel opens it as UTF-8 rather than mangling the district names.
+  return "﻿" + lines.join("\r\n") + "\r\n";
+}
+
+function downloadCsv(btn){
+  const name = `gujarat-reservoir-watch_${DATA.meta.report_date}.csv`;
+  const blob = new Blob([buildCsv()], {type: "text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;                 // the filename carries the date too
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  if(btn){
+    const was = btn.innerHTML;
+    btn.innerHTML = "&check; saved";
+    setTimeout(() => { btn.innerHTML = was; }, 1800);
+  }
 }
 
 /* ---------------- scheme detail sparkline ----------------
@@ -1264,6 +1365,9 @@ function wire(){
   window.__go = k => { CURRENT_VIEW = k; go(k); };
   bs.Season.onclick = () => window.__go("Season");
   bs.Schemes.onclick = () => window.__go("Schemes");
+
+  const dl = document.getElementById("dlCsv");
+  if(dl) dl.onclick = () => downloadCsv(dl);
 }
 
 /* Crossing the breakpoint changes the viewBox, so the charts have to be
