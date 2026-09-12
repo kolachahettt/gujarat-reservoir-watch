@@ -1,0 +1,316 @@
+id,mkt_name,state_id,district_id,district_name,mkt_norm
+440,APMC ANAND,11.0,133.0,Anand,anand
+2638,APMC HALVAD,11.0,151.0,Morbi,halvad
+1252,APMCKHEDBRAHMA,11.0,158.0,Sabarkantha,apmckhedbrahma
+2284,Abadasa APMC,11.0,147.0,Kachchh,abadasa
+66,Ahmedabad APMC,11.0,131.0,Ahmedabad,ahmedabad
+2543,Ahmedabad(Chimanbhai Patal Market Vasana) APMC,11.0,131.0,Ahmedabad,ahmedabad
+2763,Ahmedabad(Flower Market Jamalpur) APMC,11.0,135.0,Banaskanth,ahmedabad
+2541,"Ahmedabad(Fruit Market, Naroda) APMC",11.0,131.0,Ahmedabad,ahmedabad
+2764,Ahmedabad(Manekchowk) APMC,11.0,131.0,Ahmedabad,ahmedabad
+2542,Ahmedabad(Rajnagar sub yard) APMC,11.0,131.0,Ahmedabad,ahmedabad
+2640,Ahwa-Dang APMC,11.0,162.0,The Dangs,ahwa dang
+2314,Amirgadh APMC,11.0,135.0,Banaskanth,amirgadh
+1270,Amod APMC,11.0,136.0,Bharuch,amod
+2571,"Anand(Veg,Yard,Anand) APMC",11.0,133.0,Anand,anand
+1256,Anjar APMC,11.0,147.0,Kachchh,anjar
+2595,"Anjar(Veg,Sub Yard) APMC",11.0,147.0,Kachchh,anjar
+2599,Anklav APMC,11.0,133.0,Anand,anklav
+434,Ankleshwar APMC,11.0,136.0,Bharuch,ankleshwar
+1560,Babra APMC,11.0,132.0,Amreli,babra
+1257,Bachau APMC,11.0,147.0,Kachchh,bachau
+1624,Bagasara APMC,11.0,132.0,Amreli,bagasara
+1540,Balasinor APMC,11.0,148.0,Kheda,balasinor
+431,Banaskantha APMC,11.0,135.0,Banaskanth,banaskantha
+785,Bardoli APMC,11.0,159.0,Surat,bardoli
+2623,Bardoli(Kadod) APMC,11.0,159.0,Surat,bardoli
+2816,Bardoli(Madhi) APMC,11.0,159.0,Surat,bardoli
+2579,Baruch Vagara APMC,11.0,136.0,Bharuch,baruch vagara
+2275,Barvala APMC,11.0,131.0,Ahmedabad,barvala
+1250,Bavla APMC,11.0,131.0,Ahmedabad,bavla
+783,Bayad APMC,11.0,158.0,Sabarkantha,bayad
+2609,Bayad(Demai) APMC,11.0,158.0,Sabarkantha,bayad
+2610,Bayad(Sadamba) APMC,11.0,158.0,Sabarkantha,bayad
+1530,Becharaji APMC,11.0,150.0,Mehsana,becharaji
+1554,Bhabhar APMC,11.0,135.0,Banaskanth,bhabhar
+2602,Bhanvad APMC,11.0,142.0,Devbhumi Dwarka,bhanvad
+54,Bharuch APMC,11.0,136.0,Bharuch,bharuch
+2309,Bhatiya APMC,11.0,145.0,Jamnagar,bhatiya
+433,Bhavnagar APMC,11.0,137.0,Bhavnagar,bhavnagar
+2298,Bhesan APMC,11.0,146.0,Junagarh,bhesan
+1534,Bhiloda APMC,11.0,158.0,Sabarkantha,bhiloda
+441,Bhuj APMC,11.0,147.0,Kachchh,bhuj
+1146,Bilimora APMC,11.0,153.0,Navsari,bilimora
+2633,Bilimora(Gandevi) APMC,11.0,153.0,Navsari,bilimora
+432,Bodeliu APMC,11.0,139.0,Chhota Udaipur,bodeliu
+1264,Borsad APMC,11.0,133.0,Anand,borsad
+2279,Borsad(Asodar) APMC,11.0,133.0,Anand,borsad
+2598,Borsad(Veg Yard Barsad) APMC,11.0,133.0,Anand,borsad
+1102,Botad APMC,11.0,138.0,Botad,botad
+2568,Botad(Bhabarkot) APMC,11.0,138.0,Botad,botad
+2785,Botad(Haddad) APMC,11.0,138.0,Botad,botad
+2790,Chachack  APMC,11.0,139.0,Chhota Udaipur,chachack
+1251,Chansama APMC,11.0,155.0,Patan,chansama
+53,Chhota Udaipur APMC,11.0,163.0,Vadodara(Baroda),chhota udaipur
+436,Chikhali APMC,11.0,153.0,Navsari,chikhali
+2582,Chikli(Khorgam) APMC,11.0,164.0,Valsad,chikli
+2627,"Chotial(Veg,Yard) APMC",11.0,160.0,Surendranagar,chotial
+1551,Chotila APMC,11.0,160.0,Surendranagar,chotila
+2590,"Chotila(Veg,Yard Chotila) APMC",11.0,160.0,Surendranagar,chotila
+2619,Dabhoi(Kayavarohan) APMC,11.0,163.0,Vadodara(Baroda),dabhoi
+1543,Daboi APMC,11.0,163.0,Vadodara(Baroda),daboi
+56,Dahod APMC,11.0,140.0,Dahod,dahod
+2548,Dahod(Garbada) APMC,11.0,140.0,Dahod,dahod
+2550,Dahod(Himalaya) APMC,11.0,140.0,Dahod,dahod
+2767,Dahod(Jesavada) APMC,11.0,140.0,Dahod,dahod
+2549,Dahod(Veg. Market) APMC,11.0,140.0,Dahod,dahod
+1626,Damnagar APMC,11.0,132.0,Amreli,damnagar
+2313,Danta APMC,11.0,135.0,Banaskanth,danta
+1555,Dasada Patadi APMC,11.0,160.0,Surendranagar,dasada patadi
+2769,Davgadbaria(Piplod) APMC,11.0,140.0,Dahod,davgadbaria
+1269,Dediyapada APMC,11.0,152.0,Narmada,dediyapada
+50,Deesa APMC,11.0,135.0,Banaskanth,deesa
+2561,Deesa(Bhildi) APMC,11.0,135.0,Banaskanth,deesa
+2774,Deesa(Deesa Veg Yard) APMC,11.0,135.0,Banaskanth,deesa
+1098,Dehgam APMC,11.0,143.0,Gandhinagar,dehgam
+2632,Dehgam(Rekhiyal) APMC,11.0,143.0,Gandhinagar,dehgam
+1107,Derol APMC,11.0,154.0,Panchmahals,derol
+2575,Derol(Adadara) APMC,11.0,154.0,Panchmahals,derol
+2779,Derol(Vejalpur) APMC,11.0,154.0,Panchmahals,derol
+1266,Devgadhbaria APMC,11.0,140.0,Dahod,devgadhbaria
+426,Dhandhuka APMC,11.0,131.0,Ahmedabad,dhandhuka
+2544,Dhandkuka(Dholera) APMC,11.0,131.0,Ahmedabad,dhandkuka
+51,Dhanera APMC,11.0,135.0,Banaskanth,dhanera
+2775,Dhanera(Samarwada) APMC,11.0,135.0,Banaskanth,dhanera
+2563,"Dhanera(Veg,Yard Dhanera) APMC",11.0,135.0,Banaskanth,dhanera
+1533,Dhansura APMC,11.0,158.0,Sabarkantha,dhansura
+1274,Dharampur(veg) APMC,11.0,164.0,Valsad,dharampur
+2295,Dhari APMC,11.0,132.0,Amreli,dhari
+2634,Dhari(Chalala) APMC,11.0,132.0,Amreli,dhari
+1254,Dholka APMC,11.0,131.0,Ahmedabad,dholka
+2765,Dholka(Koth) APMC,11.0,131.0,Ahmedabad,dholka
+2592,Dholka(Market Yard Veg) APMC,11.0,131.0,Ahmedabad,dholka
+1253,Dhoraji APMC,11.0,157.0,Rajkot,dhoraji
+2302,Dhragradhra APMC,11.0,160.0,Surendranagar,dhragradhra
+2308,Dhrol APMC,11.0,145.0,Jamnagar,dhrol
+2777,Diyodar APMC,11.0,135.0,Banaskanth,diyodar
+2307,Gadada APMC,11.0,138.0,Botad,gadada
+2305,Gariyadar APMC,11.0,137.0,Bhavnagar,gariyadar
+2601,Garudeshwal APMC,11.0,152.0,Narmada,garudeshwal
+445,Godhra APMC,11.0,154.0,Panchmahals,godhra
+2778,Godhra Kakanpur APMC,11.0,154.0,Panchmahals,godhra kakanpur
+2574,Godhra(Timbaroad) APMC,11.0,154.0,Panchmahals,godhra
+1541,Gogamba APMC,11.0,154.0,Panchmahals,gogamba
+2617,Gogamba(Similiya) APMC,11.0,154.0,Panchmahals,gogamba
+61,Gondal APMC,11.0,157.0,Rajkot,gondal
+2546,Gondal(Veg.market Gondal) APMC,11.0,157.0,Rajkot,gondal
+2578,Hadad     APMC,11.0,139.0,Chhota Udaipur,hadad
+2290,Halol APMC,11.0,154.0,Panchmahals,halol
+1105,Harij APMC,11.0,155.0,Patan,harij
+2282,Hasot APMC,11.0,136.0,Bharuch,hasot
+2630,Hasot(Elav) APMC,11.0,136.0,Bharuch,hasot
+447,Himatnagar APMC,11.0,158.0,Sabarkantha,himatnagar
+2564,Himatnagar(Gambhoi) APMC,11.0,158.0,Sabarkantha,himatnagar
+2565,Himatnagar(Veg.Market Himatnagar) APMC,11.0,158.0,Sabarkantha,himatnagar
+782,Idar APMC,11.0,158.0,Sabarkantha,idar
+2589,Idar(Jadar) APMC,11.0,158.0,Sabarkantha,idar
+1623,Jam Jodhpur APMC,11.0,145.0,Jamnagar,jam jodhpur
+1622,Jam Khambalia APMC,11.0,142.0,Devbhumi Dwarka,jam khambalia
+1271,Jambusar APMC,11.0,136.0,Bharuch,jambusar
+2604,Jambusar(Kaavi) APMC,11.0,136.0,Bharuch,jambusar
+1617,Jamkandorna APMC,11.0,157.0,Rajkot,jamkandorna
+437,Jamnagar APMC,11.0,145.0,Jamnagar,jamnagar
+780,Jasdan APMC,11.0,157.0,Rajkot,jasdan
+2591,Jasdan(Vichhiya) APMC,11.0,157.0,Rajkot,jasdan
+1615,Jetpur(Dist.Rajkot) APMC,11.0,157.0,Rajkot,jetpur
+2639,Jetpur-Pavi APMC,11.0,139.0,Chhota Udaipur,jetpur pavi
+1557,Jhagadiya APMC,11.0,136.0,Bharuch,jhagadiya
+1267,Jhalod APMC,11.0,140.0,Dahod,jhalod
+2586,Jodiya APMC,11.0,145.0,Jamnagar,jodiya
+438,Junagadh APMC,11.0,146.0,Junagarh,junagadh
+2567,"Junagadh(Veg,Yard, Junagadh) APMC",11.0,146.0,Junagarh,junagadh
+1104,K.Mandvi APMC,11.0,147.0,Kachchh,k mandvi
+2626,KUKARMUNDA APMC,11.0,159.0,Surat,kukarmunda
+1255,Kadi APMC,11.0,150.0,Mehsana,kadi
+2593,Kadi(Kadi cotton Yard) APMC,11.0,150.0,Mehsana,kadi
+1103,Kalawad APMC,11.0,145.0,Jamnagar,kalawad
+2577,Kalediya APMC,11.0,139.0,Chhota Udaipur,kalediya
+443,Kalol APMC,11.0,143.0,Gandhinagar,kalol
+2556,"Kalol(Veg,Market,Kalol) APMC",11.0,143.0,Gandhinagar,kalol
+2605,Kapadanj(Moti Jaher) APMC,11.0,148.0,Kheda,kapadanj
+1275,Kapadvanj APMC,11.0,148.0,Kheda,kapadvanj
+1145,Karjan APMC,11.0,163.0,Vadodara(Baroda),karjan
+1144,Kathlal APMC,11.0,148.0,Kheda,kathlal
+2285,Kawant APMC,11.0,163.0,Vadodara(Baroda),kawant
+2299,Keshod APMC,11.0,146.0,Junagarh,keshod
+2296,Khambha APMC,11.0,132.0,Amreli,khambha
+67,Khambhat APMC,11.0,133.0,Anand,khambhat
+2572,Khambhat(Grain Market) APMC,11.0,133.0,Anand,khambhat
+2573,Khambhat(Veg Yard Khambhat) APMC,11.0,133.0,Anand,khambhat
+2292,Khanpur APMC,11.0,154.0,Panchmahals,khanpur
+2311,Kheda APMC,11.0,148.0,Kheda,kheda
+2615,Kheda(Nayaka) APMC,11.0,148.0,Kheda,kheda
+2587,Khedbrahma(Lambadia) APMC,11.0,158.0,Sabarkantha,khedbrahma
+2588,Khedbrahma(Posina) APMC,11.0,158.0,Sabarkantha,khedbrahma
+1618,Kodinar APMC,11.0,144.0,Gir Somnath,kodinar
+2594,Kodinar(Dollasa) APMC,11.0,146.0,Junagarh,kodinar
+1547,Kosamba APMC,11.0,159.0,Surat,kosamba
+2793,Kosamba(Vankal) APMC,11.0,159.0,Surat,kosamba
+2794,Kosamba(Zangvav) APMC,11.0,159.0,Surat,kosamba
+2310,Kutiyana APMC,11.0,156.0,Porbandar,kutiyana
+2562,Lakhani APMC,11.0,135.0,Banaskanth,lakhani
+1552,Lakhtar APMC,11.0,160.0,Surendranagar,lakhtar
+2585,Lalpur APMC,11.0,145.0,Jamnagar,lalpur
+1099,Lathi APMC,11.0,132.0,Amreli,lathi
+786,Limdi APMC,11.0,160.0,Surendranagar,limdi
+1205,Limkheda APMC,11.0,140.0,Dahod,limkheda
+779,Lunavada APMC,11.0,154.0,Panchmahals,lunavada
+2616,Lunavada(Kobamba) APMC,11.0,154.0,Panchmahals,lunavada
+1546,Mahuva APMC,11.0,159.0,Surat,mahuva
+2622,Mahuva(Anaval) APMC,11.0,159.0,Surat,mahuva
+55,Mahuva(Station Road) APMC,11.0,137.0,Bhavnagar,mahuva
+1536,Malia Hatina APMC,11.0,146.0,Junagarh,malia hatina
+2280,Malpur APMC,11.0,158.0,Sabarkantha,malpur
+1619,Manavdar APMC,11.0,146.0,Junagarh,manavdar
+2273,Mandal APMC,11.0,131.0,Ahmedabad,mandal
+1686,Mandvi APMC,11.0,159.0,Surat,mandvi
+2580,Mandvi(Amba Paradi) APMC,11.0,159.0,Surat,mandvi
+1620,Mangrol APMC,11.0,146.0,Junagarh,mangrol
+1249,Mansa APMC,11.0,143.0,Gandhinagar,mansa
+2584,Mansa(Manas Veg Yard) APMC,11.0,143.0,Gandhinagar,mansa
+1538,Matar APMC,11.0,148.0,Kheda,matar
+2613,Matar(Limbasi) APMC,11.0,148.0,Kheda,matar
+1532,Meghraj APMC,11.0,158.0,Sabarkantha,meghraj
+2608,Meghraj(Rellavada) APMC,11.0,158.0,Sabarkantha,meghraj
+1260,Mehmadabad APMC,11.0,148.0,Kheda,mehmadabad
+2596,"Mehmadabad(Veg ,market) APMC",11.0,148.0,Kheda,mehmadabad
+442,Mehsana APMC,11.0,150.0,Mehsana,mehsana
+2772,Mehsana(Jornang) APMC,11.0,150.0,Mehsana,mehsana
+2773,Mehsana(Mehsana Veg) APMC,11.0,150.0,Mehsana,mehsana
+784,Modasa APMC,11.0,158.0,Sabarkantha,modasa
+2611,Modasa(Tintoi) APMC,11.0,158.0,Sabarkantha,modasa
+2789,Modasar APMC,11.0,139.0,Chhota Udaipur,modasar
+62,Morbi APMC,11.0,151.0,Morbi,morbi
+2289,Morva Hafad APMC,11.0,154.0,Panchmahals,morva hafad
+2303,Muli APMC,11.0,160.0,Surendranagar,muli
+1259,Mundra APMC,11.0,147.0,Kachchh,mundra
+57,Nadiad APMC,11.0,148.0,Kheda,nadiad
+2569,Nadiyad(Chaklasi) APMC,11.0,148.0,Kheda,nadiyad
+2570,Nadiyad(Piplag) APMC,11.0,148.0,Kheda,nadiyad
+2283,Nakhatrana APMC,11.0,147.0,Kachchh,nakhatrana
+2288,Nasvadi APMC,11.0,163.0,Vadodara(Baroda),nasvadi
+1273,Navsari APMC,11.0,153.0,Navsari,navsari
+1550,Nizar APMC,11.0,159.0,Surat,nizar
+2796,Nizar(Rumkitalav) APMC,11.0,159.0,Surat,nizar
+1147,Padra APMC,11.0,163.0,Vadodara(Baroda),padra
+1100,Palanpur APMC,11.0,135.0,Banaskanth,palanpur
+2560,"Palanpur(Veg,Yard Palanpur) APMC",11.0,135.0,Banaskanth,palanpur
+1598,Palitana APMC,11.0,137.0,Bhavnagar,palitana
+1556,Panthawada APMC,11.0,135.0,Banaskanth,panthawada
+2792,Panvad APMC,11.0,139.0,Chhota Udaipur,panvad
+2294,Pardi APMC,11.0,164.0,Valsad,pardi
+2782,Pardi(Motavagachiya) APMC,11.0,164.0,Valsad,pardi
+2783,Pardi(Rohinee) APMC,11.0,164.0,Valsad,pardi
+2780,Pardi(Ugvada) APMC,11.0,164.0,Valsad,pardi
+2781,Pardi(Vapi) APMC,11.0,164.0,Valsad,pardi
+444,Patan APMC,11.0,155.0,Patan,patan
+2559,"Patan(Veg,Yard Patan) APMC",11.0,155.0,Patan,patan
+1263,Petlad APMC,11.0,133.0,Anand,petlad
+2597,"Petlad(Veg Yard, Petlad) APMC",11.0,133.0,Anand,petlad
+1537,Porbandar APMC,11.0,156.0,Porbandar,porbandar
+1272,Prantij APMC,11.0,158.0,Sabarkantha,prantij
+2635,Prantij(Salala) APMC,11.0,158.0,Sabarkantha,prantij
+1101,Radhanpur APMC,11.0,155.0,Patan,radhanpur
+428,Radheja APMC,11.0,143.0,Gandhinagar,radheja
+60,Rajkot APMC,11.0,157.0,Rajkot,rajkot
+2545,Rajkot(Veg.Sub Yard) APMC,11.0,157.0,Rajkot,rajkot
+1268,Rajpipla APMC,11.0,152.0,Narmada,rajpipla
+4769,Rajula (Dungar) APMC,11.0,132.0,Amreli,rajula
+430,Rajula APMC,11.0,132.0,Amreli,rajula
+2276,Rampura APMC,11.0,131.0,Ahmedabad,rampura
+2555,Randheja(Chiloda) APMC,11.0,143.0,Gandhinagar,randheja
+2554,Randheja(Veg.Market Gandhinagar) APMC,11.0,143.0,Gandhinagar,randheja
+2274,Ranpur APMC,11.0,131.0,Ahmedabad,ranpur
+1258,Rapar APMC,11.0,147.0,Kachchh,rapar
+448,S.Mandvi APMC,11.0,159.0,Surat,s mandvi
+2293,Sami APMC,11.0,155.0,Patan,sami
+425,Sanad APMC,11.0,131.0,Ahmedabad,sanad
+446,Santrampur APMC,11.0,154.0,Panchmahals,santrampur
+2576,Santrampur(Fathaepura) APMC,11.0,154.0,Panchmahals,santrampur
+1625,Savarkundla APMC,11.0,132.0,Amreli,savarkundla
+1542,Savli APMC,11.0,163.0,Vadodara(Baroda),savli
+2788,Savli(Desar) APMC,11.0,163.0,Vadodara(Baroda),savli
+2618,Savli(Samlaya) APMC,11.0,163.0,Vadodara(Baroda),savli
+65,Sayala APMC,11.0,160.0,Surendranagar,sayala
+1545,Selemba APMC,11.0,152.0,Narmada,selemba
+2621,Selemba(Navgam Javli) APMC,11.0,152.0,Narmada,selemba
+2291,Shehra APMC,11.0,154.0,Panchmahals,shehra
+2286,Shinor APMC,11.0,163.0,Vadodara(Baroda),shinor
+1262,Siddhpur APMC,11.0,155.0,Patan,siddhpur
+2278,Sojitra APMC,11.0,133.0,Anand,sojitra
+1559,Songadh APMC,11.0,159.0,Surat,songadh
+2629,Songadh(Badarpada) APMC,11.0,159.0,Surat,songadh
+2795,Songadh(Umrada) APMC,11.0,159.0,Surat,songadh
+64,Surat APMC,11.0,159.0,Surat,surat
+1621,Talala APMC,11.0,146.0,Junagarh,talala
+787,Talalagir APMC,11.0,144.0,Gir Somnath,talalagir
+2306,Taleja APMC,11.0,137.0,Bhavnagar,taleja
+63,Talod APMC,11.0,158.0,Sabarkantha,talod
+2566,Talod(Harsol) APMC,11.0,158.0,Sabarkantha,talod
+2277,Tarapur APMC,11.0,133.0,Anand,tarapur
+2552,Tejgarh APMC,11.0,139.0,Chhota Udaipur,tejgarh
+2791,Thalkala APMC,11.0,139.0,Chhota Udaipur,thalkala
+1553,Thara APMC,11.0,135.0,Banaskanth,thara
+2776,Thara(Shihori) APMC,11.0,135.0,Banaskanth,thara
+1531,Tharad APMC,11.0,135.0,Banaskanth,tharad
+2607,Tharad(Rah) APMC,11.0,135.0,Banaskanth,tharad
+1539,Thasara APMC,11.0,148.0,Kheda,thasara
+2614,Thasara(Dokar) APMC,11.0,148.0,Kheda,thasara
+429,The Agricultural Produce Market Committee-Amreli,11.0,132.0,Amreli,the agricultural produce committee amreli
+2304,Tilakwada APMC,11.0,152.0,Narmada,tilakwada
+2297,Timbi APMC,11.0,132.0,Amreli,timbi
+1548,Uchhal APMC,11.0,159.0,Surat,uchhal
+2624,Uchhal(Karod) APMC,11.0,159.0,Surat,uchhal
+1265,Umreth APMC,11.0,133.0,Anand,umreth
+439,Una APMC,11.0,144.0,Gir Somnath,una
+1261,Unava APMC,11.0,150.0,Mehsana,unava
+58,Unjha APMC,11.0,150.0,Mehsana,unjha
+781,Upleta APMC,11.0,157.0,Rajkot,upleta
+2281,Vadali APMC,11.0,158.0,Sabarkantha,vadali
+2316,Vadgam APMC,11.0,135.0,Banaskanth,vadgam
+450,Vadhvan APMC,11.0,160.0,Surendranagar,vadhvan
+1529,Vadnagar APMC,11.0,150.0,Mehsana,vadnagar
+2606,Vadnagar(Kheralu) APMC,11.0,150.0,Mehsana,vadnagar
+52,Vadodara APMC,11.0,163.0,Vadodara(Baroda),vadodara
+2786,Vadodara(Navapura) APMC,11.0,163.0,Vadodara(Baroda),vadodara
+2551,Vadodara(Sayajipura) APMC,11.0,163.0,Vadodara(Baroda),vadodara
+3854,Vaghai APMC,11.0,141.0,Dang,vaghai
+2287,Vagodiya APMC,11.0,163.0,Vadodara(Baroda),vagodiya
+1544,Valia APMC,11.0,136.0,Bharuch,valia
+2620,Valia(Nethrang) APMC,11.0,136.0,Bharuch,valia
+1549,Valod APMC,11.0,159.0,Surat,valod
+2625,Valod(Buhari) APMC,11.0,159.0,Surat,valod
+435,Valsad APMC,11.0,164.0,Valsad,valsad
+2583,Valsad(Dungari) APMC,11.0,164.0,Valsad,valsad
+1616,Vankaner APMC,11.0,151.0,Morbi,vankaner
+3374,Vankaner(Sub yard) APMC,11.0,151.0,Morbi,vankaner
+1558,Vansda APMC,11.0,153.0,Navsari,vansda
+2628,Vansda(Limzar) APMC,11.0,153.0,Navsari,vansda
+2300,Vanthli APMC,11.0,146.0,Junagarh,vanthli
+2637,Varahi APMC,11.0,155.0,Patan,varahi
+2315,Vav APMC,11.0,135.0,Banaskanth,vav
+2301,Veraval APMC,11.0,144.0,Gir Somnath,veraval
+1106,Vijapur APMC,11.0,150.0,Mehsana,vijapur
+2558,Vijapur(Gojjariya) APMC,11.0,150.0,Mehsana,vijapur
+2557,Vijapur(Kukarvada) APMC,11.0,150.0,Mehsana,vijapur
+2770,Vijapur(Ladol) APMC,11.0,150.0,Mehsana,vijapur
+2771,Vijapur(Vegetable) APMC,11.0,150.0,Mehsana,vijapur
+2612,Vijaynagar(Kundlakap) APMC,11.0,158.0,Sabarkantha,vijaynagar
+427,Viramgam APMC,11.0,131.0,Ahmedabad,viramgam
+2312,Virpur APMC,11.0,148.0,Kheda,virpur
+1535,Visavadar APMC,11.0,146.0,Junagarh,visavadar
+59,Visnagar APMC,11.0,150.0,Mehsana,visnagar
+2581,Vyara(Paati) APMC,11.0,159.0,Surat,vyara
+449,Vyra APMC,11.0,159.0,Surat,vyra
+2600,Zalod(Sanjeli) APMC,11.0,140.0,Dahod,zalod
+2768,Zalod(Zalod) APMC,11.0,140.0,Dahod,zalod

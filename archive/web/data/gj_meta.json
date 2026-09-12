@@ -1,0 +1,44 @@
+{
+  "state_code": 24,
+  "slug": "gj",
+  "generated": "2026-09-11",
+  "source": "SHRUG 2.2 Pakora (CC BY-NC-SA 4.0); names from Core Keys",
+  "villages_total": 17946,
+  "villages_with_index": 17454,
+  "towns": 168,
+  "subdistricts": 224,
+  "districts": 26,
+  "break_method": "within-state quintiles of basis_risk_index",
+  "breaks": [
+    0.1486,
+    0.3391,
+    0.4907,
+    0.5805
+  ],
+  "edges": [
+    0.0011,
+    0.1486,
+    0.3391,
+    0.4907,
+    0.5805,
+    0.8977
+  ],
+  "class_counts": [
+    3491,
+    3491,
+    3490,
+    3491,
+    3491
+  ],
+  "index_min": 0.0011,
+  "index_max": 0.8977,
+  "index_median": 0.4269,
+  "village_zoom": [
+    8,
+    13
+  ],
+  "overview_zoom": [
+    4,
+    7
+  ]
+}

@@ -1,0 +1,56 @@
+name: Deploy site to GitHub Pages
+
+# GitHub Pages can only serve a repository root or /docs directly. This
+# publishes web/ instead, so the deployable artefact keeps its own name and the
+# site lives at the URL root rather than under /web/.
+#
+# Nothing is built or generated here. The site is a static HTML file plus a JSON
+# that scripts/build_view_data.py produced and that is committed, so this
+# workflow only uploads. If the data looks stale, the fix is to re-run
+# build_view_data.py locally and commit web/data/reservoir_view.json — not to
+# add a build step that reaches for the source at deploy time.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A queued run supersedes an in-flight one; never cancel a deploy mid-flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the site is self-contained
+        run: |
+          test -f web/index.html || { echo "missing web/index.html"; exit 1; }
+          test -f web/data/reservoir_view.json || {
+            echo "missing web/data/reservoir_view.json — run scripts/build_view_data.py"; exit 1; }
+          python3 -c "import json,sys; d=json.load(open('web/data/reservoir_view.json')); \
+            assert d['meta']['n_schemes']==206, d['meta']['n_schemes']; \
+            assert len(d['regions'])==5, len(d['regions']); \
+            print('report date', d['meta']['report_date'], '-', \
+                  d['meta']['dates_loaded'], 'daily reports')"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4

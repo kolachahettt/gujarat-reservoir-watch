@@ -1,0 +1,85 @@
+﻿loaded span 2022-06-01 .. 2026-09-11   dates 15
+tolerance: values within 0.500% are the same capacity
+
+dates per season:
+ season  dates
+   2022     11
+   2023      1
+   2024      1
+   2025      1
+   2026      1
+
+============================================================================================
+GATE — does any scheme change design capacity WITHIN one season?
+============================================================================================
+CLEAR — no scheme shows more than one design value inside a season.
+
+============================================================================================
+CAPACITY RESTATEMENTS — a finding in its own right
+============================================================================================
+schemes restated above tolerance: 15   restatement events: 17
+direction: {'down': 12, 'up': 5}
+net change across all restatements: -8.25 MCM   gross movement: 54.97 MCM
+
+(the net barely moving while the gross is large is the signature of a correction exercise,
+ not of physical capacity change — siltation would be uniformly downward)
+
+ scheme_id scheme_name    district region       shape  season_before  season_after  design_before_mcm  design_after_mcm  change_mcm  change_pct direction last_seen_before first_seen_after  changeover_gap_days
+        25    Edalwada       Dahod     CG single_step           2023          2024               6.42             14.08        7.66      119.31        up       2023-09-11       2024-09-11                  366
+        59   Fatehgadh     Kachchh  Kutch single_step           2023          2024               7.44              4.04       -3.40      -45.70      down       2023-09-11       2024-09-11                  366
+         8   Chopadvav     Narmada     SG single_step           2023          2024              12.05              7.18       -4.87      -40.41      down       2023-09-11       2024-09-11                  366
+        18 Patadungari       Dahod     CG single_step           2023          2024              33.03             41.05        8.02       24.28        up       2023-09-11       2024-09-11                  366
+        11  Kakdi-Amba     Narmada     SG single_step           2023          2024               9.37              7.31       -2.06      -21.99      down       2023-09-11       2024-09-11                  366
+        38      Ver-II       Surat     SG single_step           2022          2023              38.30             31.88       -6.42      -16.76      down       2022-09-11       2023-09-11                  365
+        55        Suvi     Kachchh  Kutch single_step           2023          2024              10.46              8.85       -1.61      -15.39      down       2023-09-11       2024-09-11                  366
+        43        Jhuj     Navsari     SG single_step           2023          2024              28.65             24.44       -4.21      -14.69      down       2023-09-11       2024-09-11                  366
+        39    Lakhigam       Surat     SG single_step           2022          2023               4.89              4.26       -0.63      -12.88      down       2022-09-11       2023-09-11                  365
+        44       Kelia     Navsari     SG single_step           2023          2024              19.98             17.46       -2.52      -12.61      down       2023-09-11       2024-09-11                  366
+        37     Doswada        Tapi     SG single_step           2023          2024               3.80              3.43       -0.37       -9.74      down       2023-09-11       2024-09-11                  366
+        23  WNKL.-BHEY       Dahod     CG single_step           2023          2024              12.62             13.30        0.68        5.39        up       2023-09-11       2024-09-11                  366
+        54       Kaila     Kachchh  Kutch single_step           2023          2024               8.95              8.54       -0.41       -4.58      down       2023-09-11       2024-09-11                  366
+        48   Rudramata     Kachchh  Kutch single_step           2023          2024              61.53             59.92       -1.61       -2.62      down       2023-09-11       2024-09-11                  366
+         4   Dantiwada Banaskantha     NG oscillating           2024          2025             393.62            397.12        3.50        0.89        up       2024-09-11       2025-09-11                  365
+         4   Dantiwada Banaskantha     NG oscillating           2022          2023             393.62            397.12        3.50        0.89        up       2022-09-11       2023-09-11                  365
+         4   Dantiwada Banaskantha     NG oscillating           2023          2024             397.12            393.62       -3.50       -0.88      down       2023-09-11       2024-09-11                  366
+
+shape of each restated scheme's capacity series:
+shape
+single_step    14
+oscillating     1
+
+OSCILLATING — capacity is left and later returned to. Not a restatement and not rounding: the source disagrees with itself between seasons. Option C handles these correctly by keeping only the seasons matching today's value.
+ scheme_id scheme_name       shape  n_transitions                  seasons                         capacities
+         4   Dantiwada oscillating              3 2022/2023/2024/2025/2026 393.62/397.12/393.62/397.12/397.12
+
+============================================================================================
+CHANGEOVER WINDOW
+============================================================================================
+ season_before  season_after last_seen_before first_seen_after  changeover_gap_days  schemes
+          2023          2024       2023-09-11       2024-09-11                  366       13
+          2022          2023       2022-09-11       2023-09-11                  365        3
+          2024          2025       2024-09-11       2025-09-11                  365        1
+
+The narrowest window is 365 days wide.
+
+LIMIT OF THIS DATA: the revision happens BETWEEN seasons, in the Nov-May
+off-season, which the Jun-Oct download range deliberately excludes. The
+changeover therefore cannot be pinned to a day from season data alone, however
+many season dates are added — the evidence simply is not in the range.
+
+To pin it exactly, binary-search the off-season gap: fetch the midpoint date
+between the last October report and the first June report, see which capacity it
+carries, and halve again. That is about 8 requests per boundary -- roughly five
+minutes at the server's ~33 s per request, not a re-run of the backfill.
+
+============================================================================================
+DID THE STATE TOTAL MOVE?
+============================================================================================
+ season  dates  mean_state_design_mcm  min_total  max_total
+   2022     11               15805.84   15805.84   15805.84
+   2023      1               15802.29   15802.29   15802.29
+   2024      1               15794.03   15794.03   15794.03
+   2025      1               15797.57   15797.57   15797.57
+   2026      1               15797.56   15797.56   15797.56
+
+written: data\processed\capacity_restatements.csv

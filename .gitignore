@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------------------
+# Raw source data: never committed. All of it is re-fetchable or re-derivable.
+# See DATA.md for how to regenerate every excluded path.
+# ---------------------------------------------------------------------------
+
+# The 732 cached WRD daily report PDFs (~195 MB). Re-fetchable from the source
+# in one command; the ledger records the SHA-256 of every one, so a regenerated
+# cache is verifiable against what this analysis actually read.
+data/raw/
+
+# Parsed intermediates: one parquet per day for storage and rainfall, plus the
+# download ledger. Derived from data/raw/ with no network access.
+data/interim/
+
+# ---------------------------------------------------------------------------
+# Derived binaries and large artefacts
+# ---------------------------------------------------------------------------
+*.duckdb
+*.duckdb.wal
+*.parquet
+*.mbtiles
+*.pmtiles
+
+# Archived viewer screenshots (~11 MB of full-resolution PNG). Kept locally,
+# out of git: they document a map whose tiles are too large to deploy anyway,
+# and DATA.md already states the archive bulk is excluded. Regenerate by
+# serving archive/web/ against a local tile build.
+archive/web/screenshots/
+*.dta
+*.gpkg
+*.zip
+
+# ---------------------------------------------------------------------------
+# Kept deliberately, despite the patterns above
+# ---------------------------------------------------------------------------
+# The small derived CSV/JSON in data/processed/ ARE committed: they are the
+# audit trail the brief and README cite (capacity restatements, the three
+# mid-season exceptions, season capacities, the pinned changeover dates).
+# The rule is size and reproducibility, not "derived" as such.
+!data/processed/*.csv
+!data/processed/*.json
+!data/reference/*
+
+# The deployed site is committed in full — it is the artefact.
+!web/**
+
+# ---------------------------------------------------------------------------
+# Local noise
+# ---------------------------------------------------------------------------
+__pycache__/
+*.pyc
+*.log
+*.err
+.claude/
+data/processed/GATE_TRIPPED.txt
+.DS_Store
+Thumbs.db
+.venv/
+venv/

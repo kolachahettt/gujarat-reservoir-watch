@@ -1,0 +1,30 @@
+{
+  "source_name": "IMD Hydromet Division \u2014 District Rainfall Distribution",
+  "source_url": "https://mausam.imd.gov.in/Rainfall/DISTRICT_RAINFALL_DISTRIBUTION_COUNTRY_INDIA_cd.pdf",
+  "state": "GUJARAT",
+  "pdf_day": "11-09-2026",
+  "period_from": "01-06-2026",
+  "period_to": "11-09-2026",
+  "fetched_utc": "2026-09-11T12:15:05.064611+00:00",
+  "sha256": "E8CD6B2F667813A96EAF465CF3AA53FB7A9E6AA7E244B7931E63B04FA6972E43",
+  "bytes": 2996724,
+  "local_pdf": "data\\raw\\imd\\district_rainfall_20260911.pdf",
+  "districts_parsed": 33,
+  "rows_missing_departure": 0,
+  "categories": {
+    "N": 14,
+    "D": 12,
+    "LD": 4,
+    "E": 3
+  },
+  "category_key": {
+    "LE": "large excess >= +60%",
+    "E": "excess +20 to +59%",
+    "N": "normal -19 to +19%",
+    "D": "deficient -20 to -59%",
+    "LD": "large deficient -60 to -99%",
+    "NR": "no rain -100%",
+    "ND": "no data"
+  },
+  "note": "Departure is against the period normal for 01-06 to the DAY date, computed by IMD. Categories are IMD's own."
+}

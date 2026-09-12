@@ -1,0 +1,34 @@
+imd_district,pc11_district_name,relation,other_pc11_parents,confidence,note
+AHMEDABAD,Ahmadabad,same_name,Botad,high,PC11 Ahmadabad also ceded Barwala and Ranpur talukas to Botad in 2013
+AMRELI,Amreli,same_name,,high,unchanged since 2011
+ANAND,Anand,same_name,,high,unchanged since 2011
+BANASKANTHA,Banas Kantha,same_name,,high,spelling variant only
+BHARUCH,Bharuch,same_name,,high,unchanged since 2011
+BHAVNAGAR,Bhavnagar,same_name,Botad,high,ceded Botad and Gadhada talukas to Botad district in 2013
+DAHOD,Dohad,same_name,,high,spelling variant only
+DANGS,The Dangs,same_name,,high,spelling variant only
+GANDHINAGAR,Gandhinagar,same_name,,high,unchanged since 2011
+JAMNAGAR,Jamnagar,same_name,"Devbhoomi Dwarka,Morbi",high,ceded the Dwarka side to Devbhoomi Dwarka and Maliya to Morbi in 2013
+JUNAGADH,Junagadh,same_name,Gir Somnath,high,ceded the Una-Kodinar coast to Gir Somnath in 2013
+KHEDA,Kheda,same_name,Mahisagar,high,ceded Balasinor and Virpur to Mahisagar in 2013
+KUTCH,Kachchh,same_name,,high,spelling variant only
+MEHSANA,Mahesana,same_name,,high,spelling variant only
+NARMADA,Narmada,same_name,,high,unchanged since 2011
+NAVSARI,Navsari,same_name,,high,unchanged since 2011
+PANCHMAHAL,Panch Mahals,same_name,Mahisagar,high,ceded Lunawada and Santrampur side to Mahisagar in 2013
+PATAN,Patan,same_name,,high,unchanged since 2011
+PORBANDAR,Porbandar,same_name,,high,unchanged since 2011
+RAJKOT,Rajkot,same_name,Morbi,high,ceded Morbi Tankara and Wankaner to Morbi district in 2013
+SABARKANTHA,Sabar Kantha,same_name,Aravalli,high,ceded the Modasa side to Aravalli in 2013
+SURAT,Surat,same_name,,high,Tapi was split off in 2007 so PC11 already treats it separately
+SURENDRANAGAR,Surendranagar,same_name,Morbi,high,ceded Halvad to Morbi district in 2013
+TAPI,Tapi,same_name,,high,unchanged since 2011
+VADODARA,Vadodara,same_name,Chhota Udepur,high,ceded the Chhota Udepur side in 2013
+VALSAD,Valsad,same_name,,high,unchanged since 2011
+ARAVALLI,Sabar Kantha,seceded,,high,created 2013 wholly from PC11 Sabar Kantha
+BOTAD,Bhavnagar,seceded,Ahmadabad,medium,created 2013 from PC11 Bhavnagar and PC11 Ahmadabad; split share not sourced
+CHHOTA UDEPUR,Vadodara,seceded,,high,created 2013 wholly from PC11 Vadodara
+DEVBHOOMI DWARKA,Jamnagar,seceded,,high,created 2013 wholly from PC11 Jamnagar
+GIR SOMNATH,Junagadh,seceded,,high,created 2013 wholly from PC11 Junagadh
+MAHISAGAR,Panch Mahals,seceded,Kheda,medium,created 2013 from PC11 Panch Mahals and PC11 Kheda; split share not sourced
+MORBI,Rajkot,seceded,"Jamnagar,Surendranagar",medium,created 2013 from PC11 Rajkot Jamnagar and Surendranagar; split share not sourced

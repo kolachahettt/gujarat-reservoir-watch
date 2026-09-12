@@ -1,0 +1,34 @@
+{
+  "source_name": "Gujarat WRD Reservoir Data Management System \u2014 daily storage report",
+  "url": "https://wrd-dam.gujarat.gov.in/downloads/home_pdf.php?dt=MjAyNi0wOS0xMQ==",
+  "date_token": "MjAyNi0wOS0xMQ==",
+  "report_date": "2026-09-11",
+  "fetched_utc": "2026-09-11T14:32:33.584660+00:00",
+  "bytes": 276237,
+  "sha256": "10F4783D812B83530D6B108AC131E4B03FDA075B48778183369BF4B60B2C4C28",
+  "local_pdf": "data\\raw\\dam\\dam_2026-09-11.pdf",
+  "tls_verified": false,
+  "pdf_pages": 23,
+  "pdf_date_line": "Date :- 11-09-2026",
+  "other_tables": {
+    "19-col": 1,
+    "8-col": 1,
+    "14-col": 1,
+    "11-col": 6,
+    "3-col": 1,
+    "12-col": 6
+  },
+  "schemes_parsed": 206,
+  "schemes_expected": 206,
+  "parse_failures": [],
+  "detail_pages": [
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ]
+}

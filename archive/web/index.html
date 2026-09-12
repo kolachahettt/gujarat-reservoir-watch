@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMFBY structural basis-risk index — Gujarat</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.3.1/ol.css">
+<style>
+  :root {
+    --surface-1: #fcfcfb;
+    --page: #f4f4f1;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --hairline: #e1e0d9;
+    --ring: rgba(11, 11, 11, 0.10);
+    --q1: #b7d3f6; --q2: #86b6ef; --q3: #3987e5; --q4: #1c5cab; --q5: #104281;
+    --town: #dcdbd4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { background: var(--page); color: var(--ink); }
+  #map { position: absolute; inset: 0; background: var(--page); }
+
+  .card { position: absolute; z-index: 10; background: var(--surface-1);
+    border: 1px solid var(--ring); border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(11,11,11,.08); }
+  #panel { top: 12px; left: 12px; width: 286px; padding: 13px 15px; }
+  h1 { margin: 0 0 2px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+  .sub { margin: 0 0 11px; font-size: 11.5px; color: var(--ink-2); line-height: 1.45; }
+
+  .legend-title { font-size: 10.5px; font-weight: 600; color: var(--ink-2);
+    text-transform: uppercase; letter-spacing: .04em; margin: 0 0 5px; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 2px 0; font-size: 11.5px;
+    font-variant-numeric: tabular-nums; }
+  .sw { width: 22px; height: 11px; border-radius: 2px; border: 1px solid var(--ring); flex: 0 0 auto; }
+  .cnt { margin-left: auto; color: var(--muted); font-size: 10.5px; }
+  .divider { height: 1px; background: var(--hairline); margin: 9px 0; }
+  .note { font-size: 10.5px; color: var(--muted); line-height: 1.45; margin: 6px 0 0; }
+  #zoomstate { font-size: 10.5px; color: var(--ink-2); margin: 8px 0 0; font-weight: 600; }
+  #watch-toggle-row { display: flex; gap: 7px; align-items: flex-start; font-size: 11.5px;
+    line-height: 1.35; cursor: pointer; margin: 2px 0 4px; }
+  #watch-toggle-row input { margin: 1px 0 0; flex: 0 0 auto; accent-color: #d03b3b; }
+  .prov { font-variant-numeric: tabular-nums; }
+
+  #info { bottom: 12px; left: 12px; width: 286px; padding: 13px 15px; display: none; }
+  #info h2 { margin: 0 0 2px; font-size: 12.5px; font-weight: 600; color: var(--ink); }
+  #info .where { margin: 0 0 8px; font-size: 11px; color: var(--muted); }
+  dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 11.5px; }
+  dt { color: var(--ink-2); }
+  dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .flag-yes { color: #d03b3b; font-weight: 600; }
+  .flag-no { color: var(--ink-2); font-weight: 400; }
+  .nodata-msg { font-size: 11px; color: var(--ink-2); line-height: 1.5; margin: 0; }
+  #hint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 10; font-size: 11.5px; color: var(--ink-2); background: var(--surface-1);
+    border: 1px solid var(--ring); border-radius: 999px; padding: 5px 14px; }
+  #attr { position: absolute; bottom: 0; right: 0; z-index: 10; font-size: 10px;
+    color: var(--ink-2); background: rgba(252,252,251,.92); padding: 4px 8px;
+    border-top-left-radius: 6px; border: 1px solid var(--ring); border-right: 0; border-bottom: 0; }
+  #attr a { color: inherit; }
+  #err { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 20;
+    display: none; max-width: 560px; padding: 10px 14px; font-size: 12px;
+    background: #fff4f4; border: 1px solid #d03b3b; border-radius: 6px; color: #7a1c1c; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="panel" class="card">
+  <h1>Structural basis-risk index — Gujarat</h1>
+  <p class="sub">
+    Village-level drivers of PMFBY basis risk.
+    <strong>Structural drivers, not measured basis risk.</strong>
+  </p>
+  <p class="legend-title" id="legend-title">Index value</p>
+  <div id="legend"></div>
+  <div class="divider"></div>
+  <div class="row"><span class="sw" id="sw-nodata"></span> No index issued</div>
+  <div class="row"><span class="sw" style="background:var(--town)"></span>
+    Town, outside scheme unit</div>
+  <div class="row"><span class="sw" id="sw-priority"></span> Flagged for subdivision</div>
+  <p class="note" id="legend-note"></p>
+
+  <div class="divider"></div>
+  <p class="legend-title">Season overlay</p>
+  <label id="watch-toggle-row">
+    <input type="checkbox" id="watch-toggle">
+    <span>Highlight high-index villages in deficient districts</span>
+  </label>
+  <div class="row" id="watch-legend-row" style="display:none">
+    <span class="sw" id="sw-watch"></span> On watchlist
+    <span class="cnt" id="watch-count"></span>
+  </div>
+  <p class="note" id="rainfall-prov">Loading rainfall data…</p>
+  <p id="zoomstate">—</p>
+</div>
+
+<div id="info" class="card">
+  <h2 id="info-title">—</h2>
+  <p class="where" id="info-where"></p>
+  <div id="info-body"></div>
+</div>
+
+<div id="hint">Zoom in for villages</div>
+<div id="attr">
+  Data: <a href="https://www.devdatalab.org/shrug" target="_blank" rel="noopener">SHRUG 2.2</a>,
+  Development Data Lab — CC BY-NC-SA 4.0. Asher, Lunt, Matsuura &amp; Novosad (2021).
+</div>
+<div id="err"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ol@10.3.1/dist/ol.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pmtiles@3.2.0/dist/pmtiles.js"></script>
+<script>
+(function () {
+  "use strict";
+  var fail = function (msg) {
+    var e = document.getElementById("err");
+    e.textContent = msg; e.style.display = "block"; console.error(msg);
+  };
+  if (typeof ol === "undefined") { return fail("OpenLayers failed to load."); }
+  if (typeof pmtiles === "undefined") { return fail("pmtiles.js failed to load."); }
+
+  var SLUG = "gj";
+  var RAMP = ["#b7d3f6", "#86b6ef", "#3987e5", "#1c5cab", "#104281"];
+  var HAIRLINE = "rgba(11,11,11,0.13)";
+  var TOWN_FILL = "#dcdbd4";
+  var SURFACE = "#fcfcfb";
+  var CASE_INK = "rgba(11,11,11,0.92)";
+  var SWITCH_ZOOM = 7.999;     // overview below, villages above
+  var CASE_MIN_ZOOM = 11;      // casing OFF below this: at z9 it forms webs
+
+  var BREAKS = null;           // loaded from <slug>_meta.json (data-derived)
+
+  function hatchPattern() {
+    var c = document.createElement("canvas");
+    c.width = c.height = 8;
+    var g = c.getContext("2d");
+    g.fillStyle = "#e8e7e2"; g.fillRect(0, 0, 8, 8);
+    g.strokeStyle = "#898781"; g.lineWidth = 1.25;
+    g.beginPath();
+    g.moveTo(0, 8); g.lineTo(8, 0);
+    g.moveTo(-2, 2); g.lineTo(2, -2);
+    g.moveTo(6, 10); g.lineTo(10, 6);
+    g.stroke();
+    return g.createPattern(c, "repeat");
+  }
+  var HATCH = hatchPattern();
+
+  function classOf(v) {
+    if (!BREAKS) { return 2; }
+    for (var i = 0; i < BREAKS.length; i++) { if (v < BREAKS[i]) { return i; } }
+    return BREAKS.length;
+  }
+
+  // Pre-built styles: allocating per feature stalls at 18k polygons x pan.
+  var PLAIN = [], FLAGGED = [];
+  for (var i = 0; i < RAMP.length; i++) {
+    PLAIN.push(new ol.style.Style({
+      fill: new ol.style.Fill({ color: RAMP[i] }),
+      stroke: new ol.style.Stroke({ color: HAIRLINE, width: 0.4 })
+    }));
+    FLAGGED.push([
+      new ol.style.Style({
+        fill: new ol.style.Fill({ color: RAMP[i] }),
+        stroke: new ol.style.Stroke({ color: SURFACE, width: 2.6 })
+      }),
+      new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: CASE_INK, width: 1.1 })
+      })
+    ]);
+  }
+  var NODATA_STYLE = new ol.style.Style({
+    fill: new ol.style.Fill({ color: HATCH }),
+    stroke: new ol.style.Stroke({ color: "rgba(11,11,11,0.18)", width: 0.4 })
+  });
+  var TOWN_STYLE = new ol.style.Style({
+    fill: new ol.style.Fill({ color: TOWN_FILL }),
+    stroke: new ol.style.Stroke({ color: "rgba(11,11,11,0.32)", width: 0.6 })
+  });
+
+  var showCasing = false;      // driven by zoom
+  var watchOn = false;         // season overlay toggle
+  var DEFICIT = new Set();     // PC11 district names in IMD deficit categories
+  var DEP = new Map();         // PC11 district name -> cumulative departure %
+
+  // The watchlist is a CONJUNCTION of two independent facts, and it is drawn
+  // in a reserved status colour rather than anywhere on the blue ramp -- the
+  // rainfall deficit is never a term in the index (§7), only a filter over it.
+  var WATCH_INK = "#d03b3b";
+  var WATCH = [];
+  for (var w = 0; w < RAMP.length; w++) {
+    WATCH.push([
+      new ol.style.Style({
+        fill: new ol.style.Fill({ color: RAMP[w] }),
+        stroke: new ol.style.Stroke({ color: SURFACE, width: 2.6 })
+      }),
+      new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: WATCH_INK, width: 1.4 })
+      })
+    ]);
+  }
+
+  function isWatch(f) {
+    return watchOn && f.get("subdivision_priority") === 1
+      && DEFICIT.has(f.get("district_name"));
+  }
+
+  function villageStyle(f) {
+    if (f.get("is_town") === 1) { return TOWN_STYLE; }
+    var v = f.get("basis_risk_index");
+    if (v === undefined || v === null || isNaN(v)) { return NODATA_STYLE; }
+    var cls = classOf(v);
+    if (isWatch(f)) { return WATCH[cls]; }
+    return (showCasing && f.get("subdivision_priority") === 1)
+      ? FLAGGED[cls] : PLAIN[cls];
+  }
+
+  var OV = [];
+  for (var j = 0; j < RAMP.length; j++) {
+    OV.push(new ol.style.Style({
+      fill: new ol.style.Fill({ color: RAMP[j] }),
+      stroke: new ol.style.Stroke({ color: "rgba(11,11,11,0.22)", width: 0.6 })
+    }));
+  }
+  function overviewStyle(f) {
+    var v = f.get("mean_index");
+    if (v === undefined || v === null || isNaN(v)) { return NODATA_STYLE; }
+    return OV[classOf(v)];
+  }
+
+  // --- reference geography -------------------------------------------------
+  // Not decoration. Without boundaries and names the choropleth cannot be
+  // used to look anything up.
+  var districtLayer = new ol.layer.Vector({
+    source: new ol.source.Vector({
+      url: "data/" + SLUG + "_districts.geojson", format: new ol.format.GeoJSON()
+    }),
+    style: new ol.style.Style({
+      stroke: new ol.style.Stroke({ color: "rgba(11,11,11,0.55)", width: 0.9 })
+    }),
+    zIndex: 20
+  });
+
+  var stateLayer = new ol.layer.Vector({
+    source: new ol.source.Vector({
+      url: "data/" + SLUG + "_state.geojson", format: new ol.format.GeoJSON()
+    }),
+    style: [
+      new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: "rgba(252,252,251,0.85)", width: 4 })
+      }),
+      new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: "#0b0b0b", width: 1.5 })
+      })
+    ],
+    zIndex: 21
+  });
+
+  // Deficient districts are outlined in the status colour only while the
+  // overlay is on, so the base map stays a pure structural product.
+  var rainfallLayer = new ol.layer.Vector({
+    source: new ol.source.Vector({
+      url: "data/" + SLUG + "_district_rainfall.geojson",
+      format: new ol.format.GeoJSON()
+    }),
+    visible: false,
+    zIndex: 22,
+    style: function (f) {
+      if (!f.get("deficient")) { return null; }
+      return new ol.style.Style({
+        stroke: new ol.style.Stroke({ color: WATCH_INK, width: 1.8 })
+      });
+    }
+  });
+
+  var labelLayer = new ol.layer.Vector({
+    source: new ol.source.Vector({
+      url: "data/" + SLUG + "_district_labels.geojson", format: new ol.format.GeoJSON()
+    }),
+    declutter: true,
+    zIndex: 30,
+    style: function (f) {
+      return new ol.style.Style({
+        text: new ol.style.Text({
+          text: String(f.get("district_name") || "").toUpperCase(),
+          font: "600 10px system-ui, sans-serif",
+          fill: new ol.style.Fill({ color: "#1c1c1a" }),
+          stroke: new ol.style.Stroke({ color: "rgba(252,252,251,0.92)", width: 3 }),
+          overflow: false
+        })
+      });
+    }
+  });
+
+  // --- tiles ---------------------------------------------------------------
+  function pmSource(path, minz, maxz) {
+    var archive = new pmtiles.PMTiles(path);
+    var fmt = new ol.format.MVT();
+    var src = new ol.source.VectorTile({
+      format: fmt, url: "{z}/{x}/{y}", minZoom: minz, maxZoom: maxz,
+      tileLoadFunction: function (tile) {
+        tile.setLoader(function (extent, resolution, projection) {
+          var tc = tile.getTileCoord();
+          archive.getZxy(tc[0], tc[1], tc[2]).then(function (res) {
+            if (!res || !res.data) { tile.setFeatures([]); return; }
+            tile.setFeatures(fmt.readFeatures(res.data, {
+              extent: extent, featureProjection: projection
+            }));
+          }).catch(function (e) {
+            console.warn("tile " + tc.join("/") + " failed", e);
+            tile.setFeatures([]);
+          });
+        });
+      }
+    });
+    src._archive = archive;
+    return src;
+  }
+
+  var ovSource = pmSource("tiles/" + SLUG + "_overview.pmtiles", 4, 7);
+  var vSource = pmSource("tiles/" + SLUG + "_villages.pmtiles", 8, 13);
+  var ovLayer = new ol.layer.VectorTile({
+    source: ovSource, style: overviewStyle, maxZoom: SWITCH_ZOOM, zIndex: 5
+  });
+  var vLayer = new ol.layer.VectorTile({
+    source: vSource, style: villageStyle, minZoom: SWITCH_ZOOM,
+    renderMode: "hybrid", zIndex: 6
+  });
+
+  var view = new ol.View({
+    center: ol.proj.fromLonLat([71.4, 22.4]), zoom: 7, minZoom: 5, maxZoom: 15
+  });
+
+  var map = new ol.Map({
+    target: "map",
+    layers: [ovLayer, vLayer, districtLayer, rainfallLayer, stateLayer, labelLayer],
+    view: view,
+    controls: ol.control.defaults.defaults({ attribution: false })
+  });
+
+  // Default view frames the whole state on the subdistrict layer: zoomed out
+  // is for pattern, zoomed in is for lookup. A #lon,lat,zoom hash overrides.
+  function fromHash() {
+    var m = /^#(-?[\d.]+),(-?[\d.]+)(?:,([\d.]+))?$/.exec(location.hash || "");
+    return m ? [parseFloat(m[1]), parseFloat(m[2]), m[3] ? parseFloat(m[3]) : 9] : null;
+  }
+  function applyHash() {
+    var h = fromHash();
+    if (h) { view.setCenter(ol.proj.fromLonLat([h[0], h[1]])); view.setZoom(h[2]); }
+  }
+  window.addEventListener("hashchange", applyHash);
+
+  stateLayer.getSource().once("featuresloadend", function (e) {
+    if (fromHash()) { applyHash(); return; }
+    var ext = stateLayer.getSource().getExtent();
+    view.fit(ext, { size: map.getSize(), padding: [24, 24, 24, 310], maxZoom: 7.4 });
+  });
+
+  // --- legend, built from the data-derived breaks --------------------------
+  function fmtRange(lo, hi, last) {
+    return lo.toFixed(2) + " – " + hi.toFixed(2) + (last ? "" : "");
+  }
+  function buildLegend(meta) {
+    BREAKS = meta.breaks;
+    var edges = meta.edges, counts = meta.class_counts;
+    var el = document.getElementById("legend");
+    var html = "";
+    for (var k = 0; k < RAMP.length; k++) {
+      html += '<div class="row"><span class="sw" style="background:' + RAMP[k] +
+        '"></span> ' + fmtRange(edges[k], edges[k + 1], k === RAMP.length - 1) +
+        '<span class="cnt">' + counts[k].toLocaleString() + "</span></div>";
+    }
+    el.innerHTML = html;
+    document.getElementById("legend-title").textContent =
+      "Index value — within-Gujarat quintiles";
+    document.getElementById("legend-note").innerHTML =
+      "Classes are <strong>quintiles of Gujarat's " +
+      meta.villages_with_index.toLocaleString() + " indexed villages</strong>, not " +
+      "equal intervals: 48% of them fall in 0.30–0.60, which equal intervals flatten. " +
+      "No-data is hatched, never coloured as low risk. Towns are not insurance units. " +
+      "Subdivision outlines appear from z" + CASE_MIN_ZOOM + ".";
+    ovLayer.changed(); vLayer.changed();
+  }
+
+  (function legendSwatches() {
+    var c = document.createElement("canvas");
+    c.width = 22; c.height = 11;
+    var g = c.getContext("2d");
+    g.fillStyle = HATCH; g.fillRect(0, 0, 22, 11);
+    document.getElementById("sw-nodata").style.backgroundImage =
+      "url(" + c.toDataURL() + ")";
+    var d = document.createElement("canvas");
+    d.width = 22; d.height = 11;
+    var h = d.getContext("2d");
+    h.fillStyle = RAMP[4]; h.fillRect(0, 0, 22, 11);
+    h.strokeStyle = SURFACE; h.lineWidth = 3; h.strokeRect(1.5, 1.5, 19, 8);
+    h.strokeStyle = CASE_INK; h.lineWidth = 1.1; h.strokeRect(1.5, 1.5, 19, 8);
+    var sw = document.getElementById("sw-priority");
+    sw.style.backgroundImage = "url(" + d.toDataURL() + ")";
+  })();
+
+  fetch("data/" + SLUG + "_meta.json")
+    .then(function (r) { return r.json(); })
+    .then(buildLegend)
+    .catch(function (e) { fail("Could not load " + SLUG + "_meta.json — " + e); });
+
+  // --- season overlay -----------------------------------------------------
+  (function watchSwatch() {
+    var c = document.createElement("canvas");
+    c.width = 22; c.height = 11;
+    var g = c.getContext("2d");
+    g.fillStyle = RAMP[4]; g.fillRect(0, 0, 22, 11);
+    g.strokeStyle = SURFACE; g.lineWidth = 3; g.strokeRect(1.5, 1.5, 19, 8);
+    g.strokeStyle = WATCH_INK; g.lineWidth = 1.4; g.strokeRect(1.5, 1.5, 19, 8);
+    document.getElementById("sw-watch").style.backgroundImage =
+      "url(" + c.toDataURL() + ")";
+  })();
+
+  var toggle = document.getElementById("watch-toggle");
+  var prov = document.getElementById("rainfall-prov");
+  toggle.disabled = true;
+
+  fetch("data/" + SLUG + "_rainfall_meta.json")
+    .then(function (r) { return r.json(); })
+    .then(function (m) {
+      var src = m.imd;
+      var fetched = src.fetched_utc ? src.fetched_utc.slice(0, 10) : "unknown";
+      prov.innerHTML =
+        "<strong>IMD district rainfall</strong>, cumulative " + src.period_from +
+        " to " + src.period_to + '. Reading dated <span class="prov">' +
+        src.pdf_day + '</span>, fetched <span class="prov">' + fetched +
+        "</span>. " + m.districts_deficient + " of " + m.districts_total +
+        " districts in an IMD deficit category. " +
+        "<strong>Rainfall is a filter over the index, never a term in it.</strong>";
+      document.getElementById("watch-count").textContent =
+        m.watchlist_villages.toLocaleString() + " villages";
+      toggle.disabled = false;
+    })
+    .catch(function (e) {
+      prov.textContent = "Rainfall overlay unavailable — " + e;
+      console.warn(e);
+    });
+
+  rainfallLayer.getSource().once("featuresloadend", function () {
+    rainfallLayer.getSource().forEachFeature(function (f) {
+      var n = f.get("district_name");
+      DEP.set(n, f.get("cum_dep_pct"));
+      if (f.get("deficient")) { DEFICIT.add(n); }
+    });
+    vLayer.changed();
+  });
+
+  toggle.addEventListener("change", function () {
+    watchOn = toggle.checked;
+    rainfallLayer.setVisible(watchOn);
+    document.getElementById("watch-legend-row").style.display =
+      watchOn ? "flex" : "none";
+    vLayer.changed();
+  });
+
+  // --- zoom state ----------------------------------------------------------
+  var zs = document.getElementById("zoomstate");
+  var hint = document.getElementById("hint");
+  function onZoom() {
+    var z = view.getZoom();
+    var want = z >= CASE_MIN_ZOOM;
+    if (want !== showCasing) { showCasing = want; vLayer.changed(); }
+    labelLayer.setVisible(z >= 6);
+    zs.textContent = z > SWITCH_ZOOM
+      ? "Villages (z" + z.toFixed(1) + ")"
+      : "Subdistrict averages (z" + z.toFixed(1) + ") — zoom in for villages";
+    hint.textContent = z > SWITCH_ZOOM ? "Click a village" : "Click a subdistrict";
+  }
+  view.on("change:resolution", onZoom);
+  onZoom();
+
+  // --- click ---------------------------------------------------------------
+  var info = document.getElementById("info");
+  var title = document.getElementById("info-title");
+  var where = document.getElementById("info-where");
+  var body = document.getElementById("info-body");
+
+  function pct(x) {
+    return (x === undefined || x === null || isNaN(x)) ? "—" : (x * 100).toFixed(1) + "%";
+  }
+  function flag(b) {
+    return b ? '<span class="flag-yes">Yes</span>' : '<span class="flag-no">No</span>';
+  }
+
+  map.on("singleclick", function (evt) {
+    // Scoped to the layer actually on screen: cached tiles from the hidden
+    // layer are otherwise still hit-tested and return the wrong feature type.
+    var villages = view.getZoom() > SWITCH_ZOOM;
+    var active = villages ? vLayer : ovLayer;
+    var hit = null;
+    map.forEachFeatureAtPixel(evt.pixel, function (f) { hit = f; return true; },
+      { hitTolerance: 2, layerFilter: function (l) { return l === active; } });
+    if (!hit) { info.style.display = "none"; return; }
+
+    var dname = hit.get("district_name") || "";
+
+    if (!villages) {
+      title.textContent = "Subdistrict " + (hit.get("subdist_key") || "");
+      where.textContent = dname ? dname + " district" : "";
+      var mi = hit.get("mean_index");
+      body.innerHTML = "<dl>" +
+        "<dt>Mean index (area-weighted)</dt><dd>" +
+          (mi === undefined || mi === null || isNaN(mi) ? "—" : mi.toFixed(3)) + "</dd>" +
+        "<dt>Mean rainfed share</dt><dd>" + pct(hit.get("mean_rainfed")) + "</dd>" +
+        "<dt>Villages</dt><dd>" + (hit.get("n_villages") || "—") + "</dd>" +
+        "<dt>With an index</dt><dd>" + pct(hit.get("measured_share")) + "</dd>" +
+        "<dt>Flagged for subdivision</dt><dd>" + pct(hit.get("subdiv_share")) + "</dd>" +
+        "</dl>" + '<p class="note">Zoom past z8 for individual villages.</p>';
+      info.style.display = "block";
+      return;
+    }
+
+    title.textContent = hit.get("shrid2") || "(unknown)";
+    where.textContent = dname ? dname + " district" : "";
+
+    if (hit.get("is_town") === 1) {
+      body.innerHTML = '<p class="nodata-msg"><strong>Town — outside the scheme ' +
+        'unit.</strong> PMFBY insurance units are villages and village panchayats, ' +
+        'so this polygon carries no index. It is drawn to keep the map continuous ' +
+        'rather than leaving a hole that reads as missing data.</p>';
+      info.style.display = "block";
+      return;
+    }
+
+    var v = hit.get("basis_risk_index");
+    var rf = hit.get("rainfed_share");
+    if (v === undefined || v === null || isNaN(v)) {
+      body.innerHTML = '<p class="nodata-msg"><strong>No index issued.</strong> A ' +
+        'component could not be computed here. A score from the remaining ' +
+        'components would be a different quantity, not a weaker version of this ' +
+        'one, so none is published.</p>' +
+        (rf === undefined || rf === null || isNaN(rf) ? "" :
+          '<dl style="margin-top:8px"><dt>Rainfed share</dt><dd>' + pct(rf) + "</dd></dl>");
+    } else {
+      var dep = DEP.has(dname) ? DEP.get(dname) : null;
+      var onWatch = hit.get("subdivision_priority") === 1 && DEFICIT.has(dname);
+      body.innerHTML = "<dl>" +
+        "<dt>Rainfed share</dt><dd>" + pct(rf) + "</dd>" +
+        "<dt>Index value</dt><dd>" + v.toFixed(3) + "</dd>" +
+        "<dt>Percentile in state</dt><dd>" + pct(hit.get("index_pct_within_state")) + "</dd>" +
+        "<dt>Flagged for subdivision</dt><dd>" +
+          flag(hit.get("subdivision_priority") === 1) + "</dd>" +
+        "<dt>Low confidence</dt><dd>" + flag(hit.get("low_confidence") === 1) + "</dd>" +
+        (dep === null ? "" :
+          "<dt>District rainfall, season</dt><dd>" +
+          (dep > 0 ? "+" : "") + dep + "%</dd>" +
+          "<dt>On watchlist</dt><dd>" + flag(onWatch) + "</dd>") +
+        "</dl>" +
+        (onWatch ? '<p class="note">High structural index in a rainfall-deficit ' +
+          'district. A watchlist, not a forecast — claim outcomes depend on ' +
+          'insurance-unit yields, which are not public.</p>' : "");
+    }
+    info.style.display = "block";
+  });
+
+  map.on("pointermove", function (evt) {
+    if (evt.dragging) { return; }
+    var active = view.getZoom() > SWITCH_ZOOM ? vLayer : ovLayer;
+    map.getTargetElement().style.cursor = map.hasFeatureAtPixel(evt.pixel, {
+      hitTolerance: 2, layerFilter: function (l) { return l === active; }
+    }) ? "pointer" : "";
+  });
+
+  Promise.all([ovSource._archive.getHeader(), vSource._archive.getHeader()])
+    .then(function (h) {
+      console.log("pmtiles ok — overview z" + h[0].minZoom + "-" + h[0].maxZoom +
+                  ", villages z" + h[1].minZoom + "-" + h[1].maxZoom);
+    })
+    .catch(function (e) { fail("Could not read a PMTiles archive — " + e); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+"type": "FeatureCollection",
+"name": "gj_district_labels",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "district_name": "Kachchh", "mean_rainfed": 0.81413685265320446, "mean_index": 0.33720356146925801, "n_villages": 880 }, "geometry": { "type": "Point", "coordinates": [ 69.835666995450396, 23.735758364000219 ] } },
+{ "type": "Feature", "properties": { "district_name": "Banas Kantha", "mean_rainfed": 0.44904787938698099, "mean_index": 0.39065044517403141, "n_villages": 1235 }, "geometry": { "type": "Point", "coordinates": [ 72.146086640128118, 24.285551355000194 ] } },
+{ "type": "Feature", "properties": { "district_name": "Patan", "mean_rainfed": 0.67528462774697029, "mean_index": 0.37707864194647367, "n_villages": 514 }, "geometry": { "type": "Point", "coordinates": [ 71.794453055918666, 23.768540235000188 ] } },
+{ "type": "Feature", "properties": { "district_name": "Mahesana", "mean_rainfed": 0.26594975449596459, "mean_index": 0.43114531266443107, "n_villages": 593 }, "geometry": { "type": "Point", "coordinates": [ 72.454610020960587, 23.571112275000146 ] } },
+{ "type": "Feature", "properties": { "district_name": "Sabar Kantha", "mean_rainfed": 0.41860026432931868, "mean_index": 0.45697050218696589, "n_villages": 1365 }, "geometry": { "type": "Point", "coordinates": [ 73.123869629603675, 23.77932079500011 ] } },
+{ "type": "Feature", "properties": { "district_name": "Gandhinagar", "mean_rainfed": 0.32275124856410203, "mean_index": 0.45840071564220303, "n_villages": 260 }, "geometry": { "type": "Point", "coordinates": [ 72.656533536186686, 23.282979660000123 ] } },
+{ "type": "Feature", "properties": { "district_name": "Ahmadabad", "mean_rainfed": 0.59755943852035143, "mean_index": 0.4296494975191954, "n_villages": 510 }, "geometry": { "type": "Point", "coordinates": [ 72.293109505958128, 22.751300430000128 ] } },
+{ "type": "Feature", "properties": { "district_name": "Surendranagar", "mean_rainfed": 0.68066394777315842, "mean_index": 0.41767608624549096, "n_villages": 648 }, "geometry": { "type": "Point", "coordinates": [ 71.487410764036298, 22.83125872500009 ] } },
+{ "type": "Feature", "properties": { "district_name": "Rajkot", "mean_rainfed": 0.63879678424202091, "mean_index": 0.51025553071800422, "n_villages": 841 }, "geometry": { "type": "Point", "coordinates": [ 70.764849920482874, 22.351542165000268 ] } },
+{ "type": "Feature", "properties": { "district_name": "Jamnagar", "mean_rainfed": 0.59427317401382529, "mean_index": 0.57459292668243189, "n_villages": 699 }, "geometry": { "type": "Point", "coordinates": [ 70.055714130897229, 22.3389990000002 ] } },
+{ "type": "Feature", "properties": { "district_name": "Porbandar", "mean_rainfed": 0.71092292257785539, "mean_index": 0.39325382710663626, "n_villages": 180 }, "geometry": { "type": "Point", "coordinates": [ 69.850714293820701, 21.604131135000131 ] } },
+{ "type": "Feature", "properties": { "district_name": "Junagadh", "mean_rainfed": 0.49123486173152914, "mean_index": 0.48743904478871247, "n_villages": 901 }, "geometry": { "type": "Point", "coordinates": [ 70.442941030648029, 21.184403715000371 ] } },
+{ "type": "Feature", "properties": { "district_name": "Amreli", "mean_rainfed": 0.73267382431655836, "mean_index": 0.42090425335180814, "n_villages": 614 }, "geometry": { "type": "Point", "coordinates": [ 71.271680578180934, 21.423391380000169 ] } },
+{ "type": "Feature", "properties": { "district_name": "Bhavnagar", "mean_rainfed": 0.59191060661619044, "mean_index": 0.47068139656932317, "n_villages": 791 }, "geometry": { "type": "Point", "coordinates": [ 71.94473766396851, 21.666858840000103 ] } },
+{ "type": "Feature", "properties": { "district_name": "Anand", "mean_rainfed": 0.079250571799557287, "mean_index": 0.23745012485786937, "n_villages": 348 }, "geometry": { "type": "Point", "coordinates": [ 72.724124401176681, 22.444063020000193 ] } },
+{ "type": "Feature", "properties": { "district_name": "Kheda", "mean_rainfed": 0.43129114819513048, "mean_index": 0.46820176175726969, "n_villages": 614 }, "geometry": { "type": "Point", "coordinates": [ 73.035131565784468, 22.889969190000102 ] } },
+{ "type": "Feature", "properties": { "district_name": "Panch Mahals", "mean_rainfed": 0.78221117252219641, "mean_index": 0.32620936212391827, "n_villages": 1196 }, "geometry": { "type": "Point", "coordinates": [ 73.625014446731797, 22.875832305000142 ] } },
+{ "type": "Feature", "properties": { "district_name": "Dohad", "mean_rainfed": 0.83457253767150863, "mean_index": 0.33250799197869507, "n_villages": 694 }, "geometry": { "type": "Point", "coordinates": [ 74.140270057165111, 22.920953355000151 ] } },
+{ "type": "Feature", "properties": { "district_name": "Vadodara", "mean_rainfed": 0.46605531995086757, "mean_index": 0.42186210650079231, "n_villages": 1547 }, "geometry": { "type": "Point", "coordinates": [ 73.356080627794768, 22.321253565000141 ] } },
+{ "type": "Feature", "properties": { "district_name": "Narmada", "mean_rainfed": 0.7822347556839071, "mean_index": 0.3073603078116211, "n_villages": 559 }, "geometry": { "type": "Point", "coordinates": [ 73.629764292161212, 21.742543350000119 ] } },
+{ "type": "Feature", "properties": { "district_name": "Bharuch", "mean_rainfed": 0.72176775886097966, "mean_index": 0.31865678327366342, "n_villages": 658 }, "geometry": { "type": "Point", "coordinates": [ 72.869792235894224, 21.839348700000148 ] } },
+{ "type": "Feature", "properties": { "district_name": "The Dangs", "mean_rainfed": 0.97140322005636259, "mean_index": 0.12435283145489695, "n_villages": 310 }, "geometry": { "type": "Point", "coordinates": [ 73.714546303784715, 20.77694707550026 ] } },
+{ "type": "Feature", "properties": { "district_name": "Navsari", "mean_rainfed": 0.51213529630220467, "mean_index": 0.50706464378418092, "n_villages": 380 }, "geometry": { "type": "Point", "coordinates": [ 73.033267268952173, 20.826731880000125 ] } },
+{ "type": "Feature", "properties": { "district_name": "Valsad", "mean_rainfed": 0.8329396131940795, "mean_index": 0.28900418209806827, "n_villages": 451 }, "geometry": { "type": "Point", "coordinates": [ 73.167049819998539, 20.444188860000224 ] } },
+{ "type": "Feature", "properties": { "district_name": "Surat", "mean_rainfed": 0.35079470607662766, "mean_index": 0.34233686970074934, "n_villages": 705 }, "geometry": { "type": "Point", "coordinates": [ 72.947176701417192, 21.192868575000112 ] } },
+{ "type": "Feature", "properties": { "district_name": "Tapi", "mean_rainfed": 0.64107827182529509, "mean_index": 0.44907070586369358, "n_villages": 453 }, "geometry": { "type": "Point", "coordinates": [ 73.558823972873398, 21.188455581500136 ] } }
+]
+}

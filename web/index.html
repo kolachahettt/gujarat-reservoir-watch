@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gujarat Reservoir Watch — season to date</title>
+<style>
+/* Palette: only values documented as passing in the data-viz reference palette.
+   2026 = categorical slot 2 (orange). Prior years = the blue SEQUENTIAL ramp,
+   light -> dark for 2022 -> 2025, because year is ordered data, not nominal.
+   No step lighter than 250 on light / darker than 600 on dark, per the ordinal
+   floor. */
+.viz-root{
+  color-scheme:light;
+  --surface-1:#fcfcfb; --page:#f9f9f7;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --now:#eb6834;
+  --y22:#86b6ef; --y23:#6da7ec; --y24:#5598e7; --y25:#3987e5;
+  --tip-bg:#ffffff;
+  /* Diverging scale for deviation: 42 of 206 schemes are ABOVE their prior
+     mean and 164 below, so polarity is real and diverging is the right job.
+     Poles and the neutral midpoint are the documented diverging pair
+     (blue <-> red, gray midpoint); the intermediate steps are interpolated
+     between them, one arm at a time, as that pair prescribes. */
+  --d-neg3:#e34948; --d-neg2:#ea7b7a; --d-neg1:#f1adac;
+  --d-zero:#f0efec;
+  --d-pos1:#9ec5f4; --d-pos2:#2a78d6;
+  --land:none; --admin:#d8d6ce;
+}
+@media (prefers-color-scheme:dark){
+  :root:where(:not([data-theme="light"])) .viz-root{
+    color-scheme:dark;
+    --surface-1:#1a1a19; --page:#0d0d0d;
+    --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+    --now:#d95926;
+    --y22:#184f95; --y23:#1c5cab; --y24:#256abf; --y25:#2a78d6;
+    --tip-bg:#232321;
+  }
+}
+:root[data-theme="dark"] .viz-root{
+  color-scheme:dark;
+  --surface-1:#1a1a19; --page:#0d0d0d;
+  --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+  --now:#d95926;
+  --y22:#184f95; --y23:#1c5cab; --y24:#256abf; --y25:#2a78d6;
+  --tip-bg:#232321;
+  --d-neg3:#e66767; --d-neg2:#c25a5a; --d-neg1:#8f4747;
+  --d-zero:#383835;
+  --d-pos1:#256abf; --d-pos2:#3987e5;
+  --land:none; --admin:#3a3a37;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--page,#f9f9f7);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.viz-root{background:var(--page);color:var(--text-primary);
+  padding:20px 22px 40px;max-width:1480px;margin:0 auto}
+
+/* ---------- header ---------- */
+header.hd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
+  justify-content:space-between;border-bottom:1px solid var(--border);
+  padding-bottom:12px}
+h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
+.prov{font-size:11.5px;color:var(--text-secondary);line-height:1.55}
+.prov code{font-size:10.5px;color:var(--muted);word-break:break-all}
+.srch{position:relative;min-width:270px}
+.srch input{width:100%;padding:7px 9px;font-size:12.5px;font-family:inherit;
+  border:1px solid var(--border);border-radius:6px;background:var(--surface-1);
+  color:var(--text-primary)}
+.srch label{display:block;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--muted);margin-bottom:4px}
+.results{position:absolute;z-index:40;top:100%;left:0;right:0;max-height:280px;
+  overflow:auto;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:6px;margin-top:3px;display:none;
+  box-shadow:0 6px 22px rgba(0,0,0,.13)}
+.results.on{display:block}
+.results button{display:block;width:100%;text-align:left;padding:6px 9px;
+  font-size:12px;font-family:inherit;background:none;border:0;cursor:pointer;
+  color:var(--text-primary)}
+.results button:hover,.results button:focus{background:var(--page)}
+.results .rg{font-size:10.5px;color:var(--muted)}
+
+/* ---------- headline ---------- */
+.headline{margin:18px 0 6px;display:flex;flex-wrap:wrap;gap:26px;
+  align-items:flex-start}
+.hero{min-width:210px}
+.hero .n{font-size:42px;line-height:1;letter-spacing:-.02em;color:var(--now)}
+.hero .u{font-size:13px;color:var(--text-secondary);margin-top:5px}
+.hero .sub{font-size:12px;color:var(--text-secondary);margin-top:9px;
+  max-width:270px;line-height:1.5}
+.statechart{flex:1;min-width:330px}
+.kv{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+.kv div{font-size:11.5px;color:var(--text-secondary)}
+.kv b{font-variant-numeric:tabular-nums;color:var(--text-primary);
+  font-weight:600}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:15px;align-items:center;
+  margin:16px 0 4px;padding:9px 12px;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:7px;font-size:11.5px;
+  color:var(--text-secondary)}
+.legend .it{display:flex;align-items:center;gap:6px}
+.sw{width:17px;height:0;border-top-style:solid;display:inline-block}
+.sw.thick{border-top-width:3px}
+.sw.thin{border-top-width:2px}
+.sw.bar{height:10px;border:0;width:9px;border-radius:2px}
+.sw.dash{border-top-width:2px;border-top-style:dashed}
+.legend .sep{color:var(--border)}
+
+/* ---------- facets ---------- */
+.grid{display:grid;gap:13px;margin-top:11px;
+  grid-template-columns:repeat(auto-fit,minmax(410px,1fr))}
+.facet{background:var(--surface-1);border:1px solid var(--border);
+  border-radius:8px;padding:11px 12px 9px}
+.fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
+.fh .nm{font-size:13.5px;font-weight:600}
+.fh .meta{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fnums{display:flex;gap:13px;margin:3px 0 5px;font-size:11.5px;
+  color:var(--text-secondary);flex-wrap:wrap}
+.fnums b{font-variant-numeric:tabular-nums;color:var(--text-primary)}
+.fnums .dv{color:var(--now);font-weight:600;font-variant-numeric:tabular-nums}
+.plot{position:relative}
+.plot svg{display:block;width:100%;height:auto;touch-action:none}
+.cross{font-size:11.5px;line-height:1.5;margin-top:6px;
+  color:var(--text-secondary);border-top:1px solid var(--border);
+  padding-top:6px}
+.cross b{color:var(--text-primary)}
+.cross .none{color:var(--muted)}
+.capnote{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+
+/* ---------- tooltip ---------- */
+.tip{position:fixed;z-index:60;pointer-events:none;display:none;
+  background:var(--tip-bg);border:1px solid var(--border);border-radius:7px;
+  padding:8px 10px;font-size:11.5px;color:var(--text-primary);min-width:172px;
+  box-shadow:0 8px 26px rgba(0,0,0,.17)}
+.tip.on{display:block}
+.tip .d{font-size:11px;color:var(--text-secondary);margin-bottom:5px;
+  padding-bottom:4px;border-bottom:1px solid var(--border)}
+.tip table{border-collapse:collapse;width:100%}
+.tip td{padding:1.5px 0;font-variant-numeric:tabular-nums}
+.tip td.k{color:var(--text-secondary);padding-right:9px}
+.tip td.v{text-align:right;font-weight:600}
+.tip tr.cur td{color:var(--now)}
+.tip .rn{margin-top:5px;padding-top:4px;border-top:1px solid var(--border);
+  color:var(--text-secondary);font-variant-numeric:tabular-nums}
+
+/* ---------- tables ---------- */
+h2{font-size:15px;margin:30px 0 3px;letter-spacing:-.01em}
+h2 .q{font-weight:400;font-size:12px;color:var(--text-secondary);
+  display:block;margin-top:3px;letter-spacing:0}
+table.dt{width:100%;border-collapse:collapse;font-size:12px;margin-top:9px;
+  background:var(--surface-1);border:1px solid var(--border);
+  border-radius:7px;overflow:hidden}
+table.dt th{text-align:left;font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.055em;color:var(--muted);font-weight:600;
+  padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.dt td{padding:5.5px 9px;border-bottom:1px solid var(--border);
+  color:var(--text-secondary)}
+table.dt tr:last-child td{border-bottom:0}
+table.dt td.n{text-align:right;font-variant-numeric:tabular-nums;
+  color:var(--text-primary)}
+table.dt td.nm{color:var(--text-primary);font-weight:600}
+table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
+  color:var(--now);font-weight:600}
+.flag{display:inline-block;font-size:9.5px;text-transform:uppercase;
+  letter-spacing:.05em;border:1px solid var(--border);border-radius:3px;
+  padding:0 4px;color:var(--muted);margin-left:5px;vertical-align:1px}
+
+/* ---------- detail ---------- */
+.detail{margin:15px 0 0;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:8px;padding:13px 14px;
+  display:none}
+.detail.on{display:block}
+.detail h3{margin:0 0 2px;font-size:15px}
+.detail .sub{font-size:11.5px;color:var(--muted)}
+.dgrid{display:grid;gap:11px;margin-top:11px;
+  grid-template-columns:repeat(auto-fit,minmax(136px,1fr))}
+.dgrid .c{border-left:2px solid var(--border);padding-left:9px}
+.dgrid .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.055em;
+  color:var(--muted)}
+.dgrid .v{font-size:16px;margin-top:2px;font-variant-numeric:tabular-nums}
+.dgrid .v.sm{font-size:12.5px;line-height:1.35}
+.dgrid .v.none{color:var(--muted);font-size:12.5px}
+.dnote{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5;
+  border-top:1px solid var(--border);padding-top:8px}
+.close{float:right;background:none;border:1px solid var(--border);
+  border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:11px;
+  padding:2px 7px;font-family:inherit}
+
+/* ---------- methodology / footer ---------- */
+details.meth{margin:20px 0 0;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:8px;padding:10px 13px}
+details.meth summary{cursor:pointer;font-size:12.5px;font-weight:600}
+details.meth div{font-size:11.5px;color:var(--text-secondary);
+  line-height:1.62;margin-top:9px}
+details.meth ul{margin:6px 0;padding-left:19px}
+details.meth code{font-size:11px;color:var(--text-primary)}
+.tblbtn{background:none;border:1px solid var(--border);border-radius:5px;
+  color:var(--text-secondary);cursor:pointer;font-size:10.5px;padding:2px 7px;
+  font-family:inherit;margin-top:6px}
+.tv{display:none;margin-top:7px}
+.tv.on{display:block}
+.tv table{width:100%;border-collapse:collapse;font-size:10.5px}
+.tv th,.tv td{padding:2.5px 4px;text-align:right;
+  font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border)}
+.tv th:first-child,.tv td:first-child{text-align:left}
+.tv th{color:var(--muted);font-weight:600}
+footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--border);
+  font-size:11px;color:var(--muted);line-height:1.65}
+.nofc{margin-top:9px;font-size:11px;color:var(--text-secondary)}
+
+/* ---------- view switcher & second view ---------- */
+.views{display:flex;gap:0;margin-top:9px;border:1px solid var(--border);
+  border-radius:6px;overflow:hidden;width:max-content}
+.views button{background:var(--surface-1);border:0;cursor:pointer;
+  font-family:inherit;font-size:11.5px;padding:5px 13px;
+  color:var(--text-secondary);border-right:1px solid var(--border)}
+.views button:last-child{border-right:0}
+.views button[aria-current="true"]{background:var(--now);color:#fff;
+  font-weight:600}
+.filters{display:flex;gap:7px;align-items:center;margin:13px 0 5px;
+  flex-wrap:wrap}
+.filters span.lb{font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted)}
+.filters button{background:var(--surface-1);border:1px solid var(--border);
+  border-radius:5px;cursor:pointer;font-family:inherit;font-size:11.5px;
+  padding:3px 9px;color:var(--text-secondary)}
+.filters button[aria-pressed="true"]{border-color:var(--now);
+  color:var(--text-primary);font-weight:600}
+.placement{background:var(--surface-1);border:1px solid var(--border);
+  border-left:2px solid var(--muted);border-radius:7px;padding:11px 13px;
+  margin:11px 0;font-size:11.5px;color:var(--text-secondary);line-height:1.6}
+.placement b{color:var(--text-primary)}
+.placement code{font-size:11px;color:var(--text-primary)}
+.scat{background:var(--surface-1);border:1px solid var(--border);
+  border-radius:8px;padding:11px 12px;margin-top:10px}
+.scat svg{display:block;width:100%;height:auto}
+.dotleg{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
+  margin-top:10px;font-size:11px;color:var(--text-secondary)}
+.dotleg .grp{display:flex;gap:8px;align-items:flex-end}
+.dotleg .t{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);margin-bottom:3px}
+.ramp{display:flex;gap:0;align-items:center}
+.ramp i{width:26px;height:11px;display:inline-block}
+.ramp i:first-child{border-radius:2px 0 0 2px}
+.ramp i:last-child{border-radius:0 2px 2px 0}
+.rampx{display:flex;justify-content:space-between;font-size:10px;
+  color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+.szleg{display:flex;gap:11px;align-items:flex-end}
+.szleg div{text-align:center;font-size:10px;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.szleg svg{display:block;margin:0 auto 2px}
+</style>
+</head>
+<body>
+<div class="viz-root" id="root">
+  <header class="hd">
+    <div>
+      <h1>Gujarat Reservoir Watch — season to date</h1>
+      <div class="prov" id="prov"></div>
+    </div>
+    <div class="srch">
+      <label for="q">Find a scheme</label>
+      <input id="q" type="text" placeholder="Name or district — e.g. Dholidhaja, Kachchh"
+             autocomplete="off" spellcheck="false">
+      <div class="results" id="res"></div>
+      <div class="views" role="group" aria-label="View">
+        <button id="vSeason" aria-current="true">Season</button>
+        <button id="vSchemes" aria-current="false">Schemes</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="detail" id="detail"></div>
+
+  <section id="viewSchemes" hidden>
+    <h2 style="margin-top:14px">All 206 schemes — one point each
+      <span class="q">Sized by design capacity, coloured by deviation from the
+        same-date mean of prior years. Points only; no filled areas.</span></h2>
+    <div class="placement" id="placement"></div>
+    <div class="filters" id="filters"></div>
+    <div class="scat"><div id="scatPlot"></div><div class="dotleg" id="scatLeg"></div></div>
+  </section>
+
+  <section id="viewSeason">
+  <section class="headline">
+    <div class="hero">
+      <div class="n" id="heroN"></div>
+      <div class="u" id="heroU"></div>
+      <div class="sub" id="heroS"></div>
+    </div>
+    <div class="statechart">
+      <div class="fh"><span class="nm">Gujarat — all 206 schemes</span>
+        <span class="meta" id="stMeta"></span></div>
+      <div class="plot" id="statePlot"></div>
+      <div class="cross" id="stCross"></div>
+    </div>
+  </section>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="grid" id="grid"></div>
+
+  <h2>Largest negative deviations — percentage points
+    <span class="q">Today's % filling against the mean % filling on the same calendar
+      date in prior years, for the years whose published capacity matches today's.
+      Answers: where is the drop deepest relative to this reservoir's own record?</span></h2>
+  <div id="tblPP"></div>
+
+  <h2>The same comparison weighted by volume
+    <span class="q">Implied shortfall in MCM against the prior same-date mean.
+      Answers: where is the largest quantity of water missing? A different
+      question, and a different list.</span></h2>
+  <div id="tblVol"></div>
+  </section><!-- /viewSeason -->
+
+  <details class="meth">
+    <summary>How these figures are built — parameters, exclusions and limits</summary>
+    <div id="meth"></div>
+  </details>
+
+  <footer class="ft" id="foot"></footer>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<script>
+const YRS = ["2022","2023","2024","2025"];
+const CUR = "2026";
+const COL = {2022:"var(--y22)",2023:"var(--y23)",2024:"var(--y24)",2025:"var(--y25)"};
+const SEASON_DAYS = 153;
+const MONTHS = [[1,"Jun"],[31,"Jul"],[62,"Aug"],[93,"Sep"],[123,"Oct"]];
+const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* day-of-season -> label. Day 1 is 1 June; the season ends 31 October. */
+function dosDate(dos, year){
+  const d = new Date(Date.UTC(+year, 5, 1));
+  d.setUTCDate(d.getUTCDate() + dos - 1);
+  return d;
+}
+function dosLabel(dos, year){
+  const d = dosDate(dos, year);
+  return d.getUTCDate() + " " + MN[d.getUTCMonth()];
+}
+function dosLabelFull(dos, year){
+  const d = dosDate(dos, year);
+  return d.getUTCDate() + " " + MN[d.getUTCMonth()] + " " + d.getUTCFullYear();
+}
+const esc = s => String(s).replace(/[&<>"]/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const f1 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(1);
+const f2 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(2);
+
+/* ---------------- chart geometry ---------------- */
+const W = 470, PADL = 30, PADR = 12;
+const SH = 112;                 // storage plot height
+const GAP = 9;                  // gap between the two panels
+const RH = 30;                  // rainfall strip height
+const AX = 15;                  // x-axis label band
+const TOTH = SH + GAP + RH + AX;
+const xOf = d => PADL + (d - 1) / (SEASON_DAYS - 1) * (W - PADL - PADR);
+const yOf = p => SH - 6 - (p / 100) * (SH - 16);
+
+function linePath(map, year){
+  const ks = Object.keys(map).map(Number).sort((a,b)=>a-b);
+  if(!ks.length) return "";
+  let out = "", prev = null;
+  for(const k of ks){
+    const cmd = (prev === null || k !== prev + 1) ? "M" : "L";
+    out += cmd + xOf(k).toFixed(1) + " " + yOf(map[k]).toFixed(1) + " ";
+    prev = k;
+  }
+  return out.trim();
+}
+
+function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
+  /* The state headline carries no rainfall strip: a regional mean of regional
+     means is not a quantity worth showing, and an empty panel reads as "no
+     rain" rather than "not shown". */
+  const rTop = SH + GAP;
+  const totH = showRain ? TOTH : SH + AX;
+  const axY = totH - 3;
+  let g = "";
+  /* gridlines: solid hairlines, one shade off the surface (never dashed) */
+  for(const p of [0,25,50,75,100]){
+    g += `<line x1="${PADL}" x2="${W-PADR}" y1="${yOf(p)}" y2="${yOf(p)}"
+      stroke="var(--grid)" stroke-width="1"/>`;
+    g += `<text x="${PADL-5}" y="${yOf(p)+3.2}" text-anchor="end"
+      font-size="8.5" fill="var(--muted)"
+      style="font-variant-numeric:tabular-nums">${p}</text>`;
+  }
+  /* month ticks */
+  let ax = "";
+  for(const [d,nm] of MONTHS){
+    ax += `<line x1="${xOf(d)}" x2="${xOf(d)}" y1="${SH-6}" y2="${SH-2}"
+      stroke="var(--baseline)" stroke-width="1"/>`;
+    ax += `<text x="${xOf(d)}" y="${axY}" text-anchor="middle"
+      font-size="9" fill="var(--muted)">${nm}</text>`;
+  }
+  /* latest-report rule: prior years run to 31 Oct, 2026 stops here. Saying so
+     stops the shorter line reading as a collapse. */
+  const lr = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
+      y2="${SH-6}" stroke="var(--baseline)" stroke-width="1"/>
+    <text x="${xOf(latestDay)-3}" y="10" text-anchor="end" font-size="8"
+      fill="var(--muted)">latest report</text>`;
+
+  /* prior years: thin, ordered blue ramp, drawn first so 2026 sits on top */
+  let pri = "";
+  for(const y of YRS){
+    const p = linePath(series[y], y);
+    if(p) pri += `<path d="${p}" fill="none" stroke="${COL[y]}"
+      stroke-width="1.4" stroke-linejoin="round" opacity="0.85"/>`;
+  }
+  /* crossover marker: dashed because it marks a threshold event, not a grid */
+  let mk = "";
+  const md = cross.case === "crossed" ? cross.marker_day : null;
+  if(md){
+    /* Dashed because it marks a threshold event — the one place dashing is
+       meaningful rather than noise. Kept recessive: the marker locates the
+       event, the orange line is still the figure. */
+    mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${SH-6}"
+      stroke="var(--muted)" stroke-width="1" stroke-dasharray="2.5 3.5"/>
+      <circle cx="${xOf(md)}" cy="${yOf(series[CUR][md])}" r="3.4"
+        fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
+      <text x="${xOf(md)+4}" y="${SH-9}" font-size="8"
+        fill="var(--muted)">${dosLabel(md, CUR)}</text>`;
+  }
+  const cp = linePath(series[CUR], CUR);
+  const cur = `<path d="${cp}" fill="none" stroke="var(--now)"
+    stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  /* direct label on the one series that matters */
+  const ld = series[CUR][latestDay];
+  const lab = `<circle cx="${xOf(latestDay)}" cy="${yOf(ld)}" r="3.6"
+      fill="var(--now)" stroke="var(--surface-1)" stroke-width="2"/>
+    <text x="${xOf(latestDay)-6}" y="${yOf(ld)-6}" text-anchor="end"
+      font-size="10" font-weight="700" fill="var(--now)">2026</text>`;
+
+  /* ---- rainfall: a SEPARATE panel with its own y-scale, sharing the x-axis.
+     Never a second y-axis on the storage plot. ---- */
+  let rr = "";
+  if(showRain){
+  const rmax = Math.max(6, ...Object.values(rain[CUR] || {}),
+    ...YRS.flatMap(y => Object.values(rain[y] || {})));
+  const ry = v => rTop + RH - (v / rmax) * (RH - 4);
+  rr = `<line x1="${PADL}" x2="${W-PADR}" y1="${rTop+RH}" y2="${rTop+RH}"
+      stroke="var(--baseline)" stroke-width="1"/>
+    <text x="${PADL-5}" y="${rTop+8}" text-anchor="end" font-size="8"
+      fill="var(--muted)" style="font-variant-numeric:tabular-nums">${rmax.toFixed(0)}</text>
+    <text x="${PADL-5}" y="${rTop+RH+2}" text-anchor="end" font-size="8"
+      fill="var(--muted)">0</text>`;
+  /* prior-year mean rainfall, as a reference line */
+  const pm = {};
+  for(let d=1; d<=SEASON_DAYS; d++){
+    const v = YRS.map(y => (rain[y]||{})[d]).filter(x => x!=null);
+    if(v.length === YRS.length) pm[d] = v.reduce((a,b)=>a+b,0)/v.length;
+  }
+  const pmPath = Object.keys(pm).map(Number).sort((a,b)=>a-b)
+    .map((k,i) => (i?"L":"M") + xOf(k).toFixed(1) + " " + ry(pm[k]).toFixed(1))
+    .join(" ");
+  if(pmPath) rr += `<path d="${pmPath}" fill="none" stroke="var(--muted)"
+    stroke-width="1.2" opacity="0.9"/>`;
+  /* 2026 daily rain: thin bars, 2px surface gap, 1px rounded ends */
+  const bw = Math.max(1.1, (W-PADL-PADR)/SEASON_DAYS - 0.7);
+  for(const [k,v] of Object.entries(rain[CUR] || {})){
+    if(v <= 0) continue;
+    const h = Math.max(0.8, rTop + RH - ry(v));
+    rr += `<rect x="${(xOf(+k)-bw/2).toFixed(1)}" y="${ry(v).toFixed(1)}"
+      width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="0.7"
+      fill="var(--now)" opacity="0.6"/>`;
+  }
+  rr += `<text x="${W-PADR}" y="${rTop-1}" text-anchor="end" font-size="7.5"
+    fill="var(--muted)">rain mm/day, regional mean</text>`;
+  }
+
+  const hitH = showRain ? rTop + RH : SH - 6;
+  return `<svg viewBox="0 0 ${W} ${totH}" role="img" tabindex="0"
+      aria-label="Percent filling by day of season, 2026 against 2022 to 2025${
+        showRain ? ", with daily rainfall below" : ""}" data-id="${idPrefix}">
+    ${g}${ax}${lr}${pri}${cur}${mk}${lab}${rr}
+    <line class="xh" x1="0" x2="0" y1="4" y2="${hitH}" stroke="var(--text-secondary)"
+      stroke-width="1" opacity="0" pointer-events="none"/>
+    <rect class="hit" x="${PADL}" y="0" width="${W-PADL-PADR}" height="${hitH}"
+      fill="transparent" style="cursor:crosshair"/>
+  </svg>`;
+}
+
+/* ---------------- crossover wording ----------------
+   Three cases rendered distinctly, plus where the series stands now — the
+   marker is the FIRST qualifying run, which may sit in a season that later
+   recovered and fell below again. */
+function crossText(c, label){
+  const N = c.min_run;
+  const rule = `<span class="none">(${N}+ consecutive days rule)</span>`;
+  const D = d => dosLabel(d, CUR);
+  if(c.case === "not_evaluable")
+    return `<span class="none">Not enough prior-year coverage to evaluate.</span>`;
+  if(c.case === "never_below")
+    return `<b>Not below all four prior years this season.</b> ${label} is below
+      the prior four-year mean, but has not been under every one of them for
+      ${N} consecutive days. ${rule}`;
+  if(c.case === "below_from_start")
+    return `<b>Below every prior year from the start of the season</b> — there was
+      no crossing, so none is marked. ${rule}`;
+
+  /* Lead with where things stand, then the history. The marker is the FIRST
+     qualifying run by definition, and opening with it made a reader work out
+     the current state from a clause at the end. */
+  const r = c.current_run;
+  const earlier = c.marker_day && (!r || c.marker_day !== r.start_day);
+  const also = earlier
+    ? ` Also fell below briefly on <b>${D(c.marker_day)}</b>${
+        c.recovered_day ? `, recovering <b>${D(c.recovered_day)}</b>` : ""}.`
+    : "";
+
+  if(c.currently_below && r && r.qualifies)
+    return `<b>Below every prior year since ${D(r.start_day)}</b> — ${r.length}
+      days.${also} ${rule}`;
+
+  if(c.currently_below && r)
+    return `<span class="none">Below every prior year for the last ${r.length}
+      day${r.length > 1 ? "s" : ""}, short of the ${N}-day rule, so no crossing
+      is claimed.</span> Fell below on <b>${D(c.marker_day)}</b>${
+      c.recovered_day ? `, recovering <b>${D(c.recovered_day)}</b>` : ""}.`;
+
+  return `<b>Not below all four prior years on the latest report.</b> Fell below
+    on <b>${D(c.marker_day)}</b>${c.recovered_day
+      ? `, back above one of them on <b>${D(c.recovered_day)}</b>` : ""}. ${rule}`;
+}
+
+/* ---------------- table view (every chart has a table twin) ---------------- */
+function tableView(series, latestDay, id){
+  const days = [...MONTHS.map(m=>m[0]), latestDay]
+    .filter((d,i,a) => d<=latestDay && a.indexOf(d)===i);
+  let h = `<table><thead><tr><th>Day of season</th>` +
+    days.map(d=>`<th>${dosLabel(d,CUR)}</th>`).join("") + `</tr></thead><tbody>`;
+  for(const y of [CUR, ...YRS]){
+    h += `<tr><td>${y}${y===CUR?" (current)":""}</td>` +
+      days.map(d => `<td>${series[y][d]!=null ? f1(series[y][d])+"%" : "—"}</td>`)
+        .join("") + `</tr>`;
+  }
+  return h + `</tbody></table>`;
+}
+
+/* ================= second view: 206 points ==================
+   Requested as a map. It is not one, and the reason is in `placement` below:
+   the WRD report publishes district and taluka for every dam and never a
+   coordinate, and OSM name-matching resolved 9 of 206. Rather than place dams
+   at taluka or district centroids — which would put up to 22% of them in the
+   wrong place, Devbhoomi Dwarka worst of all, and that is the group carrying
+   this season's story — the same encodings are drawn against the two axes we
+   actually have. `renderMap` below is the real thing and switches on by itself
+   the moment coordinates exist. */
+
+/* Diverging: negative (below prior years) reads warm, positive cool, neutral
+   straddling zero. Bins are explicit so the legend is exact. */
+const DEV_BINS = [
+  {max:-60, c:"var(--d-neg3)", lb:"≤ −60"},
+  {max:-30, c:"var(--d-neg2)", lb:"−60 to −30"},
+  {max:-5,  c:"var(--d-neg1)", lb:"−30 to −5"},
+  {max:5,   c:"var(--d-zero)", lb:"−5 to +5"},
+  {max:25,  c:"var(--d-pos1)", lb:"+5 to +25"},
+  {max:1e9, c:"var(--d-pos2)", lb:"≥ +25"},
+];
+const devColor = v => (DEV_BINS.find(b => v < b.max) || DEV_BINS[5]).c;
+/* Capacity in bins, not a continuous area scale: design capacity spans
+   1.3 to 7,414 MCM, so a true area encoding would make everything except Ukai
+   a dot. Binned size with an exact legend does not pretend to be readable to
+   the MCM. */
+const CAP_BINS = [
+  {max:5,    r:2.6, lb:"< 5"},
+  {max:25,   r:4.0, lb:"5–25"},
+  {max:100,  r:5.8, lb:"25–100"},
+  {max:1000, r:8.2, lb:"100–1000"},
+  {max:1e9,  r:11.5, lb:"≥ 1000"},
+];
+const capR = v => (CAP_BINS.find(b => v < b.max) || CAP_BINS[4]).r;
+
+let FILTER = "ALL";
+
+function scatterSVG(list){
+  const W2 = 940, H2 = 430, L = 52, R = 18, T = 16, B = 42;
+  const xs = [-100, 50];
+  const xp = v => L + (v - xs[0]) / (xs[1] - xs[0]) * (W2 - L - R);
+  const lg = v => Math.log10(Math.max(1, v));
+  const ys = [lg(1), lg(8000)];
+  const yp = v => H2 - B - (lg(v) - ys[0]) / (ys[1] - ys[0]) * (H2 - T - B);
+
+  let g = "";
+  for(const v of [-100,-75,-50,-25,0,25,50]){
+    g += `<line x1="${xp(v)}" x2="${xp(v)}" y1="${T}" y2="${H2-B}"
+      stroke="${v===0?"var(--baseline)":"var(--grid)"}" stroke-width="1"/>`;
+    g += `<text x="${xp(v)}" y="${H2-B+14}" text-anchor="middle" font-size="9.5"
+      fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
+  }
+  for(const v of [1,10,100,1000,8000]){
+    g += `<line x1="${L}" x2="${W2-R}" y1="${yp(v)}" y2="${yp(v)}"
+      stroke="var(--grid)" stroke-width="1"/>`;
+    g += `<text x="${L-6}" y="${yp(v)+3.2}" text-anchor="end" font-size="9.5"
+      fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>=1000?(v/1000)+"k":v}</text>`;
+  }
+  g += `<text x="${xp(0)}" y="${H2-B+27}" text-anchor="middle" font-size="10"
+      fill="var(--text-secondary)">deviation from the prior same-date mean, percentage points</text>`;
+  g += `<text x="${L}" y="${T-4}" text-anchor="start" font-size="9"
+      fill="var(--text-secondary)">design capacity, MCM (log)</text>`;
+  /* Two anchored labels rather than one string with arrows in the middle —
+     the combined version read as a single ambiguous arrow. */
+  g += `<text x="${xp(-100)+5}" y="${H2-B-7}" font-size="9.5"
+      fill="var(--muted)">← further below prior years</text>`;
+  g += `<text x="${xp(50)-5}" y="${H2-B-7}" text-anchor="end" font-size="9.5"
+      fill="var(--muted)">above prior years →</text>`;
+
+  /* Largest first so small dots land on top and stay clickable; a 1.5px
+     surface ring separates overlaps without drawing a border. */
+  const pts = [...list].sort((a,b) => b.design_gross_mcm - a.design_gross_mcm)
+    .map(s => `<circle cx="${xp(Math.max(xs[0],Math.min(xs[1],s.dev_pp))).toFixed(1)}"
+      cy="${yp(s.design_gross_mcm).toFixed(1)}" r="${capR(s.design_gross_mcm)}"
+      fill="${devColor(s.dev_pp)}" stroke="var(--surface-1)" stroke-width="1.5"
+      class="pt" data-id="${s.scheme_id}" style="cursor:pointer"><title>${
+      esc(s.scheme_name)} — ${esc(s.district)}, ${esc(regName(s.region))} — ${
+      f1(s.pct_filling)}% now, ${f1(s.dev_pp)} pp vs prior mean, ${
+      f1(s.design_gross_mcm)} MCM design</title></circle>`)
+    .join("");
+
+  return `<svg viewBox="0 0 ${W2} ${H2}" role="img"
+    aria-label="Each of 206 schemes as one point: deviation on the x axis,
+    design capacity on a log y axis, sized by capacity, coloured by deviation">
+    ${g}${pts}</svg>`;
+}
+
+function scatterLegend(){
+  return `
+    <div class="grp" style="flex-direction:column;align-items:flex-start">
+      <span class="t">Deviation, percentage points</span>
+      <div class="ramp">${DEV_BINS.map(b =>
+        `<i style="background:${b.c}" title="${b.lb}"></i>`).join("")}</div>
+      <div class="rampx" style="width:${26*DEV_BINS.length}px">
+        <span>−60</span><span>0</span><span>+25</span></div>
+    </div>
+    <div class="grp" style="flex-direction:column;align-items:flex-start">
+      <span class="t">Design capacity, MCM</span>
+      <div class="szleg">${CAP_BINS.map(b =>
+        `<div><svg width="${b.r*2+4}" height="${b.r*2+4}"><circle
+           cx="${b.r+2}" cy="${b.r+2}" r="${b.r}" fill="var(--muted)"
+           stroke="var(--surface-1)" stroke-width="1.5"/></svg>${b.lb}</div>`
+        ).join("")}</div>
+    </div>
+    <div class="grp" style="color:var(--muted);max-width:260px;line-height:1.5">
+      Click a point for that scheme's detail, including days of water at
+      today's release rate.
+    </div>`;
+}
+
+/* The real map. Unreachable until coordinates exist; kept here so supplying
+   them is the only remaining step. Admin geometry is drawn as STROKES ONLY —
+   no filled areas — so nothing implies a value for a district. */
+function mapSVG(list, coords, geo){
+  const pts = list.filter(s => coords[s.scheme_id]);
+  if(!pts.length) return "";
+  const all = pts.map(s => coords[s.scheme_id]);
+  const lats = all.map(p => p[0]), lons = all.map(p => p[1]);
+  const pad = 0.35;
+  const b = [Math.min(...lons)-pad, Math.min(...lats)-pad,
+             Math.max(...lons)+pad, Math.max(...lats)+pad];
+  const W2 = 940, H2 = 640;
+  const sx = (W2 - 20) / (b[2] - b[0]), sy = (H2 - 20) / (b[3] - b[1]);
+  const k = Math.min(sx, sy);
+  const px = lon => 10 + (lon - b[0]) * k;
+  const py = lat => H2 - 10 - (lat - b[1]) * k;
+  const ring = r => r.map((c,i) => (i?"L":"M") + px(c[0]).toFixed(1) + " "
+    + py(c[1]).toFixed(1)).join(" ") + "Z";
+  const draw = (fc, stroke, w) => !fc ? "" : fc.features.map(f => {
+    const gm = f.geometry, ps = gm.type === "Polygon" ? [gm.coordinates]
+      : gm.type === "MultiPolygon" ? gm.coordinates : [];
+    return ps.map(poly => `<path d="${poly.map(ring).join(" ")}" fill="none"
+      stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round"/>`).join("");
+  }).join("");
+  const dots = [...pts].sort((a,b2) => b2.design_gross_mcm - a.design_gross_mcm)
+    .map(s => { const c = coords[s.scheme_id];
+      return `<circle cx="${px(c[1]).toFixed(1)}" cy="${py(c[0]).toFixed(1)}"
+        r="${capR(s.design_gross_mcm)}" fill="${devColor(s.dev_pp)}"
+        stroke="var(--surface-1)" stroke-width="1.5" class="pt"
+        data-id="${s.scheme_id}" style="cursor:pointer"><title>${
+        esc(s.scheme_name)} — ${esc(s.district)} — ${f1(s.pct_filling)}% now, ${
+        f1(s.dev_pp)} pp</title></circle>`; }).join("");
+  return `<svg viewBox="0 0 ${W2} ${H2}" role="img"
+    aria-label="Dams as points, sized by design capacity and coloured by
+    deviation, over district outlines">
+    ${draw(geo.districts, "var(--admin)", 0.8)}
+    ${draw(geo.state, "var(--baseline)", 1.4)}${dots}</svg>`;
+}
+
+/* ---------------- render ---------------- */
+let DATA = null;
+let GEO = {state:null, districts:null};
+/* Region codes are the source's own shorthand. They are fine as a join key and
+   wrong as a label — "Sau" is not a word. Built from the data so the names
+   never drift from the facets. */
+let REG = {};
+const regName = c => REG[c] || c;
+
+function render(d){
+  DATA = d;
+  const m = d.meta;
+  REG = Object.fromEntries(d.regions.map(r => [r.code, r.name]));
+
+  document.getElementById("prov").innerHTML =
+    `Report date <b>${m.report_date}</b> &nbsp;·&nbsp; source: ${esc(m.source)}
+     &nbsp;·&nbsp; built ${esc(m.built_utc)}<br>
+     ${m.dates_loaded} daily reports loaded, ${esc(m.season_window)} for
+     ${m.seasons_prior.join(", ")} and ${m.season_current}
+     &nbsp;·&nbsp; <code>SHA-256 ${esc(m.report_sha256||"—")}</code>`;
+
+  /* headline */
+  const s = d.state;
+  const weakest = Object.entries(s.prior_at_now).sort((a,b)=>a[1]-b[1])[0];
+  document.getElementById("heroN").textContent = f2(s.pct_now) + "%";
+  document.getElementById("heroU").innerHTML =
+    `of design capacity, statewide<br><span style="color:var(--muted)">
+     ${f1(s.mcm_now)} of ${f1(s.design_mcm)} MCM on ${m.report_date}</span>`;
+  document.getElementById("heroS").innerHTML =
+    `Against a four-year mean of <b>${f2(s.mean_prior_at_now)}%</b> on the same
+     calendar date. The weakest prior year on this date was <b>${weakest[0]}</b>
+     at <b>${f2(weakest[1])}%</b> — 2026 is ${f2(weakest[1]-s.pct_now)} points
+     below even that.`;
+  document.getElementById("stMeta").textContent =
+    `day ${s.day_of_season} of the season · % of design capacity`;
+  const stSeries = s.series;
+  document.getElementById("statePlot").innerHTML =
+    chartSVG(stSeries, null, s.crossover, s.day_of_season, "state", false);
+  document.getElementById("stCross").innerHTML =
+    crossText(s.crossover, "Gujarat") +
+    `<button class="tblbtn" data-tv="state">Show as table</button>
+     <div class="tv" id="tv-state">${tableView(stSeries, s.day_of_season,"state")}</div>`;
+
+  /* legend */
+  document.getElementById("legend").innerHTML =
+    `<span class="it"><span class="sw thick" style="border-color:var(--now)"></span>
+       <b style="color:var(--text-primary)">2026</b> — current season</span>
+     <span class="sep">|</span>
+     ` + YRS.map(y =>
+      `<span class="it"><span class="sw thin" style="border-color:${COL[y]}"></span>${y}</span>`
+     ).join("") +
+    `<span class="sep">|</span>
+     <span class="it"><span class="sw dash" style="border-color:var(--text-secondary)"></span>
+       crossed below all prior years</span>
+     <span class="it"><span class="sw bar" style="background:var(--now);opacity:.6"></span>
+       2026 rain, mm/day</span>
+     <span class="it"><span class="sw thin" style="border-color:var(--muted)"></span>
+       prior-year mean rain</span>
+     <span class="sep">|</span>
+     <span class="it" style="color:var(--muted)">facets ordered worst deviation first</span>`;
+
+  /* facets */
+  document.getElementById("grid").innerHTML = d.regions.map(r => {
+    const dev = r.pct_now - r.mean_prior_at_now;
+    const capn = r.n_capacity_substituted
+      ? `<div class="capnote">Denominator: ${r.n_capacity_substituted} scheme-season${r.n_capacity_substituted>1?"s":""}
+         in this region published two capacities mid-season; the 2026 capacity is
+         used for those, which is the value every other season agrees on.</div>` : "";
+    return `<div class="facet">
+      <div class="fh"><span class="nm">${esc(r.name)}</span>
+        <span class="meta">${r.n_schemes} schemes · ${f1(r.design_mcm)} MCM design</span></div>
+      <div class="fnums">
+        <span>now <b>${f2(r.pct_now)}%</b></span>
+        <span>prior mean <b>${f2(r.mean_prior_at_now)}%</b></span>
+        <span class="dv">${dev>0?"+":""}${f1(dev)} pp</span>
+        <span style="color:var(--muted)">${f1(r.mcm_now)} MCM</span>
+      </div>
+      <div class="plot" data-region="${r.code}">
+        ${chartSVG(r.series, r.rain, r.crossover, DATA.state.day_of_season, r.code, true)}
+      </div>
+      <div class="cross">${crossText(r.crossover, esc(r.name))}
+        <button class="tblbtn" data-tv="${r.code}">Show as table</button>
+        <div class="tv" id="tv-${r.code}">${tableView(r.series, DATA.state.day_of_season, r.code)}</div>
+      </div>${capn}
+    </div>`;
+  }).join("");
+
+  /* deviation table 1 — no days-of-water here; that lives on scheme detail */
+  document.getElementById("tblPP").innerHTML =
+    `<table class="dt"><thead><tr>
+      <th>Scheme</th><th>District</th><th>Region</th>
+      <th style="text-align:right">% now</th>
+      <th style="text-align:right">Prior mean</th>
+      <th style="text-align:right">Deviation</th>
+      <th style="text-align:right">Yrs</th>
+      <th style="text-align:right">Live MCM</th>
+      <th style="text-align:right">Design MCM</th></tr></thead><tbody>` +
+    d.deviation_pp.map(r => `<tr>
+      <td class="nm">${esc(r.scheme_name)}${r.restated
+        ? '<span class="flag" title="design capacity restated between years">restated</span>':''}</td>
+      <td>${esc(r.district)}</td><td>${esc(regName(r.region))}</td>
+      <td class="n">${f1(r.pct_filling)}</td>
+      <td class="n">${f1(r.mean_prior)}</td>
+      <td class="dev">${f1(r.dev_pp)}</td>
+      <td class="n">${r.n_prior}</td>
+      <td class="n">${f1(r.present_live_mcm)}</td>
+      <td class="n">${f1(r.design_gross_mcm)}</td></tr>`).join("") +
+    `</tbody></table>`;
+
+  document.getElementById("tblVol").innerHTML =
+    `<table class="dt"><thead><tr>
+      <th>Scheme</th><th>District</th><th>Region</th>
+      <th style="text-align:right">Design MCM</th>
+      <th style="text-align:right">% now</th>
+      <th style="text-align:right">Prior mean</th>
+      <th style="text-align:right">Deviation</th>
+      <th style="text-align:right">Shortfall MCM</th></tr></thead><tbody>` +
+    d.deviation_volume.map(r => `<tr>
+      <td class="nm">${esc(r.scheme_name)}</td>
+      <td>${esc(r.district)}</td><td>${esc(regName(r.region))}</td>
+      <td class="n">${f1(r.design_gross_mcm)}</td>
+      <td class="n">${f1(r.pct_filling)}</td>
+      <td class="n">${f1(r.mean_prior)}</td>
+      <td class="n">${f1(r.dev_pp)}</td>
+      <td class="dev">${f1(r.shortfall_mcm)}</td></tr>`).join("") +
+    `</tbody></table>`;
+
+  /* methodology */
+  const mid = m.midseason_exceptions.map(x =>
+    `<li>${esc(x.scheme_name)} (${x.season}): ${esc(x.values)} MCM, changed
+     ${esc(x.change_dates)}</li>`).join("");
+  document.getElementById("meth").innerHTML = `
+    <ul>
+      <li><b>Aligned day of season, never absolute date.</b> Day 1 is 1 June.
+        Prior seasons run to 31 October; 2026 runs to day
+        ${m.season_current === 2026 ? DATA.state.day_of_season : "—"}
+        (${m.report_date}), marked on every facet.</li>
+      <li><b>Crossover marker.</b> A day counts only if the current season and
+        <em>all four</em> prior years have a value for it; a missing prior year
+        is skipped, never treated as passing. The marker is the first day of the
+        first run of <b>${m.crossover_min_run} or more consecutive</b> such days
+        on which 2026 sits below every prior year. That run length is the one
+        tunable parameter here and it is stated rather than hidden: a shorter
+        rule would turn a single day's dip into a headline.</li>
+      <li><b>Percent filling</b> is present gross storage over design gross
+        capacity. Regional and state figures use one capacity per scheme-season,
+        so a capacity revised between seasons does not put a step in a line that
+        no rainfall caused.</li>
+      <li><b>Excluded from the like-for-like baseline</b> — capacity tolerance
+        ${f1(m.capacity_tolerance_pct)}%. A prior year enters a scheme's baseline
+        only if that year's published capacity matches today's. Nothing is
+        rebased and no published figure is altered; the surviving year count is
+        shown per row as <em>Yrs</em>.</li>
+      <li><b>Three scheme-seasons published two capacities mid-season</b> and are
+        excluded from that scheme's baseline entirely:<ul>${mid}</ul></li>
+      <li><b>Coverage.</b> ${m.dates_loaded} daily reports,
+        ${esc(m.span[0]).slice(0,10)} to ${esc(m.span[1]).slice(0,10)}.
+        ${m.absent_upstream.length} dates are absent upstream, not failed
+        downloads: ${m.absent_upstream.map(esc).join(", ")} — the server returns
+        a valid, empty response for those.</li>
+      <li><b>Days of water</b> appears only on a scheme's detail, is always
+        labelled <em>at today's release rate</em>, and reads
+        <em>no current release</em> for the ${m.n_no_release} of ${m.n_schemes}
+        schemes at zero canal release. It is a reading of one day's release rate,
+        not a drawdown estimate.</li>
+      <li><b>Command areas are not in this data.</b> The report locates a dam by
+        taluka only, so nothing here can say whether a particular reservoir
+        serves a particular village or field.</li>
+    </ul>`;
+
+  document.getElementById("foot").innerHTML =
+    `Source: ${esc(m.source)}. Daily report for <b>${m.report_date}</b>,
+     ${m.report_bytes ? m.report_bytes.toLocaleString()+" bytes, " : ""}
+     SHA-256 <code>${esc(m.report_sha256||"—")}</code>.<br>
+     Retrieved from <code>${esc(m.source_url)}</code>. Page built
+     ${esc(m.built_utc)} from ${m.dates_loaded} daily reports.
+     <div class="nofc">Every figure on this page is a comparison of observed
+     readings. Nothing here is a forecast, and no figure states what storage
+     will be on any future date.</div>`;
+
+  renderSchemesView();
+  wire();
+}
+
+function renderSchemesView(){
+  const cm = DATA.coords_meta || {available:false, n_placed:0};
+  const mapped = cm.available && Object.keys(DATA.coords || {}).length;
+
+  document.getElementById("placement").innerHTML = mapped
+    ? `<b>${cm.n_placed} of ${cm.n_schemes} schemes placed</b> from
+       ${esc(cm.source || "supplied coordinates")}. District and state
+       boundaries are drawn as outlines only — no area is filled, so no colour
+       on this map stands for a district.
+       ${cm.n_placed < cm.n_schemes
+         ? `The ${cm.n_schemes - cm.n_placed} without coordinates are not
+            plotted and are not implied to be anywhere; they remain in the
+            tables.` : ""}`
+    : `<b>This is not a map, and it cannot be one from this source.</b>
+       The WRD daily report gives each dam a <b>district and taluka but never a
+       coordinate</b> — there is no latitude or longitude column in any of the
+       six tables in the file. OpenStreetMap name-matching resolved
+       <b>9 of 206</b> schemes (4.4%): WRD writes “Aji - II” and “Demi - I”
+       where OSM has “Aji Dam 3” and “Demi Dam 1”, and guessing those equal
+       would place dams confidently in the wrong place.
+       <br><br>
+       Placing them at taluka or district centroids was the other option and is
+       worse than no map: several dams share a taluka, so the points would
+       coincide, and the district geometry here is 2011 vintage — Devbhoomi
+       Dwarka, Morbi, Botad, Arvalli, Gir Somnath, Mahisagar and Chhotaudepur
+       did not exist yet, so <b>46 of 206 schemes would sit at a parent
+       district's centroid</b>. That group includes Devbhoomi Dwarka, which
+       carries most of this season's deficit.
+       <br><br>
+       So the requested encodings — <b>one point per dam, sized by design
+       capacity, coloured by deviation, nothing filled</b> — are drawn below
+       against the two axes the data does support.
+       <b>Supply <code>${esc(cm.expected_file || "data/reference/dam_coordinates.csv")}</code></b>
+       with columns <code>${(cm.expected_columns||[]).join(", ")}</code> and this
+       view renders the real map instead, with district outlines and no fills.`;
+
+  const regions = ["ALL", ...DATA.regions.map(r => r.code)];
+  const nm = c => c === "ALL" ? "All regions"
+    : (DATA.regions.find(r => r.code === c) || {}).name || c;
+  document.getElementById("filters").innerHTML =
+    `<span class="lb">Region</span>` + regions.map(c =>
+      `<button data-f="${c}" aria-pressed="${c === FILTER}">${esc(nm(c))}</button>`
+    ).join("");
+
+  const list = DATA.schemes.filter(s =>
+    s.dev_pp != null && (FILTER === "ALL" || s.region === FILTER));
+  document.getElementById("scatPlot").innerHTML = mapped
+    ? mapSVG(list, DATA.coords, GEO) : scatterSVG(list);
+  document.getElementById("scatLeg").innerHTML = scatterLegend();
+
+  document.querySelectorAll("#filters button").forEach(b => b.onclick = () => {
+    FILTER = b.dataset.f;
+    renderSchemesView();
+    wirePoints();
+  });
+  wirePoints();
+}
+
+function wirePoints(){
+  document.querySelectorAll("#scatPlot .pt").forEach(c => c.onclick = () => {
+    const s = DATA.schemes.find(x => x.scheme_id === +c.dataset.id);
+    if(window.__showDetail) window.__showDetail(s);
+  });
+}
+
+/* ---------------- interaction ---------------- */
+function wire(){
+  document.querySelectorAll(".tblbtn").forEach(b => b.onclick = () => {
+    const el = document.getElementById("tv-" + b.dataset.tv);
+    el.classList.toggle("on");
+    b.textContent = el.classList.contains("on") ? "Hide table" : "Show as table";
+  });
+
+  const tip = document.getElementById("tip");
+  /* The tooltip is position:fixed, so it would otherwise hang in place when the
+     page scrolls or the window resizes, pointing at nothing. */
+  const dropTip = () => {
+    tip.classList.remove("on");
+    document.querySelectorAll(".plot svg .xh")
+      .forEach(l => l.setAttribute("opacity", "0"));
+  };
+  addEventListener("scroll", dropTip, {passive:true});
+  addEventListener("resize", dropTip);
+  document.querySelectorAll(".plot svg").forEach(svg => {
+    const id = svg.dataset.id;
+    const isState = id === "state";
+    const src = isState ? DATA.state
+      : DATA.regions.find(r => r.code === id);
+    const series = src.series;
+    const rain = isState ? null : src.rain;
+    const mcm = src.mcm || null;
+    const latest = DATA.state.day_of_season;
+    const xh = svg.querySelector(".xh");
+
+    const show = (day, cx, cy) => {
+      const d = Math.max(1, Math.min(latest, day));
+      xh.setAttribute("x1", xOf(d)); xh.setAttribute("x2", xOf(d));
+      xh.setAttribute("opacity", "0.5");
+      let rows = "";
+      const cv = series[CUR][d];
+      rows += `<tr class="cur"><td class="k">2026</td><td class="v">${
+        cv!=null ? f2(cv)+"%" : "—"}</td></tr>`;
+      for(const y of [...YRS].reverse())
+        rows += `<tr><td class="k">${y}</td><td class="v">${
+          series[y][d]!=null ? f2(series[y][d])+"%" : "—"}</td></tr>`;
+      let extra = "";
+      if(mcm && mcm[CUR][d]!=null)
+        extra += `<div class="rn">${f1(mcm[CUR][d])} MCM stored</div>`;
+      if(rain && rain[CUR][d]!=null)
+        extra += `<div class="rn">${f1(rain[CUR][d])} mm rain in 24 h
+          (regional mean)</div>`;
+      tip.innerHTML = `<div class="d">${dosLabelFull(d, CUR)} · day ${d}</div>
+        <table>${rows}</table>${extra}`;
+      tip.classList.add("on");
+      const r = tip.getBoundingClientRect();
+      let L = cx + 14, T = cy - r.height/2;
+      if(L + r.width > innerWidth - 8) L = cx - r.width - 14;
+      tip.style.left = Math.max(8, L) + "px";
+      tip.style.top = Math.min(Math.max(8, T), innerHeight - r.height - 8) + "px";
+    };
+    const hide = () => { tip.classList.remove("on"); xh.setAttribute("opacity","0"); };
+    const dayAt = ev => {
+      const b = svg.getBoundingClientRect();
+      const px = (ev.clientX - b.left) / b.width * W;
+      return Math.round((px - PADL) / (W - PADL - PADR) * (SEASON_DAYS - 1) + 1);
+    };
+    const hit = svg.querySelector(".hit");
+    hit.addEventListener("mousemove", ev => show(dayAt(ev), ev.clientX, ev.clientY));
+    hit.addEventListener("mouseleave", hide);
+    /* keyboard reaches the same values as hover */
+    let kd = latest;
+    svg.addEventListener("keydown", ev => {
+      if(ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+      ev.preventDefault();
+      kd = Math.max(1, Math.min(latest, kd + (ev.key === "ArrowRight" ? 1 : -1)));
+      const b = svg.getBoundingClientRect();
+      show(kd, b.left + xOf(kd)/W*b.width, b.top + b.height/2);
+    });
+    svg.addEventListener("blur", hide);
+  });
+
+  /* scheme search — a destination, not a layout driver */
+  const q = document.getElementById("q"), res = document.getElementById("res");
+  const det = document.getElementById("detail");
+  const draw = list => {
+    if(!list.length){ res.classList.remove("on"); res.innerHTML=""; return; }
+    res.innerHTML = list.slice(0,40).map(s =>
+      `<button data-id="${s.scheme_id}">${esc(s.scheme_name)}
+        <span class="rg">· ${esc(s.district)} · ${esc(regName(s.region))} ·
+        ${f1(s.pct_filling)}%</span></button>`).join("");
+    res.classList.add("on");
+    res.querySelectorAll("button").forEach(b => b.onclick = () => {
+      detail(DATA.schemes.find(x => x.scheme_id === +b.dataset.id));
+      res.classList.remove("on"); q.value = "";
+    });
+  };
+  q.oninput = () => {
+    const v = q.value.trim().toLowerCase();
+    if(v.length < 2){ res.classList.remove("on"); return; }
+    draw(DATA.schemes.filter(s =>
+      s.scheme_name.toLowerCase().includes(v) ||
+      (s.district||"").toLowerCase().includes(v)));
+  };
+  document.addEventListener("click", e => {
+    if(!e.target.closest(".srch")) res.classList.remove("on");
+  });
+
+  function detail(s){
+    if(!s) return;
+    const rel = s.outflow_canal_cusecs > 0;
+    /* Precision has to match the magnitude. Ukai at 800 cusecs against 5,043
+       MCM live computes to 2,576.8 days; quoting a seven-year figure to a
+       tenth of a day asserts precision the arithmetic does not carry, and
+       reads as nonsense. Tenths under 100 days, whole days to a year, and
+       beyond that the years in brackets so the scale is legible instead of
+       buried in four digits. */
+    const dayFmt = v =>
+      v < 100 ? `${f1(v)} days`
+      : v <= 365 ? `${Math.round(v).toLocaleString()} days`
+      : `${Math.round(v).toLocaleString()} days
+         <span style="font-size:11px;color:var(--muted)">(about
+         ${(v / 365).toFixed(1)} years)</span>`;
+    const dw = (s.days_water_at_release == null || !rel)
+      ? `<div class="v none">no current release</div>`
+      : `<div class="v sm" style="font-size:16px">${dayFmt(s.days_water_at_release)}</div>`;
+    det.innerHTML = `
+      <button class="close" id="dclose">close</button>
+      <h3>${esc(s.scheme_name)}</h3>
+      <div class="sub">${esc(s.district)} · ${esc(regName(s.region))} ·
+        reading for ${DATA.meta.report_date}</div>
+      <div class="dgrid">
+        <div class="c"><div class="k">Filling now</div>
+          <div class="v">${f2(s.pct_filling)}%</div></div>
+        <div class="c"><div class="k">Live storage</div>
+          <div class="v">${f1(s.present_live_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
+        <div class="c"><div class="k">Design gross</div>
+          <div class="v">${f1(s.design_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
+        <div class="c"><div class="k">Canal release</div>
+          <div class="v">${rel ? f1(s.outflow_canal_cusecs)+
+            ' <span style="font-size:11px;color:var(--muted)">cusecs</span>' :
+            '<span style="font-size:12.5px;color:var(--muted)">none</span>'}</div></div>
+        <div class="c"><div class="k">Days of water <span style="text-transform:none;letter-spacing:0">at today's release rate</span></div>
+          ${dw}</div>
+        <div class="c"><div class="k">Same date, prior years</div>
+          <div class="v sm">${s.mean_prior!=null
+            ? f2(s.mean_prior)+"% mean of "+s.n_prior+" yr"+(s.n_prior>1?"s":"")
+            : '<span style="color:var(--muted)">no comparable prior year</span>'}</div></div>
+        <div class="c"><div class="k">Warning level</div>
+          <div class="v sm">${esc(s.warning || "—")}</div></div>
+      </div>
+      <div class="dnote">Days of water is this reservoir's live storage divided by
+        <b>today's</b> canal release rate, and nothing more. Release rates are set
+        daily and often stop altogether, so this figure says which reservoirs to
+        look at — it is not a drawdown estimate and does not state when any
+        reservoir empties. Command areas are not published in this report, so it
+        cannot tell you whether this reservoir serves a particular field.</div>`;
+    det.classList.add("on");
+    document.getElementById("dclose").onclick = () => det.classList.remove("on");
+    det.scrollIntoView({behavior:"smooth", block:"nearest"});
+  }
+  window.__showDetail = detail;
+
+  /* view switching — Season stays the default; Schemes is a destination */
+  const vs = {Season: document.getElementById("viewSeason"),
+              Schemes: document.getElementById("viewSchemes")};
+  const bs = {Season: document.getElementById("vSeason"),
+              Schemes: document.getElementById("vSchemes")};
+  const go = k => {
+    for(const [name, el] of Object.entries(vs)){
+      el.hidden = name !== k;
+      bs[name].setAttribute("aria-current", String(name === k));
+    }
+    document.getElementById("detail").classList.remove("on");
+    scrollTo({top:0, behavior:"smooth"});
+  };
+  bs.Season.onclick = () => go("Season");
+  bs.Schemes.onclick = () => go("Schemes");
+}
+
+fetch("data/reservoir_view.json")
+  .then(r => r.json())
+  .then(d => {
+    /* Boundary geometry is only fetched when there are coordinates to draw it
+       under — no point pulling 340 KB of outlines for a view that cannot use
+       them yet. */
+    const need = d.coords_meta && d.coords_meta.available;
+    if(!need) return d;
+    return Promise.all([
+      fetch("data/gj_state.geojson").then(r => r.json()).catch(() => null),
+      fetch("data/gj_districts.geojson").then(r => r.json()).catch(() => null),
+    ]).then(([st, di]) => { GEO = {state: st, districts: di}; return d; });
+  })
+  .then(render)
+  .catch(e => { document.getElementById("prov").textContent =
+    "Could not load data/reservoir_view.json — " + e; });
+</script>
+</body>
+</html>

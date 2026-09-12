@@ -1,0 +1,2 @@
+label,schemes,season_before,season_after,probe_scheme,bracket_lo,bracket_hi,window_days,changeover_date,schemes_flipping_together,schemes_flipping_elsewhere,probes
+stragglers 2023->2024 (2 schemes),2,2023,2024,43,2024-05-31,2024-06-02,2,,0,,9

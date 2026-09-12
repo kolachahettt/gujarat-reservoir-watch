@@ -1,0 +1,104 @@
+"""
+Gujarat Reservoir Watch — run the post-download pipeline in the agreed order.
+
+  1. parse every cached PDF (parallel, no network)
+  2. rebuild DuckDB
+  3. THE CAPACITY GATE — establishes one capacity per scheme-season, and halts
+     everything on an UNACKNOWLEDGED within-season capacity change
+  4. both deviation tables (ranking on option 0 + C; volume list unchanged)
+  5. scheme drift re-check
+  6. pin the changeover dates (2023->2024 shared boundary, Dantiwada separately)
+
+On the ordering: the gate has to run *after* parse and DB rebuild, because it
+can only inspect data that has been loaded. What it gates is the ANALYSIS —
+nothing in steps 4-6 runs if the within-season stability assumption that option
+C depends on turns out to be false. Parquet and the DuckDB file are derived,
+idempotent and cheap to rebuild; a deviation ranking published on an invalid
+baseline is the thing that does damage.
+
+If the gate trips, this script stops with exit code 2 and writes
+data/processed/GATE_TRIPPED.txt. Nothing downstream is produced.
+
+Usage:
+  python scripts/run_pipeline.py
+  python scripts/run_pipeline.py --skip-pin
+"""
+
+import argparse
+import subprocess
+import sys
+from datetime import date
+from pathlib import Path
+
+HALT = Path("data/processed/GATE_TRIPPED.txt")
+
+
+def run(cmd, label, allow_fail=False):
+    print("\n" + "#" * 88)
+    print(f"# {label}")
+    print(f"# $ {' '.join(cmd)}")
+    print("#" * 88, flush=True)
+    r = subprocess.run([sys.executable, "-u"] + cmd)
+    if r.returncode != 0 and not allow_fail:
+        print(f"\n{label} exited {r.returncode}; stopping.")
+        sys.exit(r.returncode)
+    return r.returncode
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--date", default=str(date.today()))
+    ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--top", type=int, default=20)
+    ap.add_argument("--skip-pin", action="store_true")
+    args = ap.parse_args()
+
+    HALT.unlink(missing_ok=True)
+
+    run(["scripts/parse_cached.py", "--workers", str(args.workers)],
+        "1/6  PARSE cached PDFs (parallel, no network)")
+    run(["scripts/build_db.py"], "2/6  REBUILD DuckDB")
+
+    code = run(["scripts/check_capacity.py"],
+               "3/6  CAPACITY GATE (exit 2 = halt)", allow_fail=True)
+    if code == 2:
+        msg = (
+            "CAPACITY GATE TRIPPED\n\n"
+            "A scheme changes design capacity WITHIN a single Jun-Oct season and "
+            "is NOT in\ncheck_capacity.ACKNOWLEDGED_MID_SEASON — no disposition "
+            "has been agreed for it.\n\n"
+            "Excluding a scheme-season from the like-for-like baseline is not a "
+            "decision the\npipeline should take on its own, so no deviation "
+            "ranking has been produced.\n\n"
+            "See the gate output above, data/processed/"
+            "capacity_midseason_exceptions.csv,\nand brief §14 for how the three "
+            "known cases were dispositioned.\n"
+            "Review before re-running. Nothing downstream was built.\n")
+        HALT.parent.mkdir(parents=True, exist_ok=True)
+        HALT.write_text(msg)
+        print("\n" + "!" * 88)
+        print(msg)
+        print("!" * 88)
+        sys.exit(2)
+    if code != 0:
+        sys.exit(code)
+
+    run(["scripts/report_deviation.py", "--date", args.date,
+         "--top", str(args.top)],
+        "4/6 + 5/6  DEVIATION TABLES (both lists) AND DRIFT RE-CHECK")
+
+    if args.skip_pin:
+        print("\n6/6  skipped (--skip-pin)")
+    else:
+        run(["scripts/pin_changeover.py", "--boundary", "2023-2024",
+             "--scheme", "4"],
+            "6/6  PIN CHANGEOVER (2023->2024 shared boundary + Dantiwada)",
+            allow_fail=True)
+
+    print("\n" + "=" * 88)
+    print("pipeline complete")
+    print("=" * 88)
+
+
+if __name__ == "__main__":
+    main()

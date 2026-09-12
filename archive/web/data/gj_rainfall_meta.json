@@ -1,0 +1,38 @@
+{
+  "imd": {
+    "source_name": "IMD Hydromet Division \u2014 District Rainfall Distribution",
+    "source_url": "https://mausam.imd.gov.in/Rainfall/DISTRICT_RAINFALL_DISTRIBUTION_COUNTRY_INDIA_cd.pdf",
+    "pdf_day": "11-09-2026",
+    "period_from": "01-06-2026",
+    "period_to": "11-09-2026",
+    "fetched_utc": "2026-09-11T12:15:05.064611+00:00",
+    "sha256": "E8CD6B2F667813A96EAF465CF3AA53FB7A9E6AA7E244B7931E63B04FA6972E43"
+  },
+  "crosswalk": "data\\reference\\gujarat_district_crosswalk_2011_2026.csv",
+  "deficit_categories": [
+    "D",
+    "LD",
+    "NR"
+  ],
+  "districts_total": 26,
+  "districts_deficient": 12,
+  "deficient_districts": [
+    "Banas Kantha",
+    "Dohad",
+    "Gandhinagar",
+    "Jamnagar",
+    "Junagadh",
+    "Kachchh",
+    "Mahesana",
+    "Patan",
+    "Porbandar",
+    "Rajkot",
+    "Sabar Kantha",
+    "Vadodara"
+  ],
+  "within_pc11_mixed": [
+    "Jamnagar",
+    "Rajkot"
+  ],
+  "watchlist_villages": 925
+}

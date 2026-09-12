@@ -1,0 +1,316 @@
+mkt_name,district,pc11_district,tier,shrid2,matched_name,score
+APMC ANAND,Anand,Anand,town_exact_in_district,11-24-482-03864-802562,anand,1.0
+APMC HALVAD,Morbi,Rajkot,town_exact_statewide,11-24-475-03788-802490,halvad,1.0
+APMCKHEDBRAHMA,Sabarkantha,Sabar Kantha,unmatched,,,
+Abadasa APMC,Kachchh,,unmatched,,,
+Ahmedabad APMC,Ahmedabad,Ahmadabad,town_fuzzy_in_district,11-24-474-03781-802484,ahmadabad,0.8888888888888888
+Ahmedabad(Chimanbhai Patal Market Vasana) APMC,Ahmedabad,Ahmadabad,town_fuzzy_in_district,11-24-474-03781-802484,ahmadabad,0.8888888888888888
+Ahmedabad(Flower Market Jamalpur) APMC,Banaskanth,,unmatched,,,
+"Ahmedabad(Fruit Market, Naroda) APMC",Ahmedabad,Ahmadabad,town_fuzzy_in_district,11-24-474-03781-802484,ahmadabad,0.8888888888888888
+Ahmedabad(Manekchowk) APMC,Ahmedabad,Ahmadabad,town_fuzzy_in_district,11-24-474-03781-802484,ahmadabad,0.8888888888888888
+Ahmedabad(Rajnagar sub yard) APMC,Ahmedabad,Ahmadabad,town_fuzzy_in_district,11-24-474-03781-802484,ahmadabad,0.8888888888888888
+Ahwa-Dang APMC,The Dangs,,unmatched,,,
+Amirgadh APMC,Banaskanth,,unmatched,,,
+Amod APMC,Bharuch,Bharuch,town_exact_in_district,11-24-488-03914-802605,amod,1.0
+"Anand(Veg,Yard,Anand) APMC",Anand,Anand,town_exact_in_district,11-24-482-03864-802562,anand,1.0
+Anjar APMC,Kachchh,,town_exact_statewide,11-24-468-03725-802444,anjar,1.0
+"Anjar(Veg,Sub Yard) APMC",Kachchh,,town_exact_statewide,11-24-468-03725-802444,anjar,1.0
+Anklav APMC,Anand,Anand,town_exact_in_district,11-24-482-03868-802570,anklav,1.0
+Ankleshwar APMC,Bharuch,Bharuch,unmatched,,,
+Babra APMC,Amreli,Amreli,town_exact_in_district,11-24-480-03840-802539,babra,1.0
+Bachau APMC,Kachchh,,unmatched,,,
+Bagasara APMC,Amreli,Amreli,town_exact_in_district,11-24-480-03844-802543,bagasara,1.0
+Balasinor APMC,Kheda,Kheda,town_exact_in_district,11-24-483-03871-802572,balasinor,1.0
+Banaskantha APMC,Banaskanth,,unmatched,,,
+Bardoli APMC,Surat,Surat,town_exact_in_district,11-24-492-03940-802634,bardoli,1.0
+Bardoli(Kadod) APMC,Surat,Surat,town_exact_in_district,11-24-492-03940-802634,bardoli,1.0
+Bardoli(Madhi) APMC,Surat,Surat,town_exact_in_district,11-24-492-03940-802634,bardoli,1.0
+Baruch Vagara APMC,Bharuch,Bharuch,unmatched,,,
+Barvala APMC,Ahmedabad,Ahmadabad,unmatched,,,
+Bavla APMC,Ahmedabad,Ahmadabad,town_exact_in_district,11-24-474-03784-802487,bavla,1.0
+Bayad APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03772-802473,bayad,1.0
+Bayad(Demai) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03772-802473,bayad,1.0
+Bayad(Sadamba) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03772-802473,bayad,1.0
+Becharaji APMC,Mehsana,Mahesana,unmatched,,,
+Bhabhar APMC,Banaskanth,,town_exact_statewide,11-24-469-03742-802452,bhabhar,1.0
+Bhanvad APMC,Devbhumi Dwarka,,town_exact_statewide,11-24-477-03820-802520,bhanvad,1.0
+Bharuch APMC,Bharuch,Bharuch,town_exact_in_district,11-24-488-03916-802606,bharuch,1.0
+Bhatiya APMC,Jamnagar,Jamnagar,village_exact_in_district,11-24-477-03819-513960,bhatiya,1.0
+Bhavnagar APMC,Bhavnagar,Bhavnagar,town_exact_in_district,11-24-481-03854-802551,bhavnagar,1.0
+Bhesan APMC,Junagarh,,unmatched,,,
+Bhiloda APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03764-510317,bhiloda,1.0
+Bhuj APMC,Kachchh,,town_exact_statewide,11-24-468-03726-802445,bhuj,1.0
+Bilimora APMC,Navsari,Navsari,town_exact_in_district,11-24-490-03924-802617,bilimora,1.0
+Bilimora(Gandevi) APMC,Navsari,Navsari,town_exact_in_district,11-24-490-03924-802617,bilimora,1.0
+Bodeliu APMC,Chhota Udaipur,,unmatched,,,
+Borsad APMC,Anand,Anand,town_exact_in_district,11-24-482-03867-802568,borsad,1.0
+Borsad(Asodar) APMC,Anand,Anand,town_exact_in_district,11-24-482-03867-802568,borsad,1.0
+Borsad(Veg Yard Barsad) APMC,Anand,Anand,town_exact_in_district,11-24-482-03867-802568,borsad,1.0
+Botad APMC,Botad,Bhavnagar,town_exact_in_district,11-24-481-03850-802548,botad,1.0
+Botad(Bhabarkot) APMC,Botad,Bhavnagar,town_exact_in_district,11-24-481-03850-802548,botad,1.0
+Botad(Haddad) APMC,Botad,Bhavnagar,town_exact_in_district,11-24-481-03850-802548,botad,1.0
+Chachack  APMC,Chhota Udaipur,,unmatched,,,
+Chansama APMC,Patan,Patan,unmatched,,,
+Chhota Udaipur APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03901-802599,chhota udaipur,1.0
+Chikhali APMC,Navsari,Navsari,town_fuzzy_in_district,11-24-490-03925-523131,chikhli,0.9333333333333333
+Chikli(Khorgam) APMC,Valsad,Valsad,unmatched,,,
+"Chotial(Veg,Yard) APMC",Surendranagar,Surendranagar,unmatched,,,
+Chotila APMC,Surendranagar,Surendranagar,town_exact_in_district,11-24-475-03794-802496,chotila,1.0
+"Chotila(Veg,Yard Chotila) APMC",Surendranagar,Surendranagar,town_exact_in_district,11-24-475-03794-802496,chotila,1.0
+Dabhoi(Kayavarohan) APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03905-802600,dabhoi,1.0
+Daboi APMC,Vadodara(Baroda),Vadodara,town_fuzzy_in_district,11-24-486-03905-802600,dabhoi,0.9090909090909091
+Dahod APMC,Dahod,Dohad,unmatched,,,
+Dahod(Garbada) APMC,Dahod,Dohad,unmatched,,,
+Dahod(Himalaya) APMC,Dahod,Dohad,unmatched,,,
+Dahod(Jesavada) APMC,Dahod,Dohad,unmatched,,,
+Dahod(Veg. Market) APMC,Dahod,Dohad,unmatched,,,
+Damnagar APMC,Amreli,Amreli,town_exact_in_district,11-24-480-03841-802541,damnagar,1.0
+Danta APMC,Banaskanth,,unmatched,,,
+Dasada Patadi APMC,Surendranagar,Surendranagar,unmatched,,,
+Davgadbaria(Piplod) APMC,Dahod,Dohad,town_fuzzy_in_district,11-24-485-03895-802591,devgadbaria,0.9090909090909091
+Dediyapada APMC,Narmada,Narmada,town_fuzzy_in_district,11-24-487-03911-521769,dediapada,0.9473684210526315
+Deesa APMC,Banaskanth,,town_exact_statewide,11-24-469-03740-802451,deesa,1.0
+Deesa(Bhildi) APMC,Banaskanth,,town_exact_statewide,11-24-469-03740-802451,deesa,1.0
+Deesa(Deesa Veg Yard) APMC,Banaskanth,,town_exact_statewide,11-24-469-03740-802451,deesa,1.0
+Dehgam APMC,Gandhinagar,Gandhinagar,town_exact_in_district,11-24-473-03776-802480,dehgam,1.0
+Dehgam(Rekhiyal) APMC,Gandhinagar,Gandhinagar,town_exact_in_district,11-24-473-03776-802480,dehgam,1.0
+Derol APMC,Panchmahals,,unmatched,,,
+Derol(Adadara) APMC,Panchmahals,,unmatched,,,
+Derol(Vejalpur) APMC,Panchmahals,,unmatched,,,
+Devgadhbaria APMC,Dahod,Dohad,town_fuzzy_in_district,11-24-485-03895-802591,devgadbaria,0.9565217391304348
+Dhandhuka APMC,Ahmedabad,Ahmadabad,town_exact_in_district,11-24-474-03787-802489,dhandhuka,1.0
+Dhandkuka(Dholera) APMC,Ahmedabad,Ahmadabad,town_fuzzy_in_district,11-24-474-03787-802489,dhandhuka,0.8888888888888888
+Dhanera APMC,Banaskanth,,town_exact_statewide,11-24-469-03734-802449,dhanera,1.0
+Dhanera(Samarwada) APMC,Banaskanth,,town_exact_statewide,11-24-469-03734-802449,dhanera,1.0
+"Dhanera(Veg,Yard Dhanera) APMC",Banaskanth,,town_exact_statewide,11-24-469-03734-802449,dhanera,1.0
+Dhansura APMC,Sabarkantha,Sabar Kantha,village_exact_in_district,11-24-472-03770-510848,dhansura,1.0
+Dharampur(veg) APMC,Valsad,Valsad,town_exact_in_district,11-24-491-03928-802620,dharampur,1.0
+Dhari APMC,Amreli,Amreli,village_exact_in_district,11-24-480-03845-515697,dhari,1.0
+Dhari(Chalala) APMC,Amreli,Amreli,village_exact_in_district,11-24-480-03845-515697,dhari,1.0
+Dholka APMC,Ahmedabad,Ahmadabad,town_exact_in_district,11-24-474-03783-802486,dholka,1.0
+Dholka(Koth) APMC,Ahmedabad,Ahmadabad,town_exact_in_district,11-24-474-03783-802486,dholka,1.0
+Dholka(Market Yard Veg) APMC,Ahmedabad,Ahmadabad,town_exact_in_district,11-24-474-03783-802486,dholka,1.0
+Dhoraji APMC,Rajkot,Rajkot,town_exact_in_district,11-24-476-03810-802507,dhoraji,1.0
+Dhragradhra APMC,Surendranagar,Surendranagar,town_fuzzy_in_district,11-24-475-03789-802491,dhrangadhra,0.9090909090909091
+Dhrol APMC,Jamnagar,Jamnagar,town_exact_in_district,11-24-477-03816-802517,dhrol,1.0
+Diyodar APMC,Banaskanth,,unmatched,,,
+Gadada APMC,Botad,Bhavnagar,town_fuzzy_in_district,11-24-481-03852-802550,gadhada,0.9230769230769231
+Gariyadar APMC,Bhavnagar,Bhavnagar,town_fuzzy_in_district,11-24-481-03857-802553,gariadhar,0.8888888888888888
+Garudeshwal APMC,Narmada,Narmada,unmatched,,,
+Godhra APMC,Panchmahals,,town_exact_statewide,11-24-484-03885-802585,godhra,1.0
+Godhra Kakanpur APMC,Panchmahals,,unmatched,,,
+Godhra(Timbaroad) APMC,Panchmahals,,town_exact_statewide,11-24-484-03885-802585,godhra,1.0
+Gogamba APMC,Panchmahals,,unmatched,,,
+Gogamba(Similiya) APMC,Panchmahals,,unmatched,,,
+Gondal APMC,Rajkot,Rajkot,town_exact_in_district,11-24-476-03807-802504,gondal,1.0
+Gondal(Veg.market Gondal) APMC,Rajkot,Rajkot,town_exact_in_district,11-24-476-03807-802504,gondal,1.0
+Hadad     APMC,Chhota Udaipur,,unmatched,,,
+Halol APMC,Panchmahals,,town_exact_statewide,11-24-484-03888-802588,halol,1.0
+Harij APMC,Patan,Patan,town_exact_in_district,11-24-470-03748-802457,harij,1.0
+Hasot APMC,Bharuch,Bharuch,unmatched,,,
+Hasot(Elav) APMC,Bharuch,Bharuch,unmatched,,,
+Himatnagar APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03766-802469,himatnagar,1.0
+Himatnagar(Gambhoi) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03766-802469,himatnagar,1.0
+Himatnagar(Veg.Market Himatnagar) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03766-802469,himatnagar,1.0
+Idar APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03763-802468,idar,1.0
+Idar(Jadar) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03763-802468,idar,1.0
+Jam Jodhpur APMC,Jamnagar,Jamnagar,town_fuzzy_in_district,11-24-477-03821-802521,jamjodhpur,0.9523809523809523
+Jam Khambalia APMC,Devbhumi Dwarka,,unmatched,,,
+Jambusar APMC,Bharuch,Bharuch,town_exact_in_district,11-24-488-03913-802604,jambusar,1.0
+Jambusar(Kaavi) APMC,Bharuch,Bharuch,town_exact_in_district,11-24-488-03913-802604,jambusar,1.0
+Jamkandorna APMC,Rajkot,Rajkot,village_fuzzy_in_district,11-24-476-03808-513312,jam kandorna,0.9565217391304348
+Jamnagar APMC,Jamnagar,Jamnagar,town_exact_in_district,11-24-477-03814-802516,jamnagar,1.0
+Jasdan APMC,Rajkot,Rajkot,town_exact_in_district,11-24-476-03806-802503,jasdan,1.0
+Jasdan(Vichhiya) APMC,Rajkot,Rajkot,town_exact_in_district,11-24-476-03806-802503,jasdan,1.0
+Jetpur(Dist.Rajkot) APMC,Rajkot,Rajkot,town_exact_statewide,11-24-486-03900-520236,jetpur,1.0
+Jetpur-Pavi APMC,Chhota Udaipur,,unmatched,,,
+Jhagadiya APMC,Bharuch,Bharuch,village_fuzzy_in_district,11-24-488-03917-522230,jhagadia,0.9411764705882353
+Jhalod APMC,Dahod,Dohad,town_exact_in_district,11-24-485-03891-802589,jhalod,1.0
+Jodiya APMC,Jamnagar,Jamnagar,village_exact_in_district,11-24-477-03815-513704,jodiya,1.0
+Junagadh APMC,Junagarh,,town_exact_statewide,11-24-479-03827-802529,junagadh,1.0
+"Junagadh(Veg,Yard, Junagadh) APMC",Junagarh,,town_exact_statewide,11-24-479-03827-802529,junagadh,1.0
+K.Mandvi APMC,Kachchh,,unmatched,,,
+KUKARMUNDA APMC,Surat,Surat,unmatched,,,
+Kadi APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03759-802465,kadi,1.0
+Kadi(Kadi cotton Yard) APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03759-802465,kadi,1.0
+Kalawad APMC,Jamnagar,Jamnagar,unmatched,,,
+Kalediya APMC,Chhota Udaipur,,unmatched,,,
+Kalol APMC,Gandhinagar,Gandhinagar,town_exact_in_district,11-24-473-03773-802475,kalol,1.0
+"Kalol(Veg,Market,Kalol) APMC",Gandhinagar,Gandhinagar,town_exact_in_district,11-24-473-03773-802475,kalol,1.0
+Kapadanj(Moti Jaher) APMC,Kheda,Kheda,town_fuzzy_in_district,11-24-483-03869-802571,kapadvanj,0.9411764705882353
+Kapadvanj APMC,Kheda,Kheda,town_exact_in_district,11-24-483-03869-802571,kapadvanj,1.0
+Karjan APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03907-802602,karjan,1.0
+Kathlal APMC,Kheda,Kheda,town_exact_in_district,11-24-483-03872-802573,kathlal,1.0
+Kawant APMC,Vadodara(Baroda),Vadodara,unmatched,,,
+Keshod APMC,Junagarh,,town_exact_statewide,11-24-479-03831-802531,keshod,1.0
+Khambha APMC,Amreli,Amreli,village_exact_in_district,11-24-480-03847-515845,khambha,1.0
+Khambhat APMC,Anand,Anand,town_exact_in_district,11-24-482-03866-802567,khambhat,1.0
+Khambhat(Grain Market) APMC,Anand,Anand,town_exact_in_district,11-24-482-03866-802567,khambhat,1.0
+Khambhat(Veg Yard Khambhat) APMC,Anand,Anand,town_exact_in_district,11-24-482-03866-802567,khambhat,1.0
+Khanpur APMC,Panchmahals,,unmatched,,,
+Kheda APMC,Kheda,Kheda,town_exact_in_district,11-24-483-03874-802575,kheda,1.0
+Kheda(Nayaka) APMC,Kheda,Kheda,town_exact_in_district,11-24-483-03874-802575,kheda,1.0
+Khedbrahma(Lambadia) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03760-802466,khedbrahma,1.0
+Khedbrahma(Posina) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03760-802466,khedbrahma,1.0
+Kodinar APMC,Gir Somnath,Junagadh,town_exact_in_district,11-24-479-03837-802537,kodinar,1.0
+Kodinar(Dollasa) APMC,Junagarh,,town_exact_statewide,11-24-479-03837-802537,kodinar,1.0
+Kosamba APMC,Surat,Surat,town_exact_in_district,11-24-492-03933-523880,kosamba,1.0
+Kosamba(Vankal) APMC,Surat,Surat,town_exact_in_district,11-24-492-03933-523880,kosamba,1.0
+Kosamba(Zangvav) APMC,Surat,Surat,town_exact_in_district,11-24-492-03933-523880,kosamba,1.0
+Kutiyana APMC,Porbandar,Porbandar,town_exact_in_district,11-24-478-03824-802525,kutiyana,1.0
+Lakhani APMC,Banaskanth,,unmatched,,,
+Lakhtar APMC,Surendranagar,Surendranagar,village_exact_in_district,11-24-475-03791-512189,lakhtar,1.0
+Lalpur APMC,Jamnagar,Jamnagar,village_exact_in_district,11-24-477-03818-513913,lalpur,1.0
+Lathi APMC,Amreli,Amreli,town_exact_in_district,11-24-480-03841-802540,lathi,1.0
+Limdi APMC,Surendranagar,Surendranagar,town_fuzzy_in_district,11-24-475-03797-802497,limbdi,0.9090909090909091
+Limkheda APMC,Dahod,Dohad,town_exact_in_district,11-24-485-03892-519389,limkheda,1.0
+Lunavada APMC,Panchmahals,,unmatched,,,
+Lunavada(Kobamba) APMC,Panchmahals,,unmatched,,,
+Mahuva APMC,Surat,Surat,village_exact_in_district,11-24-492-03941-524353,mahuva,1.0
+Mahuva(Anaval) APMC,Surat,Surat,village_exact_in_district,11-24-492-03941-524353,mahuva,1.0
+Mahuva(Station Road) APMC,Bhavnagar,Bhavnagar,town_exact_in_district,11-24-481-03860-802557,mahuva,1.0
+Malia Hatina APMC,Junagarh,,unmatched,,,
+Malpur APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03771-510996,malpur,1.0
+Manavdar APMC,Junagarh,,unmatched,,,
+Mandal APMC,Ahmedabad,Ahmadabad,village_exact_in_district,11-24-474-03777-511429,mandal,1.0
+Mandvi APMC,Surat,Surat,town_exact_in_district,11-24-492-03935-802628,mandvi,1.0
+Mandvi(Amba Paradi) APMC,Surat,Surat,town_exact_in_district,11-24-492-03935-802628,mandvi,1.0
+Mangrol APMC,Junagarh,,town_exact_statewide,11-24-479-03832-802532,mangrol,1.0
+Mansa APMC,Gandhinagar,Gandhinagar,town_exact_in_district,11-24-473-03774-802477,mansa,1.0
+Mansa(Manas Veg Yard) APMC,Gandhinagar,Gandhinagar,town_exact_in_district,11-24-473-03774-802477,mansa,1.0
+Matar APMC,Kheda,Kheda,village_exact_in_district,11-24-483-03875-517537,matar,1.0
+Matar(Limbasi) APMC,Kheda,Kheda,village_exact_in_district,11-24-483-03875-517537,matar,1.0
+Meghraj APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03765-510446,meghraj,1.0
+Meghraj(Rellavada) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03765-510446,meghraj,1.0
+Mehmadabad APMC,Kheda,Kheda,town_fuzzy_in_district,11-24-483-03873-802574,mehmedabad,0.9
+"Mehmadabad(Veg ,market) APMC",Kheda,Kheda,town_fuzzy_in_district,11-24-483-03873-802574,mehmedabad,0.9
+Mehsana APMC,Mehsana,Mahesana,unmatched,,,
+Mehsana(Jornang) APMC,Mehsana,Mahesana,unmatched,,,
+Mehsana(Mehsana Veg) APMC,Mehsana,Mahesana,unmatched,,,
+Modasa APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03769-802472,modasa,1.0
+Modasa(Tintoi) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03769-802472,modasa,1.0
+Modasar APMC,Chhota Udaipur,,unmatched,,,
+Morbi APMC,Morbi,Rajkot,unmatched,,,
+Morva Hafad APMC,Panchmahals,,unmatched,,,
+Muli APMC,Surendranagar,Surendranagar,village_exact_in_district,11-24-475-03793-512279,muli,1.0
+Mundra APMC,Kachchh,,town_exact_statewide,11-24-468-03730-507349,mundra,1.0
+Nadiad APMC,Kheda,Kheda,town_exact_in_district,11-24-483-03876-802576,nadiad,1.0
+Nadiyad(Chaklasi) APMC,Kheda,Kheda,town_fuzzy_in_district,11-24-483-03876-802576,nadiad,0.9230769230769231
+Nadiyad(Piplag) APMC,Kheda,Kheda,town_fuzzy_in_district,11-24-483-03876-802576,nadiad,0.9230769230769231
+Nakhatrana APMC,Kachchh,,unmatched,,,
+Nasvadi APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03903-520732,nasvadi,1.0
+Navsari APMC,Navsari,Navsari,town_exact_in_district,11-24-490-03922-802614,navsari,1.0
+Nizar APMC,Surat,Surat,village_exact_in_district,11-24-492-03940-524332,nizar,1.0
+Nizar(Rumkitalav) APMC,Surat,Surat,village_exact_in_district,11-24-492-03940-524332,nizar,1.0
+Padra APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03906-802601,padra,1.0
+Palanpur APMC,Banaskanth,,town_exact_statewide,11-24-469-03739-802450,palanpur,1.0
+"Palanpur(Veg,Yard Palanpur) APMC",Banaskanth,,town_exact_statewide,11-24-469-03739-802450,palanpur,1.0
+Palitana APMC,Bhavnagar,Bhavnagar,town_exact_in_district,11-24-481-03858-802554,palitana,1.0
+Panthawada APMC,Banaskanth,,unmatched,,,
+Panvad APMC,Chhota Udaipur,,unmatched,,,
+Pardi APMC,Valsad,Valsad,town_exact_in_district,11-24-491-03929-802621,pardi,1.0
+Pardi(Motavagachiya) APMC,Valsad,Valsad,town_exact_in_district,11-24-491-03929-802621,pardi,1.0
+Pardi(Rohinee) APMC,Valsad,Valsad,town_exact_in_district,11-24-491-03929-802621,pardi,1.0
+Pardi(Ugvada) APMC,Valsad,Valsad,town_exact_in_district,11-24-491-03929-802621,pardi,1.0
+Pardi(Vapi) APMC,Valsad,Valsad,town_exact_in_district,11-24-491-03929-802621,pardi,1.0
+Patan APMC,Patan,Patan,town_exact_in_district,11-24-470-03747-802456,patan,1.0
+"Patan(Veg,Yard Patan) APMC",Patan,Patan,town_exact_in_district,11-24-470-03747-802456,patan,1.0
+Petlad APMC,Anand,Anand,town_exact_in_district,11-24-482-03865-802566,petlad,1.0
+"Petlad(Veg Yard, Petlad) APMC",Anand,Anand,town_exact_in_district,11-24-482-03865-802566,petlad,1.0
+Porbandar APMC,Porbandar,Porbandar,town_exact_in_district,11-24-478-03822-802522,porbandar,1.0
+Prantij APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03767-802470,prantij,1.0
+Prantij(Salala) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03767-802470,prantij,1.0
+Radhanpur APMC,Patan,Patan,town_exact_in_district,11-24-470-03745-802454,radhanpur,1.0
+Radheja APMC,Gandhinagar,Gandhinagar,village_fuzzy_in_district,11-24-473-03775-511249,randheja,0.9333333333333333
+Rajkot APMC,Rajkot,Rajkot,town_exact_in_district,11-24-476-03803-802501,rajkot,1.0
+Rajkot(Veg.Sub Yard) APMC,Rajkot,Rajkot,town_exact_in_district,11-24-476-03803-802501,rajkot,1.0
+Rajpipla APMC,Narmada,Narmada,town_exact_in_district,11-24-487-03910-802603,rajpipla,1.0
+Rajula (Dungar) APMC,Amreli,Amreli,town_exact_in_district,11-24-480-03849-802547,rajula,1.0
+Rajula APMC,Amreli,Amreli,town_exact_in_district,11-24-480-03849-802547,rajula,1.0
+Rampura APMC,Ahmedabad,Ahmadabad,village_exact_in_district,11-24-474-03778-511488,rampura,1.0
+Randheja(Chiloda) APMC,Gandhinagar,Gandhinagar,village_exact_in_district,11-24-473-03775-511249,randheja,1.0
+Randheja(Veg.Market Gandhinagar) APMC,Gandhinagar,Gandhinagar,village_exact_in_district,11-24-473-03775-511249,randheja,1.0
+Ranpur APMC,Ahmedabad,Ahmadabad,town_exact_in_district,11-24-474-03785-511845,ranpur,1.0
+Rapar APMC,Kachchh,,town_exact_statewide,11-24-468-03723-802442,rapar,1.0
+S.Mandvi APMC,Surat,Surat,unmatched,,,
+Sami APMC,Patan,Patan,village_exact_in_district,11-24-470-03749-509008,sami,1.0
+Sanad APMC,Ahmedabad,Ahmadabad,town_fuzzy_in_district,11-24-474-03780-802482,sanand,0.9090909090909091
+Santrampur APMC,Panchmahals,,town_exact_statewide,11-24-484-03881-802582,santrampur,1.0
+Santrampur(Fathaepura) APMC,Panchmahals,,town_exact_statewide,11-24-484-03881-802582,santrampur,1.0
+Savarkundla APMC,Amreli,Amreli,town_exact_in_district,11-24-480-03846-802545,savarkundla,1.0
+Savli APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03897-802592,savli,1.0
+Savli(Desar) APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03897-802592,savli,1.0
+Savli(Samlaya) APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03897-802592,savli,1.0
+Sayala APMC,Surendranagar,Surendranagar,unmatched,,,
+Selemba APMC,Narmada,Narmada,unmatched,,,
+Selemba(Navgam Javli) APMC,Narmada,Narmada,unmatched,,,
+Shehra APMC,Panchmahals,,unmatched,,,
+Shinor APMC,Vadodara(Baroda),Vadodara,unmatched,,,
+Siddhpur APMC,Patan,Patan,town_fuzzy_in_district,11-24-470-03746-802455,sidhpur,0.9333333333333333
+Sojitra APMC,Anand,Anand,town_exact_in_district,11-24-482-03862-802558,sojitra,1.0
+Songadh APMC,Surat,Surat,town_exact_statewide,11-24-481-03856-516414,songadh,1.0
+Songadh(Badarpada) APMC,Surat,Surat,town_exact_statewide,11-24-481-03856-516414,songadh,1.0
+Songadh(Umrada) APMC,Surat,Surat,town_exact_statewide,11-24-481-03856-516414,songadh,1.0
+Surat APMC,Surat,Surat,town_exact_in_district,11-24-492-03937-802629,surat,1.0
+Talala APMC,Junagarh,,town_exact_statewide,11-24-479-03834-802534,talala,1.0
+Talalagir APMC,Gir Somnath,Junagadh,unmatched,,,
+Taleja APMC,Bhavnagar,Bhavnagar,unmatched,,,
+Talod APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03768-802471,talod,1.0
+Talod(Harsol) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03768-802471,talod,1.0
+Tarapur APMC,Anand,Anand,village_exact_in_district,11-24-482-03861-516834,tarapur,1.0
+Tejgarh APMC,Chhota Udaipur,,unmatched,,,
+Thalkala APMC,Chhota Udaipur,,unmatched,,,
+Thara APMC,Banaskanth,,town_exact_statewide,11-24-469-03743-802453,thara,1.0
+Thara(Shihori) APMC,Banaskanth,,town_exact_statewide,11-24-469-03743-802453,thara,1.0
+Tharad APMC,Banaskanth,,town_exact_statewide,11-24-469-03733-802448,tharad,1.0
+Tharad(Rah) APMC,Banaskanth,,town_exact_statewide,11-24-469-03733-802448,tharad,1.0
+Thasara APMC,Kheda,Kheda,town_fuzzy_in_district,11-24-483-03878-802580,thasra,0.9230769230769231
+Thasara(Dokar) APMC,Kheda,Kheda,town_fuzzy_in_district,11-24-483-03878-802580,thasra,0.9230769230769231
+The Agricultural Produce Market Committee-Amreli,Amreli,Amreli,unmatched,,,
+Tilakwada APMC,Narmada,Narmada,village_exact_in_district,11-24-487-03909-521328,tilakwada,1.0
+Timbi APMC,Amreli,Amreli,village_exact_in_district,11-24-480-03848-515901,timbi,1.0
+Uchhal APMC,Surat,Surat,unmatched,,,
+Uchhal(Karod) APMC,Surat,Surat,unmatched,,,
+Umreth APMC,Anand,Anand,town_exact_in_district,11-24-482-03863-802559,umreth,1.0
+Una APMC,Gir Somnath,Junagadh,town_exact_in_district,11-24-479-03838-802538,una,1.0
+Unava APMC,Mehsana,Mahesana,village_exact_in_district,11-24-471-03753-509273,unava,1.0
+Unjha APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03753-802460,unjha,1.0
+Upleta APMC,Rajkot,Rajkot,town_exact_in_district,11-24-476-03809-802506,upleta,1.0
+Vadali APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03762-802467,vadali,1.0
+Vadgam APMC,Banaskanth,,unmatched,,,
+Vadhvan APMC,Surendranagar,Surendranagar,unmatched,,,
+Vadnagar APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03755-802462,vadnagar,1.0
+Vadnagar(Kheralu) APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03755-802462,vadnagar,1.0
+Vadodara APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03898-802596,vadodara,1.0
+Vadodara(Navapura) APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03898-802596,vadodara,1.0
+Vadodara(Sayajipura) APMC,Vadodara(Baroda),Vadodara,town_exact_in_district,11-24-486-03898-802596,vadodara,1.0
+Vaghai APMC,Dang,,unmatched,,,
+Vagodiya APMC,Vadodara(Baroda),Vadodara,unmatched,,,
+Valia APMC,Bharuch,Bharuch,town_exact_in_district,11-24-488-03920-802612,valia,1.0
+Valia(Nethrang) APMC,Bharuch,Bharuch,town_exact_in_district,11-24-488-03920-802612,valia,1.0
+Valod APMC,Surat,Surat,unmatched,,,
+Valod(Buhari) APMC,Surat,Surat,unmatched,,,
+Valsad APMC,Valsad,Valsad,town_exact_in_district,11-24-491-03927-802618,valsad,1.0
+Valsad(Dungari) APMC,Valsad,Valsad,town_exact_in_district,11-24-491-03927-802618,valsad,1.0
+Vankaner APMC,Morbi,Rajkot,unmatched,,,
+Vankaner(Sub yard) APMC,Morbi,Rajkot,unmatched,,,
+Vansda APMC,Navsari,Navsari,unmatched,,,
+Vansda(Limzar) APMC,Navsari,Navsari,unmatched,,,
+Vanthli APMC,Junagarh,,unmatched,,,
+Varahi APMC,Patan,Patan,village_exact_in_district,11-24-470-03744-508660,varahi,1.0
+Vav APMC,Banaskanth,,unmatched,,,
+Veraval APMC,Gir Somnath,Junagadh,town_exact_in_district,11-24-479-03835-802535,veraval,1.0
+Vijapur APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03756-802463,vijapur,1.0
+Vijapur(Gojjariya) APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03756-802463,vijapur,1.0
+Vijapur(Kukarvada) APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03756-802463,vijapur,1.0
+Vijapur(Ladol) APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03756-802463,vijapur,1.0
+Vijapur(Vegetable) APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03756-802463,vijapur,1.0
+Vijaynagar(Kundlakap) APMC,Sabarkantha,Sabar Kantha,town_exact_in_district,11-24-472-03761-509953,vijaynagar,1.0
+Viramgam APMC,Ahmedabad,Ahmadabad,town_exact_in_district,11-24-474-03779-802481,viramgam,1.0
+Virpur APMC,Kheda,Kheda,town_exact_in_district,11-24-483-03870-517318,virpur,1.0
+Visavadar APMC,Junagarh,,town_exact_statewide,11-24-479-03829-802530,visavadar,1.0
+Visnagar APMC,Mehsana,Mahesana,town_exact_in_district,11-24-471-03754-802461,visnagar,1.0
+Vyara(Paati) APMC,Surat,Surat,town_exact_statewide,11-24-493-03945-802636,vyara,1.0
+Vyra APMC,Surat,Surat,unmatched,,,
+Zalod(Sanjeli) APMC,Dahod,Dohad,unmatched,,,
+Zalod(Zalod) APMC,Dahod,Dohad,unmatched,,,

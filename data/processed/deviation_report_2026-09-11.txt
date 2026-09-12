@@ -1,0 +1,180 @@
+﻿
+================================================================================================
+COVERAGE
+================================================================================================
+first_date  last_date  dates_loaded  storage_rows
+2022-06-01 2026-09-11            15          3090
+
+ledger status (attempted so far):
+          status  dates
+              ok      9
+ok_with_warnings      1
+
+dates inside the loaded span with NO storage rows: 1549
+missing_date ledger_status note
+  2022-06-11 not attempted None
+  2022-06-12 not attempted None
+  2022-06-13 not attempted None
+  2022-06-14 not attempted None
+  2022-06-15 not attempted None
+  2022-06-16 not attempted None
+  2022-06-17 not attempted None
+  2022-06-18 not attempted None
+  2022-06-19 not attempted None
+  2022-06-20 not attempted None
+  2022-06-21 not attempted None
+  2022-06-22 not attempted None
+  2022-06-23 not attempted None
+  2022-06-24 not attempted None
+  2022-06-25 not attempted None
+  2022-06-26 not attempted None
+  2022-06-27 not attempted None
+  2022-06-28 not attempted None
+  2022-06-29 not attempted None
+  2022-06-30 not attempted None
+  2022-07-01 not attempted None
+  2022-07-02 not attempted None
+  2022-07-03 not attempted None
+  2022-07-04 not attempted None
+  2022-07-05 not attempted None
+  2022-07-06 not attempted None
+  2022-07-07 not attempted None
+  2022-07-08 not attempted None
+  2022-07-09 not attempted None
+  2022-07-10 not attempted None
+  2022-07-11 not attempted None
+  2022-07-12 not attempted None
+  2022-07-13 not attempted None
+  2022-07-14 not attempted None
+  2022-07-15 not attempted None
+  2022-07-16 not attempted None
+  2022-07-17 not attempted None
+  2022-07-18 not attempted None
+  2022-07-19 not attempted None
+  2022-07-20 not attempted None
+  ... and 1509 more
+
+dates NOT at exactly 206 distinct schemes: 0
+
+source layouts seen (23-col has no Taluka column):
+ layout  dates first_date  last_date  dates_missing_taluka
+     23     11 2022-06-01 2022-09-11                  11.0
+     24      4 2023-09-11 2026-09-11                   0.0
+
+================================================================================================
+SCHEME LIST DRIFT
+================================================================================================
+schemes ever seen: 206
+  appear after the first loaded date : 0
+  absent from the last loaded date   : 0
+  more than one name                 : 0
+  more than one district             : 27
+  more than one design capacity      : 20
+
+  DISTRICT CHANGED:
+ scheme_id scheme_name_latest district_latest region_latest first_seen  last_seen  days_present  n_name_variants  n_district_variants  n_design_variants
+        13             Dharoi        Mahesana            NG 2022-06-01 2026-09-11            15                1                    2                  1
+        14              Panam       Mahisagar            CG 2022-06-01 2026-09-11            15                1                    2                  1
+        16              Hadaf           Dahod            CG 2022-06-01 2026-09-11            15                1                    2                  1
+        27             Watrak         Arvalli            NG 2022-06-01 2026-09-11            15                1                    2                  1
+        29              Mazam         Arvalli            NG 2022-06-01 2026-09-11            15                1                    2                  1
+        30           Hathmati         Arvalli            NG 2022-06-01 2026-09-11            15                1                    3                  3
+        31               Lank         Arvalli            NG 2022-06-01 2026-09-11            15                1                    2                  1
+        34             Meshwo         Arvalli            NG 2022-06-01 2026-09-11            15                1                    2                  1
+        35              Waidy         Arvalli            NG 2022-06-01 2026-09-11            15                1                    2                  1
+        40              Sukhi    Chhotaudepur            CG 2022-06-01 2026-09-11            15                1                    2                  1
+        41               Rami    Chhotaudepur            CG 2022-06-01 2026-09-11            15                1                    2                  1
+        94              Und-I        Jamnagar           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+        95               Sani Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+        97               Ghee Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       100            Vartu-I Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  2
+       104            Gadhaki Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       109           Vartu-II Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       115            Sonmati Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       117    Shedhabhadthari Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       118             Veradi Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       122           Sindhani Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       123            Kabarka        Devbhumi           Sau 2022-06-01 2026-09-11            15                1                    3                  1
+       140            Hiran-I        Junagadh           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       182         Sukhbhadar           Botad           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+       184         Dholidhaja   Surendranagar           Sau 2022-06-01 2026-09-11            15                1                    2                  1
+
+  DESIGN CAPACITY CHANGED:
+ scheme_id scheme_name_latest district_latest region_latest first_seen  last_seen  days_present  n_name_variants  n_district_variants  n_design_variants
+         4          Dantiwada     Banaskantha            NG 2022-06-01 2026-09-11            15                1                    1                  2
+         8          Chopadvav         Narmada            SG 2022-06-01 2026-09-11            15                1                    1                  2
+        11         Kakdi-Amba         Narmada            SG 2022-06-01 2026-09-11            15                1                    1                  2
+        18        Patadungari           Dahod            CG 2022-06-01 2026-09-11            15                1                    1                  2
+        23         WNKL.-BHEY           Dahod            CG 2022-06-01 2026-09-11            15                1                    1                  2
+        25           Edalwada           Dahod            CG 2022-06-01 2026-09-11            15                1                    1                  2
+        30           Hathmati         Arvalli            NG 2022-06-01 2026-09-11            15                1                    3                  3
+        37            Doswada            Tapi            SG 2022-06-01 2026-09-11            15                1                    1                  2
+        38             Ver-II           Surat            SG 2022-06-01 2026-09-11            15                1                    1                  2
+        39           Lakhigam           Surat            SG 2022-06-01 2026-09-11            15                1                    1                  2
+        43               Jhuj         Navsari            SG 2022-06-01 2026-09-11            15                1                    1                  3
+        44              Kelia         Navsari            SG 2022-06-01 2026-09-11            15                1                    1                  2
+        48          Rudramata         Kachchh         Kutch 2022-06-01 2026-09-11            15                1                    1                  2
+        52          Kankawati         Kachchh         Kutch 2022-06-01 2026-09-11            15                1                    1                  2
+        54              Kaila         Kachchh         Kutch 2022-06-01 2026-09-11            15                1                    1                  2
+        55               Suvi         Kachchh         Kutch 2022-06-01 2026-09-11            15                1                    1                  2
+        59          Fatehgadh         Kachchh         Kutch 2022-06-01 2026-09-11            15                1                    1                  2
+        60           Berachia         Kachchh         Kutch 2022-06-01 2026-09-11            15                1                    1                  2
+       100            Vartu-I Devbhumi Dwarka           Sau 2022-06-01 2026-09-11            15                1                    2                  2
+       142         Phodarness       Porbandar           Sau 2022-06-01 2026-09-11            15                1                    1                  2
+
+================================================================================================
+SAME-CALENDAR-DATE DEVIATION — 2026-09-11 vs the mean of prior years
+================================================================================================
+schemes with both today and >=1 prior anniversary: 206
+prior years available: [2022, 2023, 2024, 2025]
+schemes per prior-year count: {4: 206}
+
+THE 20 LARGEST NEGATIVE DEVIATIONS
+(percentage points below the same-date mean of prior years; days-of-water is at today's release rate)
+ scheme_id     scheme_name        district region  pct_now  mean_prior  dev_pp  yrs  live_mcm  design_mcm days_at_today_rate capacity
+       100         Vartu-I Devbhumi Dwarka    Sau      0.6        99.1   -98.5    4       0.0        11.8 no current release restated
+       115         Sonmati Devbhumi Dwarka    Sau      1.1        98.7   -97.6    4       0.0         7.4 no current release         
+       123         Kabarka        Devbhumi    Sau      1.9        99.1   -97.2    4       0.0         4.3 no current release         
+       118          Veradi Devbhumi Dwarka    Sau      1.6        98.5   -97.0    4       0.0         6.4 no current release         
+        47        Sanandro         Kachchh  Kutch      1.8        98.6   -96.8    4       0.0        10.3 no current release         
+        97            Ghee Devbhumi Dwarka    Sau      1.7        98.5   -96.8    4       0.1        11.0 no current release         
+       179   Kabir-Sarovar          Rajkot    Sau      3.1        99.4   -96.3    4       0.0         6.5 no current release         
+       116       Fulzar-II        Jamnagar    Sau      0.0        96.3   -96.3    4       0.0         3.1 no current release         
+       144          Sorthi       Porbandar    Sau      0.0        96.2   -96.2    4       0.0         8.5 no current release         
+       119        Wodisang        Jamnagar    Sau      0.0        96.1   -96.1    4       0.0         7.8 no current release         
+       195      Minsar (V) Devbhumi Dwarka    Sau      2.1        96.8   -94.7    4       0.0         5.8 no current release         
+       109        Vartu-II Devbhumi Dwarka    Sau      0.0        94.6   -94.6    4       0.0        25.6 no current release         
+       122        Sindhani Devbhumi Dwarka    Sau      0.0        94.2   -94.2    4       0.0         8.7 no current release         
+        54           Kaila         Kachchh  Kutch      1.4        93.1   -91.7    4       0.1         8.5 no current release restated
+       199           Saran       Porbandar    Sau      0.6        92.3   -91.7    4       0.0         1.7 no current release         
+       194       Veradi-II Devbhumi Dwarka    Sau      4.3        95.9   -91.6    4       0.2         9.8 no current release         
+       117 Shedhabhadthari Devbhumi Dwarka    Sau      0.2        89.3   -89.1    4       0.0         5.6 no current release         
+       205        Sasoi-II        Jamnagar    Sau      4.9        92.8   -87.9    4       0.0         2.4 no current release         
+        52       Kankawati         Kachchh  Kutch     11.9        99.5   -87.6    4       0.6        10.5 no current release restated
+       120        Rupavati        Jamnagar    Sau      0.0        87.4   -87.4    4       0.0         2.8 no current release         
+
+  NOTE: 3 of the top 20 had their DESIGN capacity restated between years, so their % filling is not strictly comparable across those years. Flagged 'restated' above.
+
+FOR CONTRAST — the same comparison weighted by volume (implied shortfall in MCM against the prior same-date mean):
+ scheme_id scheme_name    district region  design_gross_mcm  pct_today  mean_pct_prior  deviation_pp  shortfall_mcm
+        36        Ukai        Tapi     SG           7,414.3       77.3            85.1          -7.8          580.9
+        13      Dharoi    Mahesana     NG             813.1       51.3            88.2         -36.9          299.7
+        17      Kadana   Mahisagar     CG           1,249.3       58.5            80.4         -21.8          272.7
+         4   Dantiwada Banaskantha     NG             397.1       25.1            80.6         -55.5          220.4
+       148      Bhadar      Rajkot    Sau             188.1       20.6            88.1         -67.5          127.0
+        14       Panam   Mahisagar     CG             578.2       60.3            72.2         -11.9           68.5
+        94       Und-I    Jamnagar    Sau              69.0        6.7            89.3         -82.6           57.0
+        27      Watrak     Arvalli     NG             158.2       53.3            81.3         -28.0           44.3
+        30    Hathmati     Arvalli     NG             152.8       49.5            77.8         -28.3           43.2
+         6      Karjan     Narmada     SG             538.8       74.2            80.6          -6.4           34.4
+
+state position on this date vs prior same-date mean:
+  yr  state_pct_filling  gross_mcm  schemes
+2022              83.88    13257.2      206
+2023              73.53    11619.8      206
+2024              84.49    13343.7      206
+2025              88.54    13986.6      206
+2026              65.29    10313.8      206
+
+days-of-water reporting on 2026-09-11: 27 schemes have a current canal release; 179 render as "no current release".
+Every days-of-water figure above is at today's release rate. These are comparisons of observations, not forecasts.
