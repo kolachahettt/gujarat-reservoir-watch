@@ -13,9 +13,28 @@
 .viz-root{
   color-scheme:light;
   --surface-1:#fcfcfb; --page:#f9f9f7;
-  --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
+  --text-primary:#0b0b0b; --text-secondary:#52514e;
+  /* Was #898781, which is 3.50:1 on the surface — it reads as "quiet" but at
+     10.5-12.5px it is body text, and body text needs 4.5:1. Thirteen separate
+     uses failed on it. #6b6963 is 5.35:1 on the surface and 5.21:1 on the
+     page, still clearly recessive against #0b0b0b primary text. */
+  --muted:#6b6963;
   --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
-  --now:#eb6834;
+  /* TWO oranges, because WCAG asks two different questions of them.
+     --now is the GRAPHIC orange: the 2026 line, the rain bars, the marker
+     dots. Non-text graphics need 3:1 (1.4.11) and #eb6834 gives 3.12:1, so it
+     passes and is left alone — darkening it would change the chart's identity
+     for no accessibility gain.
+     --now-text is for the same colour used as TEXT, which needs 4.5:1 at
+     these sizes and where #eb6834 fails at 3.12:1 — the deviation figures,
+     the tooltip's current-season row, the direct "2026" chart labels, and the
+     white-on-orange active view button (3.20:1, the worst of them). */
+  --now:#eb6834; --now-text:#c2410c;
+  /* The label that sits ON the accent fill. It cannot be a fixed white: in
+     dark mode --now-text is a LIGHT orange (it has to be, to read against a
+     near-black page), and white on it measures 2.8:1. The polarity flips with
+     the theme, so the colour is a token rather than a literal. */
+  --on-accent:#ffffff;
   /* Staleness banner. Checked rather than eyeballed: #8f2f10 on #fdf0e8 is
      7.28:1, AAA at body size. A warning the reader cannot read is not a
      warning. Deliberately NOT --now, which is 3.12:1 on the surface and fails
@@ -44,7 +63,10 @@
     --surface-1:#1a1a19; --page:#0d0d0d;
     --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
     --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
-    --now:#d95926;
+    /* Dark mode keeps --muted at #898781: on #1a1a19 that is 4.85:1, which
+       already passes. Only the orange fails here, and only as text — 4.48:1,
+       just under the 4.5 line. */
+    --now:#d95926; --now-text:#f0793f; --on-accent:#1a1a19;
     --warn-fg:#f9a97c; --warn-bg:#2a1c14; --warn-bd:#5d3a26;  /* 8.63:1 */
     --y22:#184f95; --y23:#1c5cab; --y24:#256abf; --y25:#2a78d6;
     --tip-bg:#232321;
@@ -55,7 +77,7 @@
   --surface-1:#1a1a19; --page:#0d0d0d;
   --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
   --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
-  --now:#d95926;
+  --now:#d95926; --now-text:#f0793f; --on-accent:#1a1a19;
   --warn-fg:#f9a97c; --warn-bg:#2a1c14; --warn-bd:#5d3a26;  /* 8.63:1 */
   --y22:#184f95; --y23:#1c5cab; --y24:#256abf; --y25:#2a78d6;
   --tip-bg:#232321;
@@ -101,7 +123,11 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
 .headline{margin:18px 0 6px;display:flex;flex-wrap:wrap;gap:26px;
   align-items:flex-start}
 .hero{min-width:210px}
-.hero .n{font-size:42px;line-height:1;letter-spacing:-.02em;color:var(--now)}
+/* 42px counts as large text, where 3:1 applies and #eb6834 scrapes 3.04:1 —
+   compliant, but a 1% margin on the single most important number on the page.
+   It uses the text orange for the headroom; the chart line beside it keeps the
+   brighter --now, so the two are close rather than identical. Worth it. */
+.hero .n{font-size:42px;line-height:1;letter-spacing:-.02em;color:var(--now-text)}
 .hero .u{font-size:13px;color:var(--text-secondary);margin-top:5px}
 .hero .sub{font-size:12px;color:var(--text-secondary);margin-top:9px;
   max-width:270px;line-height:1.5}
@@ -164,7 +190,7 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
 .fnums{display:flex;gap:13px;margin:3px 0 5px;font-size:11.5px;
   color:var(--text-secondary);flex-wrap:wrap}
 .fnums b{font-variant-numeric:tabular-nums;color:var(--text-primary)}
-.fnums .dv{color:var(--now);font-weight:600;font-variant-numeric:tabular-nums}
+.fnums .dv{color:var(--now-text);font-weight:600;font-variant-numeric:tabular-nums}
 .plot{position:relative}
 .plot svg{display:block;width:100%;height:auto;touch-action:none}
 .cross{font-size:11.5px;line-height:1.5;margin-top:6px;
@@ -186,7 +212,7 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
 .tip td{padding:1.5px 0;font-variant-numeric:tabular-nums}
 .tip td.k{color:var(--text-secondary);padding-right:9px}
 .tip td.v{text-align:right;font-weight:600}
-.tip tr.cur td{color:var(--now)}
+.tip tr.cur td{color:var(--now-text)}
 .tip .rn{margin-top:5px;padding-top:4px;border-top:1px solid var(--border);
   color:var(--text-secondary);font-variant-numeric:tabular-nums}
 
@@ -218,7 +244,7 @@ table.dt td.n{text-align:right;font-variant-numeric:tabular-nums;
   color:var(--text-primary)}
 table.dt td.nm{color:var(--text-primary);font-weight:600}
 table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
-  color:var(--now);font-weight:600}
+  color:var(--now-text);font-weight:600}
 .flag{display:inline-block;font-size:9.5px;text-transform:uppercase;
   letter-spacing:.05em;border:1px solid var(--border);border-radius:3px;
   padding:0 4px;color:var(--muted);margin-left:5px;vertical-align:1px}
@@ -246,7 +272,7 @@ table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
 .spark{margin:11px 0 2px;max-width:520px}
 .spark svg{display:block;width:100%;height:auto}
 .sparkcap{font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:3px}
-.sparkcap b{color:var(--now)}
+.sparkcap b{color:var(--now-text)}
 .close{float:right;background:none;border:1px solid var(--border);
   border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:11px;
   padding:2px 7px;font-family:inherit}
@@ -284,8 +310,14 @@ code{overflow-wrap:anywhere;word-break:break-word}
   font-family:inherit;font-size:11.5px;padding:5px 13px;
   color:var(--text-secondary);border-right:1px solid var(--border)}
 .views button:last-child{border-right:0}
-.views button[aria-current="true"]{background:var(--now);color:#fff;
-  font-weight:600}
+/* White on --now was 3.20:1, the worst failure on the page and on a primary
+   control. The fill uses the text orange, and the label uses --on-accent so
+   the pairing survives the theme flip: light gives white on #c2410c at
+   5.18:1, dark gives near-black on #f0793f at 6.23:1. Both fills also clear
+   3:1 against their page, so the active state has a visible edge and is not
+   signalled by colour alone — aria-current carries it for assistive tech. */
+.views button[aria-current="true"]{background:var(--now-text);
+  color:var(--on-accent);font-weight:600}
 .hdrow{display:flex;gap:7px;align-items:stretch;margin-top:9px;flex-wrap:wrap}
 .dlbtn{background:var(--surface-1);border:1px solid var(--border);
   border-radius:6px;cursor:pointer;font-family:inherit;font-size:11.5px;
@@ -336,7 +368,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 .reglegend .ri{display:flex;align-items:center;gap:6px}
 .reglegend b{color:var(--text-primary)}
 .reglegend .rv{font-variant-numeric:tabular-nums;font-weight:600;
-  color:var(--now)}
+  color:var(--now-text)}
 .reglegend .rs{font-variant-numeric:tabular-nums;color:var(--muted)}
 </style>
 </head>
@@ -634,7 +666,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
   const lab = `<circle cx="${xOf(latestDay)}" cy="${yOf(ld)}" r="3.6"
       fill="var(--now)" stroke="var(--surface-1)" stroke-width="2"/>
     <text x="${xOf(latestDay)-6}" y="${yOf(ld)-6}" text-anchor="end"
-      font-size="10" font-weight="700" fill="var(--now)">2026</text>`;
+      font-size="10" font-weight="700" fill="var(--now-text)">2026</text>`;
 
   /* ---- rainfall: a SEPARATE panel, on the ONE scale every strip shares,
      sharing the x-axis. Never a second y-axis on the storage plot. ---- */
@@ -972,7 +1004,7 @@ function schemeSpark(s, thin){
   lines += `<circle cx="${xf(latest)}" cy="${yf(cur[latest])}" r="3.2"
       fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
     <text x="${xf(latest) - 5}" y="${yf(cur[latest]) - 6}" text-anchor="end"
-      font-size="9" font-weight="700" fill="var(--now)">${CUR}</text>`;
+      font-size="9" font-weight="700" fill="var(--now-text)">${CUR}</text>`;
 
   return `<div class="spark">
     <svg viewBox="0 0 ${G.W} ${H}" role="img"
