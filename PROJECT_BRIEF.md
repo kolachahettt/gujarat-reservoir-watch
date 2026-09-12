@@ -291,6 +291,24 @@ These earned their place on the previous project and are not renegotiable.
 6. **Validate against the source's own totals.** The abstract page states the regional and
    state totals; the sum of parsed dam rows must reconcile with them, and the residual
    must be reported.
+7. **No derived figure carries more precision than its source.** The report publishes
+   storage to **two decimal places of MCM**, so nothing computed from it may be presented
+   to more. Percentages and MCM to two decimals; days, cusecs and millimetres to one;
+   a figure spanning years stated in years. This is a *presentation* rule — full precision
+   stays in the parquet and DuckDB, where it belongs — and it applies to **exports as much
+   as to the screen**, because a CSV is read as data and asserts whatever precision it
+   prints.
+
+   Added after catching the same error twice, which is the point of writing it down:
+
+   * **Days of water at a tenth of a day on a seven-year figure.** Ukai, 800 cusecs
+     against 5,043 MCM live, computed to `2,576.8 days`. The tenth is noise on a figure
+     that size, and it read as nonsense. Now `2,577 days (about 7.1 years)`.
+   * **Ten decimal places in the CSV export.** `-53.3524904215` for a deviation derived
+     from two-decimal storage. On screen the formatter hid it; in a file someone treats as
+     data, it asserts precision that does not exist.
+
+   Both were spotted by eye, one after the other. A rule catches the third.
 
 ---
 

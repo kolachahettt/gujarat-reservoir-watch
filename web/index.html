@@ -27,6 +27,11 @@
   --d-zero:#f0efec;
   --d-pos1:#9ec5f4; --d-pos2:#2a78d6;
   --land:none; --admin:#d8d6ce;
+  /* Categorical slots 1-5, in the documented order. Used only by the region
+     comparison, where region is a nominal category and every line is the
+     current season, so there is no year for these to be confused with. */
+  --cat1:#2a78d6; --cat2:#eb6834; --cat3:#1baf7a;
+  --cat4:#eda100; --cat5:#e87ba4;
 }
 @media (prefers-color-scheme:dark){
   :root:where(:not([data-theme="light"])) .viz-root{
@@ -51,6 +56,8 @@
   --d-zero:#383835;
   --d-pos1:#256abf; --d-pos2:#3987e5;
   --land:none; --admin:#3a3a37;
+  --cat1:#3987e5; --cat2:#d95926; --cat3:#199e70;
+  --cat4:#c98500; --cat5:#d55181;
 }
 
 *{box-sizing:border-box}
@@ -292,6 +299,13 @@ code{overflow-wrap:anywhere;word-break:break-word}
 .szleg div{text-align:center;font-size:10px;color:var(--muted);
   font-variant-numeric:tabular-nums}
 .szleg svg{display:block;margin:0 auto 2px}
+.reglegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;
+  font-size:11.5px;color:var(--text-secondary)}
+.reglegend .ri{display:flex;align-items:center;gap:6px}
+.reglegend b{color:var(--text-primary)}
+.reglegend .rv{font-variant-numeric:tabular-nums;font-weight:600;
+  color:var(--now)}
+.reglegend .rs{font-variant-numeric:tabular-nums;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -309,6 +323,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
       <div class="hdrow">
         <div class="views" role="group" aria-label="View">
           <button id="vSeason" aria-current="true">Season</button>
+          <button id="vRegions" aria-current="false">Regions</button>
           <button id="vSchemes" aria-current="false">Schemes</button>
         </div>
         <button id="dlCsv" class="dlbtn" type="button"
@@ -320,6 +335,17 @@ code{overflow-wrap:anywhere;word-break:break-word}
   </header>
 
   <div class="detail" id="detail"></div>
+
+  <section id="viewRegions" hidden>
+    <h2 style="margin-top:14px">Which region is having the worst season
+      <span class="q">All five regions on one chart, current season only, each
+        measured against <em>its own</em> prior four-year mean. Levels alone
+        would conflate a structurally dry region with one having a bad
+        year.</span></h2>
+    <div class="scat"><div id="regPlot"></div>
+      <div class="reglegend" id="regLegend"></div></div>
+    <div class="cross" id="regNote"></div>
+  </section>
 
   <section id="viewSchemes" hidden>
     <h2 style="margin-top:14px">All 206 schemes — one point each
@@ -553,6 +579,139 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
     <rect class="hit" x="${G.PADL}" y="0" width="${G.W-G.PADL-G.PADR}" height="${hitH}"
       fill="transparent" style="cursor:crosshair"/>
   </svg>`;
+}
+
+/* ---------------- five regions on one chart ----------------
+   Plots DEVIATION from each region's own prior-year mean, not % filling.
+   That is the whole point of the view: % filling would repeat what the facets
+   already show, and worse, it would conflate "structurally dry" with "having
+   a bad year" — Kutch sits below South Gujarat every year, so on levels alone
+   it always looks worst and the chart says nothing new. Measured against each
+   region's own normal, the line that plunges furthest is genuinely the one
+   having the worst season, and you can see when each diverged.
+
+   Colour is the documented categorical palette, slots 1-5 in order, which is
+   validated for the adjacent pairs a line chart uses. Assigned by a FIXED
+   region order, never by rank, so nothing repaints when the ranking moves.
+   Identity does not rest on colour: every line is direct-labelled on a wide
+   screen, and the legend carries the same values on a narrow one. */
+const REGION_ORDER = ["NG", "CG", "SG", "Sau", "Kutch"];
+const REGION_COL = {
+  NG:    "var(--cat1)", CG: "var(--cat2)", SG: "var(--cat3)",
+  Sau:   "var(--cat4)", Kutch: "var(--cat5)",
+};
+
+/* Deviation series for one region: 2026 minus the mean of the four prior
+   years, on the same evaluability rule as the crossover marker — a day counts
+   only if all four prior years have a value for it. */
+function regionDeviation(r){
+  const cur = r.series[CUR] || {};
+  const priors = YRS.map(y => r.series[y] || {});
+  const out = {};
+  for(const k of Object.keys(cur).map(Number).sort((a, b) => a - b)){
+    if(priors.some(p => p[k] === undefined)) continue;
+    const mean = priors.reduce((a, p) => a + p[k], 0) / priors.length;
+    out[k] = cur[k] - mean;
+  }
+  return out;
+}
+
+function regionsSVG(){
+  const narrow = isNarrow();
+  const W = narrow ? 308 : 940, H = narrow ? 360 : 400;
+  const L = narrow ? 34 : 46;
+  const R = narrow ? 10 : 132;        // wide: a gutter for direct labels
+  const T = 16, B = 34;
+
+  const devs = REGION_ORDER
+    .map(code => ({r: DATA.regions.find(x => x.code === code)}))
+    .filter(o => o.r)
+    .map(o => ({code: o.r.code, name: o.r.name, dev: regionDeviation(o.r)}));
+
+  const all = devs.flatMap(d => Object.values(d.dev));
+  if(!all.length) return "";
+  const lo = Math.min(-5, Math.floor(Math.min(...all) / 10) * 10);
+  const hi = Math.max(5, Math.ceil(Math.max(...all) / 10) * 10);
+  const xp = d => L + (d - 1) / (SEASON_DAYS - 1) * (W - L - R);
+  const yp = v => H - B - (v - lo) / (hi - lo) * (H - T - B);
+
+  let g = "";
+  const step = (hi - lo) > 60 ? 20 : 10;
+  for(let v = lo; v <= hi; v += step){
+    const zero = v === 0;
+    g += `<line x1="${L}" x2="${W-R}" y1="${yp(v)}" y2="${yp(v)}"
+      stroke="${zero ? "var(--baseline)" : "var(--grid)"}"
+      stroke-width="${zero ? 1.4 : 1}"/>
+      <text x="${L-5}" y="${yp(v)+3}" text-anchor="end" font-size="9"
+        fill="var(--muted)" style="font-variant-numeric:tabular-nums">${
+        v > 0 ? "+" + v : v}</text>`;
+  }
+  for(const [d, nm] of MONTHS){
+    g += `<text x="${xp(d)}" y="${H-B+14}" text-anchor="middle" font-size="9"
+      fill="var(--muted)">${nm}</text>`;
+  }
+  // The zero line needs saying in words, or it reads as a plain axis. Not on
+  // a narrow screen though: there it lands on top of the lines, and the
+  // subtitle and the note below already say it.
+  if(!narrow){
+    g += `<text x="${L+4}" y="${yp(0)-5}" font-size="8.5" fill="var(--muted)">
+        at its own prior four-year mean</text>`.replace(/\s+/g, " ");
+  }
+  g += `<text x="${L-5}" y="${T-5}" text-anchor="start" font-size="9"
+      fill="var(--text-secondary)">percentage points from each region's own
+      prior-year mean</text>`.replace(/\s+/g, " ");
+
+  let lines = "", labels = "";
+  const ends = [];
+  for(const d of devs){
+    const p = linePath(d.dev, xp, yp, 1);
+    if(!p) continue;
+    lines += `<path d="${p}" fill="none" stroke="${REGION_COL[d.code]}"
+      stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const end = Math.max(...Object.keys(d.dev).map(Number));
+    const v = d.dev[end];
+    lines += `<circle cx="${xp(end)}" cy="${yp(v)}" r="3.2"
+      fill="${REGION_COL[d.code]}" stroke="var(--surface-1)"
+      stroke-width="1.8"/>`;
+    ends.push({d, x: xp(end), y: yp(v) + 3.4, y0: yp(v) + 3.4, v});
+  }
+
+  if(!narrow){
+    /* Push apart labels that would overlap. Saurashtra and North Gujarat sit
+       1.6 pp apart, which put their labels 7px apart at a 10.5px font — the
+       clipped/overlapping-label anti-pattern. Where a label has been moved,
+       a hairline connects it back to its endpoint so the association is not
+       lost. */
+    const MIN = 13;
+    const placed = [...ends].sort((a, b) => a.y - b.y);
+    for(let i = 1; i < placed.length; i++){
+      if(placed[i].y - placed[i - 1].y < MIN)
+        placed[i].y = placed[i - 1].y + MIN;
+    }
+    // If nudging ran past the plot, shift the whole stack back up.
+    const over = placed.length
+      ? placed[placed.length - 1].y - (H - B - 2) : 0;
+    if(over > 0) for(const e of placed) e.y -= over;
+
+    for(const e of placed){
+      // Compare to the label's NATURAL position, not the dot:
+      // e.y already carries the 3.4px text-baseline offset, so
+      // comparing against yp(v) made every label look moved.
+      const moved = Math.abs(e.y - e.y0) > 2;
+      if(moved){
+        labels += `<line x1="${e.x + 4}" y1="${yp(e.v)}" x2="${e.x + 7}"
+          y2="${e.y - 3.4}" stroke="${REGION_COL[e.d.code]}"
+          stroke-width="1" opacity="0.6"/>`;
+      }
+      labels += `<text x="${e.x + 9}" y="${e.y}" font-size="10.5"
+        fill="var(--text-primary)">${esc(e.d.name)}
+        <tspan fill="${REGION_COL[e.d.code]}" font-weight="700"
+          style="font-variant-numeric:tabular-nums">${f1(e.v)}</tspan></text>`;
+    }
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Deviation from each region's own prior four-year mean, by day
+    of season, for all five regions in ${CUR}">${g}${lines}${labels}</svg>`;
 }
 
 /* ---------------- CSV download ----------------
@@ -1107,8 +1266,54 @@ function render(d){
      readings. Nothing here is a forecast, and no figure states what storage
      will be on any future date.</div>`;
 
+  renderRegionsView();
   renderSchemesView();
   wire();
+}
+
+function renderRegionsView(){
+  document.getElementById("regPlot").innerHTML = regionsSVG();
+
+  const rows = REGION_ORDER
+    .map(c => DATA.regions.find(r => r.code === c)).filter(Boolean)
+    .map(r => ({r, dev: r.pct_now - r.mean_prior_at_now}))
+    .sort((a, b) => a.dev - b.dev);
+
+  // The legend carries the values, so on a narrow screen where the direct
+  // labels do not fit nothing is lost but the position.
+  document.getElementById("regLegend").innerHTML = rows.map(({r, dev}) =>
+    `<span class="ri"><span class="sw thin"
+       style="border-color:${REGION_COL[r.code]}"></span>
+     <b>${esc(r.name)}</b>
+     <span class="rv">${f1(dev)} pp</span>
+     <span class="rs">now ${f1(r.pct_now)}%</span></span>`).join("");
+
+  const worst = rows[0], best = rows[rows.length - 1];
+  document.getElementById("regNote").innerHTML =
+    `<b>${esc(worst.r.name)} is having the worst season</b> — ${f1(worst.dev)}
+     percentage points below its own prior four-year mean, against
+     ${esc(best.r.name)} at ${f1(best.dev)}.
+     <span class="none">Every region is below its own mean on this date.</span>
+     A day is plotted only where all four prior years have a value for it, the
+     same rule the crossover markers use.
+     <button class="tblbtn" data-tv="regions">Show as table</button>
+     <div class="tv" id="tv-regions">${regionsTable(rows)}</div>`;
+}
+
+function regionsTable(rows){
+  const days = [...MONTHS.map(m => m[0]), DATA.state.day_of_season]
+    .filter((d, i, a) => d <= DATA.state.day_of_season && a.indexOf(d) === i);
+  const devs = {};
+  for(const {r} of rows) devs[r.code] = regionDeviation(r);
+  let h = `<table><thead><tr><th>Region</th>` +
+    days.map(d => `<th>${dosLabel(d, CUR)}</th>`).join("") +
+    `</tr></thead><tbody>`;
+  for(const {r} of rows){
+    h += `<tr><td>${esc(r.name)}</td>` + days.map(d =>
+      `<td>${devs[r.code][d] != null ? f1(devs[r.code][d]) : "—"}</td>`)
+      .join("") + `</tr>`;
+  }
+  return h + `</tbody></table>`;
 }
 
 function renderSchemesView(){
@@ -1343,8 +1548,10 @@ function wire(){
 
   /* view switching — Season stays the default; Schemes is a destination */
   const vs = {Season: document.getElementById("viewSeason"),
+              Regions: document.getElementById("viewRegions"),
               Schemes: document.getElementById("viewSchemes")};
   const bs = {Season: document.getElementById("vSeason"),
+              Regions: document.getElementById("vRegions"),
               Schemes: document.getElementById("vSchemes")};
   const go = k => {
     for(const [name, el] of Object.entries(vs)){
@@ -1364,6 +1571,7 @@ function wire(){
   }
   window.__go = k => { CURRENT_VIEW = k; go(k); };
   bs.Season.onclick = () => window.__go("Season");
+  bs.Regions.onclick = () => window.__go("Regions");
   bs.Schemes.onclick = () => window.__go("Schemes");
 
   const dl = document.getElementById("dlCsv");
