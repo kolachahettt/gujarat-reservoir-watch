@@ -29,6 +29,11 @@
      these sizes and where #eb6834 fails at 3.12:1 — the deviation figures,
      the tooltip's current-season row, the direct "2026" chart labels, and the
      white-on-orange active view button (3.20:1, the worst of them). */
+  /* What sits BEHIND a chart, so an annotation label can halo itself against
+     it. The state chart is drawn straight onto the page; a facet chart is
+     inside a card. Declared as a variable and overridden on .facet rather
+     than hardcoded, so a chart moved between the two keeps a correct halo. */
+  --chart-bg:var(--page);
   --now:#eb6834; --now-text:#c2410c;
   /* The label that sits ON the accent fill. It cannot be a fixed white: in
      dark mode --now-text is a LIGHT orange (it has to be, to read against a
@@ -209,7 +214,7 @@ main:focus{outline:none}
 .grid{display:grid;gap:13px;margin-top:11px;
   grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
 .facet{background:var(--surface-1);border:1px solid var(--border);
-  border-radius:8px;padding:11px 12px 9px}
+  border-radius:8px;padding:11px 12px 9px;--chart-bg:var(--surface-1)}
 .fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
 .fh .nm{font-size:13.5px;font-weight:600}
 .fh .meta{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -913,7 +918,81 @@ function linePath(map, xf, yf, step){
   return out.trim();
 }
 
-function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
+/* ---------------- the gap, drawn ----------------
+   The whole finding is that 2026 sits 18 points under the prior-year average,
+   and until now that number existed only as body text beside the chart. This
+   draws it: a dimension line between the two levels at the latest reported
+   day, captioned.
+
+   WHY NOT A HORIZONTAL REFERENCE LINE ACROSS THE CHART
+   That was the obvious first idea and it would be a lie. mean_prior_at_now is
+   the average of the four prior years ON THIS DAY OF THE SEASON — 83.09% on
+   day 104. The prior-year average on day 1 is about 38%. A horizontal line at
+   83.09 spanning June to October would assert a flat "normal" that the data
+   contradicts, and would sit far above every prior line in June. So the
+   reference is a short cap at the level, at the day where that level is
+   defined, and nowhere else.
+
+   WHY ONLY THE STATE CHART
+   Same viewBox, different rendered widths: the state chart draws 580px for
+   470 units (scale 1.234) while a facet draws 451px (scale 0.959). An 8-unit
+   label is 9.9px on the state chart and 7.7px on a facet — below the rain
+   caption that is already the smallest text on the page. The facets state
+   their own gap as a figure in the numbers row instead.
+
+   Placement is chosen from the data, not guessed: right of the latest-report
+   line, 2026 has no line at all and the prior years sit above y=25, so the
+   band below that is empty and the label cannot collide with a series. */
+function gapAnnotation(g, xOf, yOf, latestDay, G){
+  if(!g || g.pctNow == null || g.meanPrior == null) return "";
+  const diff = g.meanPrior - g.pctNow;
+  if(Math.abs(diff) < 0.05) return "";        // rounds to 0.0: nothing to draw
+  const x = xOf(latestDay);
+  const yNow = yOf(g.pctNow), yRef = yOf(g.meanPrior);
+  const dx = x + 9;                            // clear of the latest-report rule
+  const cap = 4;
+  const mid = (yNow + yRef) / 2;
+  const above = diff < 0;                      // 2026 is ABOVE the average
+
+  /* Labels are anchored to the PLOT'S RIGHT EDGE, not offset rightward from
+     the dimension line. Offsetting overflowed: the narrow breakpoint drops the
+     viewBox from 470 units to 308, and "the four-year average for this date"
+     ran to x=341.9 in a 308-wide box — clipped off the chart entirely, with
+     nothing to indicate it had been. Anchoring at the edge makes rightward
+     overflow impossible at any breakpoint. */
+  const lx = G.W - G.PADR;
+  const avail = lx - (dx + cap);
+  /* Width estimated rather than measured, because the string has to be chosen
+     before it is in the DOM. 0.46em per character over-estimates the observed
+     0.434em, so the test errs toward the shorter wording. */
+  const fits = (txt, fs) => txt.length * fs * 0.46 <= avail;
+  const big = `${Math.abs(diff).toFixed(1)} points ${above ? "above" : "below"}`;
+  const bigTxt = fits(big, 8.5) ? big
+               : `${Math.abs(diff).toFixed(1)} pp ${above ? "above" : "below"}`;
+  const longSub = `the ${numWord(g.nPrior)}-year average for this date`;
+  const shortSub = `the ${numWord(g.nPrior)}-year average`;
+  const sub = fits(longSub, 7.5) ? longSub : fits(shortSub, 7.5) ? shortSub : "";
+  /* Two lines of label, vertically centred on the dimension. The gap is only
+     ~17 units tall, so the text sits beside it rather than inside it. */
+  const l1y = sub ? mid - 1 : mid + 3, l2y = mid + 7.5;
+  return `
+    <line x1="${dx}" x2="${dx}" y1="${yRef.toFixed(1)}" y2="${yNow.toFixed(1)}"
+      stroke="var(--text-secondary)" stroke-width="1"/>
+    <line x1="${dx - cap}" x2="${dx + cap}" y1="${yRef.toFixed(1)}"
+      y2="${yRef.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
+    <line x1="${dx - cap}" x2="${dx + cap}" y1="${yNow.toFixed(1)}"
+      y2="${yNow.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
+    <text x="${lx}" y="${l1y.toFixed(1)}" text-anchor="end" font-size="8.5"
+      font-weight="700" fill="var(--text-primary)" stroke="var(--chart-bg)"
+      stroke-width="2.6" paint-order="stroke"
+      stroke-linejoin="round">${bigTxt}</text>
+    ${!sub ? "" : `<text x="${lx}" y="${l2y.toFixed(1)}" text-anchor="end"
+      font-size="7.5" fill="var(--muted)" stroke="var(--chart-bg)"
+      stroke-width="2.4" paint-order="stroke"
+      stroke-linejoin="round">${sub}</text>`}`;
+}
+
+function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
   /* The state headline carries no rainfall strip: a regional mean of regional
      means is not a quantity worth showing, and an empty panel reads as "no
      rain" rather than "not shown". */
@@ -1015,11 +1094,22 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
     fill="var(--muted)">rain mm/day, regional mean · peak ${f1(pk)}</text>`;
   }
 
+  /* Drawn after the series so the dimension line and its label sit on top of
+     anything they cross, and described in the aria-label so the annotation is
+     not sighted-only. */
+  const gapAnn = gapAnnotation((opts || {}).gap, xOf, yOf, latestDay, G);
+  const gapSaid = gapAnn && opts.gap
+    ? `. ${Math.abs(opts.gap.meanPrior - opts.gap.pctNow).toFixed(1)} points ${
+        opts.gap.meanPrior > opts.gap.pctNow ? "below" : "above"} the `
+      + `${numWord(opts.gap.nPrior)}-year average for this date`
+    : "";
+
   const hitH = showRain ? rTop + G.RH : G.SH - 6;
   return `<svg viewBox="0 0 ${G.W} ${totH}" role="img" tabindex="0"
       aria-label="Percent filling by day of season, 2026 against 2022 to 2025${
-        showRain ? ", with daily rainfall below" : ""}" data-id="${idPrefix}">
-    ${g}${ax}${lr}${pri}${cur}${mk}${lab}${rr}
+        showRain ? ", with daily rainfall below" : ""}${gapSaid}"
+      data-id="${idPrefix}">
+    ${g}${ax}${lr}${pri}${cur}${mk}${lab}${rr}${gapAnn}
     <line class="xh" x1="0" x2="0" y1="4" y2="${hitH}" stroke="var(--text-secondary)"
       stroke-width="1" opacity="0" pointer-events="none"/>
     <rect class="hit" x="${G.PADL}" y="0" width="${G.W-G.PADL-G.PADR}" height="${hitH}"
@@ -1666,7 +1756,9 @@ function render(d){
     `day ${s.day_of_season} of the season · % of design capacity`;
   const stSeries = s.series;
   document.getElementById("statePlot").innerHTML =
-    chartSVG(stSeries, null, s.crossover, s.day_of_season, "state", false);
+    chartSVG(stSeries, null, s.crossover, s.day_of_season, "state", false,
+      {gap: {pctNow: s.pct_now, meanPrior: s.mean_prior_at_now,
+             nPrior: Object.keys(s.prior_at_now || {}).length}});
   document.getElementById("stCross").innerHTML =
     crossText(s.crossover, "Gujarat") +
     `<button class="tblbtn" data-tv="state">Show as table</button>
