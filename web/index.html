@@ -840,6 +840,30 @@ const isNarrow = () => window.innerWidth <= NARROW_MAX;
 
    The floor of 6 mm/day guards a dry season: without it a trace-rain year
    would scale a 0.2 mm day to full panel height. */
+/* ---------------- which day the crossover marker points at ----------------
+   The chart used to mark cross.marker_day — the FIRST qualifying crossing of
+   the season. The caption leads with the CURRENT one. For the state those are
+   different events: marker_day is day 57 (27 July, a run that recovered on
+   2 August) while the caption says "Below every prior year since 26 Aug —
+   18 days", which is day 87. So the chart pointed at a six-day dip while the
+   text beside it discussed an eighteen-day one, and the reader had no way to
+   know they were different.
+
+   The rule is not "always use the current run", because South Gujarat is the
+   counter-case: its current run is 3 days and FAILS the five-consecutive-day
+   rule, so its caption explicitly claims no crossing and points back at
+   25 July. Marking day 102 there would assert a crossing the caption denies.
+
+   So: mark the current run when it qualifies, otherwise mark the first
+   qualifying run. Across the six charts on this page that moves exactly one
+   marker (the state, 57 -> 87) and leaves the other five where they were. */
+function markerDay(cross){
+  if(!cross || cross.case !== "crossed") return null;
+  const run = cross.current_run;
+  if(cross.currently_below && run && run.qualifies) return run.start_day;
+  return cross.marker_day == null ? null : cross.marker_day;
+}
+
 let RAIN_MAX = 6;
 function rainCeiling(regions){
   let mx = 6;
@@ -929,15 +953,16 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
   }
   /* crossover marker: dashed because it marks a threshold event, not a grid */
   let mk = "";
-  const md = cross.case === "crossed" ? cross.marker_day : null;
+  const md = markerDay(cross);
   if(md){
     /* Dashed because it marks a threshold event — the one place dashing is
        meaningful rather than noise. Kept recessive: the marker locates the
        event, the orange line is still the figure. */
+    const y = series[CUR][md];
     mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${G.SH-6}"
       stroke="var(--muted)" stroke-width="1" stroke-dasharray="2.5 3.5"/>
-      <circle cx="${xOf(md)}" cy="${yOf(series[CUR][md])}" r="3.4"
-        fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
+      ${y == null ? "" : `<circle cx="${xOf(md)}" cy="${yOf(y)}" r="3.4"
+        fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>`}
       <text x="${xOf(md)+4}" y="${G.SH-9}" font-size="8"
         fill="var(--muted)">${dosLabel(md, CUR)}</text>`;
   }
