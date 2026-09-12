@@ -507,6 +507,20 @@ def main():
                min(report_date) AS first_date, max(report_date) AS last_date
         FROM fact_storage
     """).df().iloc[0]
+    # Dates the server genuinely has no report for, read from the ledger rather
+    # than listed by hand. This WAS a hardcoded ["2025-09-26", "2026-09-12"],
+    # and it went stale the moment 2026-09-12 arrived: the page stated that the
+    # very report it was displaying did not exist upstream. The ledger is one
+    # row per date and is rewritten when a retry succeeds, so a date that later
+    # turned up drops out of this list by itself.
+    absent = sorted(led.loc[led["status"].isin(fd.ABSENT_UPSTREAM),
+                            "report_date"].astype(str).unique())
+    if REPORT_DATE in absent:            # cannot both be shown and be missing
+        raise SystemExit(f"FATAL: {REPORT_DATE} is the report date but the "
+                         f"ledger marks it absent upstream. Refusing to "
+                         f"publish a view that contradicts itself.")
+    print(f"absent upstream: {len(absent)} date(s)"
+          + (f" — {', '.join(absent)}" if absent else ""))
     n_rel = int((tod["outflow_canal_cusecs"] > 0).sum())
     mid_rows = (json.loads(pd.read_csv(MID)[
         ["scheme_id", "scheme_name", "season", "values", "change_dates"]]
@@ -523,10 +537,15 @@ def main():
                              if len(row) and pd.notna(row["bytes"].iloc[0]) else None),
             "dates_loaded": int(cov["dates_loaded"]),
             "span": [str(cov["first_date"]), str(cov["last_date"])],
-            "absent_upstream": ["2025-09-26", "2026-09-12"],
+            "absent_upstream": absent,
             "seasons_prior": PRIOR_SEASONS,
             "season_current": CURRENT_SEASON,
             "season_window": "1 June – 31 October",
+            # The page computes the age of the data against the reader's clock
+            # and warns past this. Same constant the pipeline fails on, so the
+            # two cannot disagree about what counts as stale.
+            "max_stale_days": fd.MAX_STALE_DAYS,
+            "season_months": list(SEASON_MONTHS_SQL),
             "crossover_min_run": CROSSOVER_MIN_RUN,
             "scheme_series_thin_to": THIN_TO,
             "capacity_tolerance_pct": eps * 100,

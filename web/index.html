@@ -16,6 +16,11 @@
   --text-primary:#0b0b0b; --text-secondary:#52514e; --muted:#898781;
   --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
   --now:#eb6834;
+  /* Staleness banner. Checked rather than eyeballed: #8f2f10 on #fdf0e8 is
+     7.28:1, AAA at body size. A warning the reader cannot read is not a
+     warning. Deliberately NOT --now, which is 3.12:1 on the surface and fails
+     AA as text — that is a separate finding. */
+  --warn-fg:#8f2f10; --warn-bg:#fdf0e8; --warn-bd:#e8b79b;
   --y22:#86b6ef; --y23:#6da7ec; --y24:#5598e7; --y25:#3987e5;
   --tip-bg:#ffffff;
   /* Diverging scale for deviation: 42 of 206 schemes are ABOVE their prior
@@ -40,6 +45,7 @@
     --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
     --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
     --now:#d95926;
+    --warn-fg:#f9a97c; --warn-bg:#2a1c14; --warn-bd:#5d3a26;  /* 8.63:1 */
     --y22:#184f95; --y23:#1c5cab; --y24:#256abf; --y25:#2a78d6;
     --tip-bg:#232321;
   }
@@ -50,6 +56,7 @@
   --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
   --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
   --now:#d95926;
+  --warn-fg:#f9a97c; --warn-bg:#2a1c14; --warn-bd:#5d3a26;  /* 8.63:1 */
   --y22:#184f95; --y23:#1c5cab; --y24:#256abf; --y25:#2a78d6;
   --tip-bg:#232321;
   --d-neg3:#e66767; --d-neg2:#c25a5a; --d-neg1:#8f4747;
@@ -109,6 +116,23 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
   margin:16px 0 4px;padding:9px 12px;background:var(--surface-1);
   border:1px solid var(--border);border-radius:7px;font-size:11.5px;
   color:var(--text-secondary)}
+/* ---------- data age ---------- */
+/* Two levels, because the honest message differs. In season and within the
+   threshold the age is a quiet fact in the provenance line. Past the threshold
+   — or in the months when the season is over and the page is a closed record
+   rather than a live one — it becomes a banner above everything, since a
+   reader who does not know how old the numbers are is reading them wrong. */
+.agebanner{display:none;margin:10px 0 0;padding:9px 12px;border-radius:7px;
+  font-size:12.5px;line-height:1.5;border:1px solid}
+.agebanner.on{display:block}
+.agebanner.stale{color:var(--warn-fg);background:var(--warn-bg);
+  border-color:var(--warn-bd)}
+.agebanner.closed{color:var(--text-secondary);background:var(--surface-1);
+  border-color:var(--border)}
+.agebanner b{color:inherit}
+.prov .age{color:var(--text-secondary)}
+.prov .age.stale{color:var(--warn-fg);font-weight:600}
+
 .legend .it{display:flex;align-items:center;gap:6px}
 /* A legend entry that is a sentence rather than swatch-plus-label. It must NOT
    be display:flex: the flex gap turns the text either side of a <b> into
@@ -342,6 +366,11 @@ code{overflow-wrap:anywhere;word-break:break-word}
     </div>
   </header>
 
+  <!-- Outside every view, not inside the Season one: how old the data is
+       applies equally to Regions and Schemes. role=status so a screen reader
+       announces it without the reader having to go looking. -->
+  <div class="agebanner" id="ageBanner" role="status"></div>
+
   <div class="detail" id="detail"></div>
 
   <section id="viewRegions" hidden>
@@ -432,6 +461,41 @@ const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const f1 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(1);
 const f2 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(2);
+
+/* ---------------- how old is this data ----------------
+   The page is a static file. It can be opened an hour after it was built or
+   eight months after, and nothing in the JSON changes, so the age has to be
+   computed against the reader's clock at the moment they look.
+
+   Measured in IST, not in the reader's own timezone. The report is an
+   IST-dated document: a reader in Los Angeles at 22:00 on 11 September is
+   already in 12 September in Gujarat, and the same page would otherwise
+   describe the same data as "today" in Ahmedabad and "yesterday" in
+   California. Doing it in IST means the age is the age of the data in the
+   terms the source itself uses. */
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+function istToday(){
+  const t = new Date(Date.now() + IST_OFFSET_MS);
+  return Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+}
+function istMonth(){ return new Date(istToday()).getUTCMonth() + 1; }
+/* Whole days between the report date and today, both taken as calendar dates
+   so the answer does not depend on the time of day. */
+function dataAgeDays(reportDate){
+  const rd = Date.parse(reportDate + "T00:00:00Z");
+  if(isNaN(rd)) return null;
+  return Math.round((istToday() - rd) / 86400000);
+}
+/* Negative is possible and is not an error to hide: a reader whose clock is
+   wrong, or is in a timezone behind IST by enough, can legitimately see a
+   report dated after their today. Saying so is better than printing
+   "-1 days ago". */
+const ageWord = n =>
+  n == null ? "an unknown date"
+  : n < 0    ? `${-n} day${-n > 1 ? "s" : ""} ahead of your clock`
+  : n === 0  ? "today"
+  : n === 1  ? "yesterday"
+  : `${n} days ago`;
 
 /* ---------------- chart geometry ----------------
    Breakpoint-driven viewBox, NOT a scaled one. This is the whole trick, and
@@ -1158,12 +1222,58 @@ function render(d){
   const m = d.meta;
   REG = Object.fromEntries(d.regions.map(r => [r.code, r.name]));
 
+  /* ---- data age: quiet in the provenance line, loud when it matters ----
+     The threshold is the pipeline's own: daily_update.py fails on it and the
+     view publishes it, so the page cannot call data fresh that the pipeline
+     has already rejected.
+
+     In season and past the threshold, the page is stale and says so. Out of
+     season it is NOT stale — the refresh deliberately stops rebuilding the
+     view once the season closes, so the months of age are by design, and a
+     staleness warning every day from November to May would be crying wolf.
+     Those two cases get different words and different colours. */
+  const age = dataAgeDays(m.report_date);
+  const maxStale = m.max_stale_days == null ? 3 : m.max_stale_days;
+  const inSeason = (m.season_months || [6,7,8,9,10]).includes(istMonth());
+  const stale = inSeason && age != null && age > maxStale;
+
   document.getElementById("prov").innerHTML =
-    `Report date <b>${m.report_date}</b> &nbsp;·&nbsp; source: ${esc(m.source)}
+    `Report date <b>${m.report_date}</b>
+     <span class="age${stale ? " stale" : ""}">— data from
+     ${ageWord(age)}</span> &nbsp;·&nbsp; source: ${esc(m.source)}
      &nbsp;·&nbsp; built ${esc(m.built_utc)}<br>
      ${m.dates_loaded} daily reports loaded, ${esc(m.season_window)} for
      ${m.seasons_prior.join(", ")} and ${m.season_current}
      &nbsp;·&nbsp; <code>SHA-256 ${esc(m.report_sha256||"—")}</code>`;
+
+  const banner = document.getElementById("ageBanner");
+  banner.className = "agebanner";
+  /* Emptied, not just hidden. render() runs again on a breakpoint change, and
+     leaving the previous message in a display:none element means any later
+     change that un-hides it — a print stylesheet, a CSS slip — resurrects a
+     warning that is no longer true. */
+  banner.innerHTML = "";
+  if(stale){
+    banner.classList.add("on", "stale");
+    banner.innerHTML =
+      `<b>This page is ${age} days behind.</b> The ${m.season_current} season is
+       running, so a new report should have arrived by now — the newest reading
+       here is for <b>${m.report_date}</b>, past the ${maxStale}-day threshold
+       the refresh fails on. Treat every figure below as a reading from
+       ${ageWord(age)}, not as the current state of the reservoirs. The refresh
+       runs on one machine against a source that cloud runners cannot reach
+       (see the limitations note), so this usually means that machine has not
+       run, rather than that the source has stopped publishing.`;
+  } else if(!inSeason && age != null && age > maxStale){
+    banner.classList.add("on", "closed");
+    banner.innerHTML =
+      `<b>The ${m.season_current} season is over.</b> The filling season is
+       ${esc(m.season_window)}, and this page holds the final reading of it,
+       for <b>${m.report_date}</b> — ${ageWord(age)}. It is not being updated
+       and is not meant to be: fetching continues daily, but the view is only
+       rebuilt in season. Nothing below is out of date for the season it
+       describes.`;
+  }
 
   /* headline */
   const s = d.state;

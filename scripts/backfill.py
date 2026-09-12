@@ -63,7 +63,9 @@ RUN_FAIL_COOLDOWN_S = 300
 # Statuses meaning "the server does not have this date", as opposed to "we
 # failed to get it". Never retried on a later pass, and excluded from the
 # completeness denominator — but always reported, never quietly dropped.
-ABSENT_UPSTREAM = ("missing_upstream", "empty_upstream")
+# Defined in fetch_dam so the view can publish the same list it is written
+# from; a second copy here would let the two drift.
+ABSENT_UPSTREAM = fd.ABSENT_UPSTREAM
 
 
 def make_ctx(insecure=False):

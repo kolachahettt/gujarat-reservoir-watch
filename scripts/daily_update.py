@@ -131,8 +131,9 @@ def main():
     ap.add_argument("--date", default=None,
                     help="override the target date (default: yesterday IST)")
     ap.add_argument("--delay", type=float, default=1.0)
-    ap.add_argument("--max-stale-days", type=int, default=3,
-                    help="fail loudly if the newest data is older than this")
+    ap.add_argument("--max-stale-days", type=int, default=fd.MAX_STALE_DAYS,
+                    help="fail loudly if the newest data is older than this "
+                         "(the published page states the same threshold)")
     ap.add_argument("--dry-run", action="store_true",
                     help="do everything except commit and push")
     ap.add_argument("--no-push", action="store_true",

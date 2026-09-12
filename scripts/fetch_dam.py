@@ -218,6 +218,25 @@ MATERIAL_RESIDUAL = 1e-5
 
 N_SCHEMES_EXPECTED = 206
 
+# How many days behind today the newest data may be before it is stale. Lives
+# here rather than in daily_update.py because the published page states the
+# same threshold to the reader; two copies of this number would eventually
+# disagree, and the page would call data fresh that the pipeline had already
+# failed on. daily_update.py takes it as the --max-stale-days default and
+# build_view_data.py publishes it in the view's meta.
+#
+# Three days is not an SLA. The source publishes daily but skips days without
+# announcing it, so one missing report is normal and two is not yet alarming.
+MAX_STALE_DAYS = 3
+
+# Ledger statuses meaning "the server does not have this date", as distinct
+# from "we failed to fetch it". This server answers a date it has no report for
+# with HTTP 200, Content-Type application/pdf, Content-Length 0 — it does not
+# use 404. Retrying never fixes one, so these are counted as absent rather than
+# as failures. Canonical here because backfill.py writes them and
+# build_view_data.py publishes the resulting list.
+ABSENT_UPSTREAM = ("missing_upstream", "empty_upstream")
+
 
 def reconcile(det, abstract):
     """Check the parsed detail rows against the report's OWN grand total.
