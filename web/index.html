@@ -209,6 +209,9 @@ table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
 .dgrid .v{font-size:16px;margin-top:2px;font-variant-numeric:tabular-nums}
 .dgrid .v.sm{font-size:12.5px;line-height:1.35}
 .dgrid .v.none{color:var(--muted);font-size:12.5px}
+/* Names the two figures a tile is derived from, so the reader can check it
+   against the tiles beside it rather than taking it on trust. */
+.dgrid .vsub{font-size:11px;color:var(--muted);margin-top:2px}
 .dnote{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5;
   border-top:1px solid var(--border);padding-top:8px}
 .spark{margin:11px 0 2px;max-width:520px}
@@ -758,6 +761,11 @@ function buildCsv(){
     ["NOTE", "days_of_water_at_todays_release is EMPTY where canal release "
            + "is zero. That is undefined, not zero and not infinite - "
            + m.n_no_release + " of " + m.n_schemes + " schemes on this date."],
+    ["NOTE", "pct_filling = 100 * present_gross_mcm / design_gross_mcm. It is "
+           + "NOT live storage over design gross - live excludes the dead "
+           + "storage below the outlet, so that ratio is lower (67.65 vs "
+           + "76.88 at Ukai). Both columns are here so the figure can be "
+           + "reproduced rather than trusted."],
     ["NOTE", "deviation_pp compares against the mean of prior years whose "
            + "PUBLISHED capacity matches this date's within the tolerance "
            + "above. n_prior_years gives how many survived."],
@@ -766,7 +774,8 @@ function buildCsv(){
     ["NOTE", "Comment lines start with #. pandas: read_csv(f, comment='#')"],
   ];
   const cols = ["scheme_id", "scheme_name", "district", "region",
-                "pct_filling", "present_live_mcm", "design_gross_mcm",
+                "pct_filling", "present_gross_mcm", "present_live_mcm",
+                "design_gross_mcm",
                 "outflow_canal_cusecs", "days_water_at_release", "warning",
                 "mean_prior_pct", "n_prior_years", "deviation_pp"];
   const lines = P.map(r => "# " + r.map(String).join(","));
@@ -774,7 +783,8 @@ function buildCsv(){
   for(const s of DATA.schemes){
     lines.push([
       m.report_date, s.scheme_id, s.scheme_name, s.district, regName(s.region),
-      csvNum(s.pct_filling, 2), csvNum(s.present_live_mcm, 2),
+      csvNum(s.pct_filling, 2), csvNum(s.present_gross_mcm, 2),
+      csvNum(s.present_live_mcm, 2),
       csvNum(s.design_gross_mcm, 2), csvNum(s.outflow_canal_cusecs, 1),
       csvNum(s.days_water_at_release, 1), s.warning,
       csvNum(s.mean_prior, 2), s.n_prior, csvNum(s.dev_pp, 2),
@@ -1518,6 +1528,12 @@ function wire(){
     const dw = (s.days_water_at_release == null || !rel)
       ? `<div class="v none">no current release</div>`
       : `<div class="v sm" style="font-size:16px">${dayFmt(s.days_water_at_release)}</div>`;
+    /* Storage in this panel is printed to the source's own two decimals, not
+       the one decimal used in the tables, so that dividing the two tiles
+       reproduces the percentage above them exactly. One decimal closes at
+       Ukai (5700.2/7414.3 = 76.88%) but not at a small dam: Kaila would read
+       0.1/8.5 = 1.18% against a published 1.41%. Two decimals is the
+       published precision, so this adds none (§8.7). */
     det.innerHTML = `
       <button class="close" id="dclose">close</button>
       <h3>${esc(s.scheme_name)}</h3>
@@ -1526,11 +1542,14 @@ function wire(){
       ${schemeSpark(s, DATA.meta.scheme_series_thin_to || 3)}
       <div class="dgrid">
         <div class="c"><div class="k">Filling now</div>
-          <div class="v">${f2(s.pct_filling)}%</div></div>
-        <div class="c"><div class="k">Live storage</div>
-          <div class="v">${f1(s.present_live_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
+          <div class="v">${f2(s.pct_filling)}%</div>
+          <div class="vsub">gross storage ÷ design gross</div></div>
+        <div class="c"><div class="k">Gross storage</div>
+          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
         <div class="c"><div class="k">Design gross</div>
-          <div class="v">${f1(s.design_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
+          <div class="v">${f2(s.design_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
+        <div class="c"><div class="k">Live storage</div>
+          <div class="v">${f2(s.present_live_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
         <div class="c"><div class="k">Canal release</div>
           <div class="v">${rel ? f1(s.outflow_canal_cusecs)+
             ' <span style="font-size:11px;color:var(--muted)">cusecs</span>' :

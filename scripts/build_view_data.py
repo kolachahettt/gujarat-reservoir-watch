@@ -332,7 +332,14 @@ def main():
         CREATE OR REPLACE TEMP VIEW today AS
         SELECT f.scheme_id, d.scheme_name_latest AS scheme_name,
                d.district_latest AS district, d.region_latest AS region,
-               f.pct_filling, f.present_live_mcm, f.design_gross_mcm,
+               -- present_gross is the NUMERATOR of the published percentage.
+               -- Without it the interface prints a percentage and a storage
+               -- figure that cannot be divided into each other: live storage
+               -- over design gross is a different ratio, off by the dead
+               -- storage (9.2 pp at Ukai). Carried so the arithmetic closes
+               -- on screen and in the CSV.
+               f.pct_filling, f.present_gross_mcm, f.present_live_mcm,
+               f.design_gross_mcm,
                f.outflow_canal_cusecs, f.days_water_at_release, f.warning,
                d.n_design_variants
         FROM fact_storage f JOIN dim_scheme d USING (scheme_id)
@@ -454,7 +461,8 @@ def main():
             for r in grp.itertuples() if pd.notna(r.pct)}
 
     schemes = rows(sch, ["scheme_id", "scheme_name", "district", "region",
-                         "pct_filling", "present_live_mcm", "design_gross_mcm",
+                         "pct_filling", "present_gross_mcm",
+                         "present_live_mcm", "design_gross_mcm",
                          "outflow_canal_cusecs", "days_water_at_release",
                          "warning", "mean_prior", "n_prior", "dev_pp"])
     # Attach each scheme's own five-year series.
