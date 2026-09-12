@@ -1335,3 +1335,80 @@ properties return hex.
 
 **Rule:** contrast is a measurement, not a judgement, and it is a measurement *per use*. The
 same hex can pass as a chart line and fail as a label beside it.
+
+---
+
+## 23. The last four audit findings, and two bugs found while testing them
+
+Findings 17, 18, 21 and 22 in one pass. Finding 25 (payload size) skipped
+deliberately: the measurement was taken on a local server, and GitHub Pages
+serves the view JSON gzipped.
+
+**17 — the `Yrs` column did not say what it meant.** A row reading 2 rather
+than 4 means two prior years were excluded because their published design
+capacity did not match this date's, so the comparison rests on a shorter
+baseline. That is a material caveat sitting under a three-letter header. Now an
+`<abbr title>` saying so.
+
+**18 — the footer cited a placeholder as provenance.** It printed
+`?dt=<base64 date>` verbatim, because `build_view_data.py` published the URL
+*pattern* as `source_url`. A reader could not follow it and could not verify
+anything with it. The view now publishes the real address for the report date,
+built with the same `fd.token_for` the fetcher uses, so the page cites the URL
+the file actually came from — and the CSV provenance header, which prints the
+same field, gained a followable address with it. The pattern is kept separately
+as `source_url_pattern`, because it is still how someone reproduces another
+date.
+
+**21 — five decorative SVGs in the scatter size legend** had no `aria-hidden`.
+Each circle demonstrates a capacity bin whose value is written in text beside
+it, so a reader announcing five unlabelled graphics adds nothing and interrupts
+the label it should be reading. `aria-hidden="true"` and `focusable="false"`,
+the second because some older engines put SVG in the tab order regardless.
+
+**22 — keyboard and announcement gaps.**
+
+* A **skip link** as the first focusable element. Without it, reaching the
+  charts by keyboard meant tabbing through the search box, three view buttons
+  and the CSV button every time.
+* A real **`<main>` landmark** wrapping the three views and the detail panel,
+  which is also the skip target, with `tabindex="-1"` so focus can be moved
+  there without putting it in the tab order.
+* One polite **live region** for transient events. Switching view swaps the
+  entire content area while focus stays on the button, so previously a screen
+  reader user heard nothing and had no way to know the page had changed. The
+  CSV confirmation was visual only — the button text flicking to "saved", which
+  is not announced and does not say *where* the file went. Both now announce,
+  the download with its filename, row count and report date.
+
+The live region **clears itself before writing**, on a separate frame. A live
+region whose text is replaced with a *different* string announces reliably, but
+one replaced with the *same* string often does not — the node did not change,
+so nothing fires. Downloading the same CSV twice must be announced twice, and
+is: verified with a MutationObserver watching the sequence of text changes the
+way an assistive technology would, not the final value.
+
+Announcement is wired to `window.__go` rather than to the internal `go()`,
+because `go()` also runs on the breakpoint re-render — announcing there would
+report a view change every time a phone was rotated.
+
+### Two bugs the testing found
+
+**The CSV button could stick on "saved" permanently.** It captured
+`btn.innerHTML` at each click and restored that value after 1.8 s, so a second
+click inside the window captured the already-changed "✓ saved" text and
+restored *it* — leaving the button reading "saved" with no way back. Now the
+original label is stashed on the element once and a single timer is reset on
+each click. Found by clicking it twice in a test, not by reading the code:
+`afterFirst` and `afterSecond` both "✓ saved", `afterRevert` "↓ CSV".
+
+**`:focus` styling cannot be verified through `document.activeElement`.** The
+skip link appeared broken — `getComputedStyle().top` stayed at `-40px` after
+focusing it. The cause was the test, not the CSS: the Browser pane did not have
+OS focus, so `document.hasFocus()` was false and `:focus` did not match even
+though `activeElement` was correct. Confirmed by reading the rule out of the
+CSSOM and by re-testing once the document had focus, where `matches(':focus')`
+became true and the link rendered at the top of the viewport.
+
+**Rule:** verifying focus behaviour needs `document.hasFocus()` checked first,
+or the result is meaningless.

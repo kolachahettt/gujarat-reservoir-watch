@@ -531,7 +531,16 @@ def main():
             "report_date": REPORT_DATE,
             "built_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "source": "Gujarat Water Resources Department — daily dam storage report",
-            "source_url": SOURCE_URL,
+            # The REAL URL for this report date, not the pattern. It used to
+            # publish SOURCE_URL verbatim, so the footer printed a literal
+            # "?dt=<base64 date>" — a placeholder presented as provenance,
+            # which a reader cannot follow and cannot verify. Built with the
+            # same fd.token_for the fetcher uses, so the page cites the address
+            # the file actually came from.
+            "source_url": fd.BASE + fd.token_for(REPORT_DATE),
+            # Kept separately, because the pattern is still worth stating —
+            # it is how someone reproduces any other date.
+            "source_url_pattern": SOURCE_URL,
             "report_sha256": (row["sha256"].iloc[0] if len(row) else None),
             "report_bytes": (int(row["bytes"].iloc[0])
                              if len(row) and pd.notna(row["bytes"].iloc[0]) else None),

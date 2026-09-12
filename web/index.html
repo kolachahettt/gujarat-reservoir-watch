@@ -142,6 +142,25 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
   margin:16px 0 4px;padding:9px 12px;background:var(--surface-1);
   border:1px solid var(--border);border-radius:7px;font-size:11.5px;
   color:var(--text-secondary)}
+/* ---------- keyboard and screen-reader plumbing ---------- */
+/* Visually hidden but still announced. NOT display:none and NOT
+   visibility:hidden, either of which removes it from the accessibility tree —
+   which is the opposite of the point. The 1px clip is the technique that keeps
+   it readable while taking no space. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* The skip link is the first focusable thing on the page, and becomes visible
+   when focused. Without it, reaching the charts by keyboard means tabbing
+   through the search box, three view buttons and the CSV button every time. */
+.skip{position:absolute;left:8px;top:-40px;z-index:20;
+  background:var(--surface-1);color:var(--text-primary);
+  border:1px solid var(--border);border-radius:6px;padding:7px 12px;
+  font-size:12.5px;text-decoration:none;transition:top .12s}
+.skip:focus{top:8px;outline:2px solid var(--now-text);outline-offset:1px}
+/* The skip target takes focus programmatically, so it must not draw a ring as
+   though it were an interactive control. */
+main:focus{outline:none}
+
 /* ---------- data age ---------- */
 /* Two levels, because the honest message differs. In season and within the
    threshold the age is a quiet fact in the provenance line. Past the threshold
@@ -374,6 +393,14 @@ code{overflow-wrap:anywhere;word-break:break-word}
 </head>
 <body>
 <div class="viz-root" id="root">
+  <a class="skip" href="#main">Skip to the data</a>
+
+  <!-- One polite live region for the whole page. Announcements that are
+       transient events rather than content — a CSV saved, a view changed —
+       are written here. Separate from #ageBanner, which is role=status
+       because it IS content and must stay on screen. -->
+  <div id="announce" class="sr-only" role="status" aria-live="polite"></div>
+
   <header class="hd">
     <div>
       <h1>Gujarat Reservoir Watch — season to date</h1>
@@ -402,6 +429,10 @@ code{overflow-wrap:anywhere;word-break:break-word}
        applies equally to Regions and Schemes. role=status so a screen reader
        announces it without the reader having to go looking. -->
   <div class="agebanner" id="ageBanner" role="status"></div>
+
+  <!-- A real landmark, and the skip link's target. tabindex=-1 so focus can be
+       moved here programmatically without putting it in the tab order. -->
+  <main id="main" tabindex="-1">
 
   <div class="detail" id="detail"></div>
 
@@ -462,6 +493,8 @@ code{overflow-wrap:anywhere;word-break:break-word}
     <div id="meth"></div>
   </details>
 
+  </main>
+
   <footer class="ft" id="foot"></footer>
 </div>
 
@@ -491,6 +524,20 @@ function dosLabelFull(dos, year){
 }
 const esc = s => String(s).replace(/[&<>"]/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* Write to the polite live region.
+   Cleared first, on a separate frame, because a live region whose text is
+   replaced with a DIFFERENT string announces reliably but one replaced with
+   the SAME string often does not — the node did not change, so nothing fires.
+   Downloading the same CSV twice must be announced twice. */
+let _announceT = null;
+function announce(msg){
+  const el = document.getElementById("announce");
+  if(!el) return;
+  clearTimeout(_announceT);
+  el.textContent = "";
+  _announceT = setTimeout(() => { el.textContent = msg; }, 60);
+}
 const f1 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(1);
 const f2 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(2);
 
@@ -948,6 +995,7 @@ function buildCsv(){
   return "﻿" + lines.join("\r\n") + "\r\n";
 }
 
+let _dlRevertT = null;
 function downloadCsv(btn){
   const name = `gujarat-reservoir-watch_${DATA.meta.report_date}.csv`;
   const blob = new Blob([buildCsv()], {type: "text/csv;charset=utf-8"});
@@ -960,10 +1008,26 @@ function downloadCsv(btn){
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+  /* The button text flicking to "saved" is a visual-only confirmation: it is
+     not announced, and on some readers the button's accessible name changing
+     under focus is reported as a new control rather than as an event. The
+     live region carries the same fact in words, including the filename, since
+     "saved" alone does not say where. */
+  announce(`CSV saved as ${name} — ${DATA.schemes.length} schemes for `
+           + `${DATA.meta.report_date}`);
+  /* The label reverts from ONE remembered original and ONE timer.
+     It used to capture btn.innerHTML at each click and restore that: a second
+     click within the 1.8s window captured the already-changed "saved" text and
+     restored it permanently, leaving the button stuck reading "saved" with no
+     way back. Found by clicking it twice in a test rather than by reading it.
+
+     The original is stashed on the element the first time, so it survives any
+     number of overlapping clicks. */
   if(btn){
-    const was = btn.innerHTML;
+    if(btn.dataset.label == null) btn.dataset.label = btn.innerHTML;
+    clearTimeout(_dlRevertT);
     btn.innerHTML = "&check; saved";
-    setTimeout(() => { btn.innerHTML = was; }, 1800);
+    _dlRevertT = setTimeout(() => { btn.innerHTML = btn.dataset.label; }, 1800);
   }
 }
 
@@ -1202,8 +1266,14 @@ function scatterLegend(){
     </div>
     <div class="grp" style="flex-direction:column;align-items:flex-start">
       <span class="t">Design capacity, MCM</span>
+      <!-- The circles are decorative: the size they demonstrate is stated in
+           text beside each one, so a screen reader announcing five unlabelled
+           graphics adds nothing and interrupts the label it should be reading.
+           focusable="false" as well as aria-hidden, because older Internet
+           Explorer-era engines put SVG in the tab order regardless. -->
       <div class="szleg">${CAP_BINS.map(b =>
-        `<div><svg width="${b.r*2+4}" height="${b.r*2+4}"><circle
+        `<div><svg width="${b.r*2+4}" height="${b.r*2+4}" aria-hidden="true"
+           focusable="false"><circle
            cx="${b.r+2}" cy="${b.r+2}" r="${b.r}" fill="var(--muted)"
            stroke="var(--surface-1)" stroke-width="1.5"/></svg>${b.lb}</div>`
         ).join("")}</div>
@@ -1408,7 +1478,7 @@ function render(d){
       <th style="text-align:right">% now</th>
       <th style="text-align:right">Prior mean</th>
       <th style="text-align:right">Deviation, pp</th>
-      <th style="text-align:right">Yrs</th>
+      <th style="text-align:right"><abbr title="How many of the four prior years entered this scheme's baseline. Fewer than 4 means a year was excluded because its published design capacity did not match this date's, so the comparison rests on a shorter baseline.">Yrs</abbr></th>
       <th style="text-align:right">Live MCM</th>
       <th style="text-align:right">Design MCM</th></tr></thead><tbody>` +
     d.deviation_pp.map(r => `<tr>
@@ -1521,7 +1591,9 @@ function render(d){
     `Source: ${esc(m.source)}. Daily report for <b>${m.report_date}</b>,
      ${m.report_bytes ? m.report_bytes.toLocaleString()+" bytes, " : ""}
      SHA-256 <code>${esc(m.report_sha256||"—")}</code>.<br>
-     Retrieved from <code>${esc(m.source_url)}</code>. Page built
+     Retrieved from <code>${esc(m.source_url)}</code>${m.source_url_pattern
+       ? ` &nbsp;·&nbsp; any other date: <code>${esc(m.source_url_pattern)}</code>`
+       : ""}. Page built
      ${esc(m.built_utc)} from ${m.dates_loaded} daily reports.
      <div class="nofc">Every figure on this page is a comparison of observed
      readings. Nothing here is a forecast, and no figure states what storage
@@ -1843,7 +1915,22 @@ function wire(){
       bs[name].setAttribute("aria-current", String(name === CURRENT_VIEW));
     }
   }
-  window.__go = k => { CURRENT_VIEW = k; go(k); };
+  /* Switching view swaps the whole content area while focus stays on the
+     button, so without this a screen-reader user hears nothing and has no way
+     to know the page changed under them. Announced from __go rather than from
+     go(), because go() also runs on the breakpoint re-render — announcing
+     there would report a view change every time a phone was rotated. */
+  const VIEW_SAID = {
+    Season: "Season view: state headline, the all-schemes chart, five regional "
+          + "facets and both deviation tables",
+    Regions: "Regions view: all five regions on one chart, current season only",
+    Schemes: "Schemes view: all 206 schemes as one point each",
+  };
+  window.__go = k => {
+    CURRENT_VIEW = k;
+    go(k);
+    announce(VIEW_SAID[k] || `${k} view`);
+  };
   bs.Season.onclick = () => window.__go("Season");
   bs.Regions.onclick = () => window.__go("Regions");
   bs.Schemes.onclick = () => window.__go("Schemes");
