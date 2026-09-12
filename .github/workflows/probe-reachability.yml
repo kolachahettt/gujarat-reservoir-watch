@@ -2,21 +2,32 @@ name: Probe — can a runner reach the WRD server?
 
 # ---------------------------------------------------------------------------
 # This exists to answer ONE question before any daily automation is built:
-# will a GitHub-hosted runner, on a shared Azure IP, get a PDF out of
-# wrd-dam.gujarat.gov.in at all? If the portal refuses Azure ranges or
-# non-Indian addresses, the whole scheduled approach is dead and it is worth
-# knowing that in one minute rather than after a day's work.
+# will a GitHub-hosted runner get a PDF out of wrd-dam.gujarat.gov.in?
 #
-# Deliberately minimal, so the result cannot be ambiguous:
+# First run, 12 Sep 2026: BLOCKED AT THE NETWORK LAYER. "Network is
+# unreachable" on both TLS attempts, from egress IP 64.236.134.161.
+#
+# That error is ENETUNREACH - no route to the address - which is a different
+# thing from a refusal. The host publishes BOTH an A record (103.78.200.187)
+# and an AAAA record (2001:df6:c800::674e:c8bb), and GitHub-hosted runners
+# routinely have IPv6 configured but unrouted. Python's getaddrinfo will return
+# the AAAA record first, try it, fail with exactly this error, and never reach
+# the A record.
+#
+# So this version resolves the ambiguity instead of guessing: it tests raw TCP
+# to each address family separately, then fetches twice - once with normal
+# dual-stack resolution, once with IPv4 forced - and prints the matrix. One
+# run now distinguishes "IPv6 is broken on runners" from "the portal refuses
+# us", which are the same symptom and completely different conclusions.
+#
+# Still deliberately minimal so the result cannot be ambiguous:
 #   * no repo checkout      - nothing to break before the request
 #   * no pip install        - a dependency failure cannot masquerade as a block
 #   * Python stdlib only    - urllib, ssl, socket, base64, hashlib
 #   * no write permissions  - it cannot commit, publish or deploy anything
 #   * manual trigger only   - no schedule; it runs when you run it
 #
-# It fetches ONE url. The default date is one whose byte count and SHA-256 are
-# already known from a local run, so a match proves the runner sees the same
-# file rather than merely that something answered.
+# At most four requests to one URL, which is within the agreed budget.
 # ---------------------------------------------------------------------------
 
 on:
@@ -37,9 +48,9 @@ concurrency:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Fetch one PDF and report what happened
+      - name: Fetch one PDF over IPv4 and IPv6 and report what happened
         env:
           TARGET_DATE: ${{ inputs.date }}
         run: |
@@ -58,32 +69,57 @@ jobs:
           KNOWN = {"2026-09-11": (276237, "10F4783D812B83530D6B108AC131E4B03"
                                           "FDA075B48778183369BF4B60B2C4C28")}
 
-          def kv(k, v): print(f"  {k:<24} {v}", flush=True)
+          def kv(k, v): print(f"  {k:<26} {v}", flush=True)
           def rule(t): print(f"\n{'='*70}\n{t}\n{'='*70}", flush=True)
 
-          rule("CONTEXT")
-          # Best effort only. Never fatal, and it tells us which IP range the
-          # portal would have seen if it refuses us.
+          # ---- 1. context ------------------------------------------------
+          rule("1. CONTEXT")
           try:
               with urllib.request.urlopen("https://api.ipify.org", timeout=15) as r:
                   kv("runner egress IP", r.read().decode().strip())
           except Exception as e:
               kv("runner egress IP", f"(unavailable: {type(e).__name__})")
 
+          _real_gai = socket.getaddrinfo
+          v4, v6 = [], []
           try:
-              ips = sorted({ai[4][0] for ai in socket.getaddrinfo(HOST, 443)})
-              kv("DNS resolves to", ", ".join(ips))
+              for ai in _real_gai(HOST, 443, 0, socket.SOCK_STREAM):
+                  (v6 if ai[0] == socket.AF_INET6 else v4).append(ai[4][0])
+              v4, v6 = sorted(set(v4)), sorted(set(v6))
+              kv("A records (IPv4)", ", ".join(v4) or "(none)")
+              kv("AAAA records (IPv6)", ", ".join(v6) or "(none)")
           except Exception as e:
               rule("VERDICT: DNS FAILURE")
               print(f"Cannot resolve {HOST}: {type(e).__name__}: {e}")
-              print("Nothing else was attempted.")
               sys.exit(1)
 
           token = base64.b64encode(DATE.encode()).decode()
           kv("target date", DATE)
-          kv("base64 token", token)
           kv("url", URL + token)
 
+          # ---- 2. raw TCP, per family ------------------------------------
+          # Separates "no route to this address" from anything TLS or HTTP
+          # does. A TCP handshake is not a report request.
+          rule("2. RAW TCP TO PORT 443, PER ADDRESS FAMILY")
+          def tcp(ip):
+              fam = socket.AF_INET6 if ":" in ip else socket.AF_INET
+              s = socket.socket(fam, socket.SOCK_STREAM); s.settimeout(15)
+              t0 = time.time()
+              try:
+                  s.connect((ip, 443))
+                  return True, f"connected in {time.time()-t0:.2f}s"
+              except Exception as e:
+                  return False, f"{type(e).__name__}: {e}"
+              finally:
+                  s.close()
+
+          tcp_ok = {}
+          for ip in v4 + v6:
+              ok, msg = tcp(ip)
+              tcp_ok[ip] = ok
+              kv(f"{'IPv6' if ':' in ip else 'IPv4'} {ip}", ("OK - " if ok else "FAIL - ") + msg)
+
+          # ---- 3 & 4. HTTPS, dual-stack then IPv4-forced -----------------
           def fetch(verify):
               ctx = ssl.create_default_context()
               if not verify:
@@ -96,99 +132,119 @@ jobs:
               return {"status": r.status, "hdrs": dict(r.headers),
                       "blob": blob, "secs": round(time.time() - t0, 1)}
 
-          rule("REQUEST")
-          # Verified first on purpose: locally this host's certificate does not
-          # validate, and knowing whether it validates on a runner's trust
-          # store decides whether verification can stay ON in automation.
-          res, verified, notes = None, None, []
-          for verify in (True, False):
-              label = "TLS verified" if verify else "TLS NOT verified"
+          def try_both_tls(label):
+              """Verified first: whether the cert validates on a runner's trust
+              store decides if verification can stay ON in automation."""
+              for verify in (True, False):
+                  tl = "TLS verified" if verify else "TLS NOT verified"
+                  try:
+                      res = fetch(verify)
+                      kv(f"{label} [{tl}]", f"HTTP {res['status']} in {res['secs']}s")
+                      return res, verify, None
+                  except urllib.error.HTTPError as e:
+                      kv(f"{label} [{tl}]", f"HTTP {e.code} {e.reason}")
+                      return ({"status": e.code, "hdrs": dict(e.headers or {}),
+                               "blob": b"", "secs": None}, verify, None)
+                  except Exception as e:
+                      msg = f"{type(e).__name__}: {e}"
+                      kv(f"{label} [{tl}]", f"FAILED - {msg}")
+                      last = msg
+              return None, None, last
+
+          rule("3. HTTPS WITH NORMAL (DUAL-STACK) RESOLUTION")
+          dual, dual_tls, dual_err = try_both_tls("dual-stack")
+
+          rule("4. HTTPS WITH IPv4 FORCED")
+          if not v4:
+              print("  no A record to force; skipped")
+              forced, forced_tls, forced_err = None, None, "no A record"
+          else:
+              def _v4_only(host, port, family=0, type=0, proto=0, flags=0):
+                  return _real_gai(host, port, socket.AF_INET, type, proto, flags)
+              socket.getaddrinfo = _v4_only
               try:
-                  res, verified = fetch(verify), verify
-                  kv(f"attempt [{label}]", f"HTTP {res['status']} "
-                                           f"in {res['secs']}s")
-                  break
-              except urllib.error.HTTPError as e:
-                  # An HTTP status means the server answered: reachable, but
-                  # possibly refusing us at the application layer.
-                  res = {"status": e.code, "hdrs": dict(e.headers or {}),
-                         "blob": b"", "secs": None}
-                  verified = verify
-                  kv(f"attempt [{label}]", f"HTTP {e.code} {e.reason}")
-                  break
-              except Exception as e:
-                  msg = f"{type(e).__name__}: {e}"
-                  kv(f"attempt [{label}]", f"FAILED - {msg}")
-                  notes.append(f"{label}: {msg}")
+                  forced, forced_tls, forced_err = try_both_tls("IPv4-forced")
+              finally:
+                  socket.getaddrinfo = _real_gai
 
-          if res is None:
-              rule("VERDICT: BLOCKED AT THE NETWORK LAYER")
-              for n in notes: print(f"  {n}")
-              print("\nThe host resolves but no request completed, with or without")
-              print("certificate verification. A shared Azure IP being refused, or")
-              print("the portal being reachable only from within India, both look")
-              print("like this. The scheduled approach cannot work from a")
-              print("GitHub-hosted runner; a self-hosted runner would be needed.")
+          # ---- verdict ---------------------------------------------------
+          def good(r): return r is not None and r["status"] == 200 and r["blob"][:5] == b"%PDF-"
+
+          rule("MATRIX")
+          kv("dual-stack resolution", "PDF" if good(dual) else
+             (f"HTTP {dual['status']}" if dual else "unreachable"))
+          kv("IPv4 forced", "PDF" if good(forced) else
+             (f"HTTP {forced['status']}" if forced else "unreachable"))
+
+          res = forced if good(forced) else dual
+          verified = forced_tls if good(forced) else dual_tls
+
+          if good(forced) and not good(dual):
+              rule("VERDICT: IPv6 WAS THE PROBLEM — IPv4 WORKS")
+              print("The portal is NOT blocking this runner. Dual-stack resolution")
+              print("picks the AAAA record, the runner has no IPv6 route, and the")
+              print("request dies with ENETUNREACH before the A record is tried.")
+              print("\nThe daily workflow is viable, provided every request forces")
+              print("IPv4. That is a getaddrinfo filter in the fetcher, not a")
+              print("change to any URL or any parsing.")
+          elif res is None:
+              rule("VERDICT: BLOCKED ON BOTH IPv4 AND IPv6")
+              kv("dual-stack error", dual_err)
+              kv("IPv4-forced error", forced_err)
+              print("\nRaw TCP results above localise it: if IPv4 TCP also failed,")
+              print("this is the portal or the network refusing the runner's address")
+              print("range, not an IPv6 routing artefact. A scheduled GitHub-hosted")
+              print("workflow cannot fetch this source.")
               sys.exit(1)
+          elif res["status"] != 200:
+              rule(f"VERDICT: REFUSED — HTTP {res['status']}")
+              print("Reachable, but the portal would not serve the report. A 403")
+              print("here is the server declining this client.")
+              sys.exit(1)
+          elif len(res["blob"]) == 0:
+              rule("VERDICT: REACHABLE, but an empty 200")
+              print("HTTP 200 with a zero-length body is how this server says 'no")
+              print("report for that date' - it does not use 404.")
+              if DATE in KNOWN:
+                  print(f"\nBut {DATE} HAS a report locally ({KNOWN[DATE][0]:,} bytes),")
+                  print("so an empty body points at interception, not a publishing lag.")
+                  sys.exit(1)
+              sys.exit(0)
+          elif not res["blob"].startswith(b"%PDF-"):
+              rule("VERDICT: SOMETHING IS INTERCEPTING")
+              print("HTTP 200, non-empty, but not a PDF - usually a captive portal,")
+              print("proxy notice or WAF challenge page. First 300 bytes:")
+              print(res["blob"][:300].decode("utf-8", "replace"))
+              sys.exit(1)
+          else:
+              rule("VERDICT: REACHABLE — got a PDF")
 
+          # ---- content check ---------------------------------------------
+          blob = res["blob"]
           rule("RESPONSE")
-          kv("status", res["status"])
           kv("TLS verification", "PASSED" if verified else
              "FAILED - fell back to unverified")
           for h in ("Content-Type", "Content-Length", "Server", "Date"):
               if h in res["hdrs"]: kv(h.lower(), res["hdrs"][h])
-          blob = res["blob"]
           kv("bytes actually read", f"{len(blob):,}")
           kv("first 8 bytes", repr(blob[:8]))
-          if blob:
-              kv("sha256", hashlib.sha256(blob).hexdigest().upper())
+          kv("sha256", hashlib.sha256(blob).hexdigest().upper())
 
-          if res["status"] != 200:
-              rule(f"VERDICT: REFUSED — HTTP {res['status']}")
-              print("The server is reachable but would not serve the report. A 403")
-              print("here is the portal declining this client rather than a")
-              print("network block.")
-              sys.exit(1)
-
-          if len(blob) == 0:
-              rule("VERDICT: REACHABLE, but an empty 200")
-              print("HTTP 200 with a zero-length body is how this server says 'no")
-              print("report for that date' - it does not use 404. That is expected")
-              print("for a date not yet published.")
-              if DATE in KNOWN:
-                  print(f"\nBut {DATE} is a date that HAS a report locally")
-                  print(f"({KNOWN[DATE][0]:,} bytes), so an empty body for it points at")
-                  print("interception rather than a publishing lag. Worth a second look.")
-                  sys.exit(1)
-              print("\nReachability itself looks fine. Re-run against a date known")
-              print("to be published to confirm content.")
-              sys.exit(0)
-
-          if not blob.startswith(b"%PDF-"):
-              rule("VERDICT: SOMETHING IS INTERCEPTING")
-              print("HTTP 200 with a non-empty body that is not a PDF. Usually a")
-              print("captive portal, proxy notice or WAF challenge page.")
-              print("\nFirst 300 bytes:")
-              print(blob[:300].decode("utf-8", "replace"))
-              sys.exit(1)
-
-          rule("VERDICT: REACHABLE — got a PDF")
           exp = KNOWN.get(DATE)
           if exp:
-              got_sha = hashlib.sha256(blob).hexdigest().upper()
-              size_ok, sha_ok = len(blob) == exp[0], got_sha == exp[1]
+              sha_ok = hashlib.sha256(blob).hexdigest().upper() == exp[1]
               kv("expected bytes", f"{exp[0]:,}")
-              kv("byte count", "MATCH" if size_ok else "DIFFERS")
+              kv("byte count", "MATCH" if len(blob) == exp[0] else "DIFFERS")
               kv("sha256", "MATCH" if sha_ok else "DIFFERS")
               if sha_ok:
                   print("\nByte-for-byte identical to the local copy. The runner sees")
                   print("the same file, so the daily workflow is viable.")
               else:
-                  print("\nA PDF arrived but it is not the file fetched locally. That")
-                  print("is not necessarily wrong - the report can be revised in")
-                  print("place - but it must be understood before automating, since")
-                  print("the whole archive assumes a published day is stable.")
+                  print("\nA PDF arrived but it is not the file fetched locally. The")
+                  print("report can be revised in place, but that must be understood")
+                  print("before automating - the archive assumes a published day is")
+                  print("stable.")
           else:
-              print(f"\nNo known hash for {DATE}; reachability confirmed, content")
-              print("not cross-checked. Re-run with the default date to do that.")
+              print(f"\nNo known hash for {DATE}; reachability confirmed, content not")
+              print("cross-checked. Re-run with the default date to do that.")
           PY
