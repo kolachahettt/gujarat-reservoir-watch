@@ -919,3 +919,65 @@ scales render; Season hidden when Schemes is shown; no console errors. Days of w
 Dholidhaja 2.8 days, Ukai 2,577 days (about 7.1 years), Kaila and Kadana "no current release".
 The stale-tooltip fix was verified by dispatching the real events: tooltip opens on hover
 (crosshair 0.5), **dismissed on scroll**, reopens, **dismissed on resize** (crosshair 0).
+
+---
+
+## 17. The source is unreachable from GitHub-hosted runners
+
+**Probed 12 September 2026, before building any daily automation.** The question was whether
+a scheduled GitHub Actions workflow could fetch the daily report at all. It was worth one
+minute of probing rather than a day of building, and the answer was no.
+
+`.github/workflows/probe-reachability.yml` — stdlib only, no checkout, no `pip install`,
+`contents: read`, manual trigger. Nothing that could fail *before* the request, so the result
+could not be ambiguous.
+
+| | Result |
+|---|---|
+| GitHub-hosted runner, egress `64.236.134.161` | **`Network is unreachable`, both TLS attempts** |
+| This machine, Indian residential address | HTTP 200 in 21.4 s, 276,237 bytes, **SHA-256 match** |
+
+### The error is a route failure, not a refusal — and that distinction matters
+
+`Network is unreachable` is `ENETUNREACH`: no route to the address. A portal *refusing* an
+address range produces a 403, a connection reset, or a timeout — not this. And the host
+publishes **both** families:
+
+```
+A     103.78.200.187
+AAAA  2001:df6:c800::674e:c8bb
+```
+
+GitHub-hosted runners routinely have IPv6 configured but unrouted. `getaddrinfo` returns the
+AAAA record first, the connection dies with exactly this error, and **the A record is never
+tried.** So two completely different conclusions produce an identical symptom:
+
+* IPv6 is broken on the runner → force IPv4 and everything works
+* the portal refuses the runner's address range → the approach is dead
+
+The revised probe settles it in one run rather than guessing: raw TCP to port 443 **per
+address family**, then HTTPS twice — normal dual-stack resolution, then IPv4 forced through a
+`getaddrinfo` filter — printing the matrix. Verified locally that both paths return the
+expected SHA-256, that the filter leaves SNI and certificate validation intact, and that the
+forced path is a resolution change only: no URL, no parsing, nothing else moves.
+
+**Result of the IPv4 re-run: pending.** This section is finalised when it lands.
+
+### A correction to §2 while here
+
+§2 records that TLS "does not validate in our environment" and `backfill.py` disables
+verification accordingly, keeping SHA-256 as the integrity check instead. **Both probe runs
+validated the certificate on the first attempt, with `ssl.create_default_context()` and no
+fallback.** Either the chain was fixed since, or the original finding was narrower than
+recorded. Not yet acted on — one observation is not grounds for changing the fetcher — but if
+the runner also verifies, verification should go back on and transport integrity stops being
+something this project trades away.
+
+### What follows regardless
+
+Whether or not IPv4 rescues it, this is a real limitation and belongs in the README, not
+buried here: **the published page is a dated snapshot, not a live feed.** It states its own
+report date and build time on its face, so staleness is visible rather than silent. If
+hosted runners cannot reach the source, the refresh has to run somewhere that can — a
+machine on a network the portal serves — and the honest options are a scheduled task on such
+a machine, or a documented one-command manual refresh.
