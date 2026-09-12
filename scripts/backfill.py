@@ -66,11 +66,43 @@ RUN_FAIL_COOLDOWN_S = 300
 ABSENT_UPSTREAM = ("missing_upstream", "empty_upstream")
 
 
-def ctx_noverify():
+def make_ctx(insecure=False):
+    """TLS context. Verification is ON by default — see below.
+
+    History, because this reverses an earlier decision. The brief recorded that
+    this host's certificate "does not validate in our environment" and the
+    fetcher disabled verification, keeping the SHA-256 of every file as the
+    integrity check instead. Re-tested 12 September 2026: **six consecutive
+    verified handshakes**, TLSv1.2, a valid Entrust OV certificate for
+    `*.gujarat.gov.in`. Either the chain was fixed server-side or the original
+    finding was narrower than recorded; which of those cannot be determined
+    retrospectively. Either way there is no longer a reason to trade transport
+    integrity away, so verification is back on.
+
+    It fails rather than falling back. A silent downgrade to unverified is the
+    same as not verifying — it just hides it. `--insecure` exists for the case
+    where the chain genuinely breaks and the data is wanted anyway, and it says
+    so loudly in the log.
+
+    KNOWN SCHEDULED RISK: the certificate observed on 12 Sep 2026 expires
+    **26 September 2026**. A late or mis-chained renewal will make every fetch
+    fail on that date. That is the correct behaviour — but it will look like an
+    outage, so check the certificate before assuming the portal is down.
+    """
     c = ssl.create_default_context()
-    c.check_hostname = False
-    c.verify_mode = ssl.CERT_NONE
+    if insecure:
+        c.check_hostname = False
+        c.verify_mode = ssl.CERT_NONE
     return c
+
+
+def ctx_noverify():
+    """Deprecated alias, kept so nothing that imports it breaks silently.
+
+    Returns a VERIFYING context now: a name promising no verification that
+    quietly started verifying is less dangerous than the reverse.
+    """
+    return make_ctx(insecure=False)
 
 
 def load_ledger():
@@ -215,7 +247,7 @@ def download_only(args):
     end = date.fromisoformat(args.end)
     days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
     days = month_filter(days, args.months)
-    ctx = ctx_noverify()
+    ctx = make_ctx(getattr(args, 'insecure', False))
 
     log = {}
     if DL_LOG.exists():
@@ -330,6 +362,9 @@ def main():
                     help="seconds between NETWORK requests (cache hits never sleep)")
     ap.add_argument("--priority-only", action="store_true")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--insecure", action="store_true",
+                    help="disable TLS certificate verification. Only for a "
+                         "genuinely broken chain; it is logged loudly.")
     ap.add_argument("--download-only", action="store_true",
                     help="fetch PDFs and log them; leave parsing to "
                          "scripts/parse_cached.py, which runs in parallel")
@@ -363,7 +398,7 @@ def main():
     print(f"to process: {len(ordered)}   delay {args.delay}s between network calls")
 
     ledger = load_ledger()
-    ctx = ctx_noverify()
+    ctx = make_ctx(getattr(args, 'insecure', False))
     net_calls = 0
     t0 = time.time()
 

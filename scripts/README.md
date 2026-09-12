@@ -33,10 +33,34 @@ python scripts/build_view_data.py
 python scripts/serve.py --root web --port 8021
 ```
 
+## The daily refresh
+
+```bash
+python scripts/daily_update.py --dry-run
+```
+
+`daily_update.py` is stages 1–6 for **one day**, with verification the backfill does not do:
+the PDF's own date line must match, there must be exactly 206 rows, closed vocabularies must
+be recognised, and the parsed rows must **reconcile against the report's own grand total**.
+The capacity gate still applies and still halts. Quiet when the report is not yet published;
+loud when data goes more than three days stale.
+
+It runs as a Windows scheduled task rather than in CI because **the source blocks
+GitHub-hosted runners** — see `PROJECT_BRIEF.md` §17. Register it with:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts\register_daily_task.ps1
+```
+
+Logs: `logs/daily_update.log` (full) and `logs/daily_update_runs.log` (one line per run).
+
 ## Supporting scripts
 
 | Script | What |
 |---|---|
+| `daily_update.py` | One day, verified, committed and pushed. `--dry-run`, `--no-push`, `--date`. |
+| `daily_update.cmd` | Task Scheduler wrapper: anchors the working directory, sets UTF-8, records the exit code. |
+| `register_daily_task.ps1` | Registers/removes the scheduled task. Dry-runs the wrapper before scheduling it. |
 | `fetch_dam.py` | **The shared parsing library**, plus a one-day ingest. Layout handling, the closed vocabularies, the hazard fixes. Imported by 1, 2 and 6 — change it and everything downstream changes. |
 | `pin_changeover.py` | Bisects the Nov–May off-season to date a capacity changeover. Needs the network; run it only when a new restatement appears. |
 | `wait_then_run.py` | Waits for a long download, runs retry passes, verifies coverage, then runs the pipeline. For unattended backfills. |

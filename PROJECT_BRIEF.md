@@ -955,13 +955,20 @@ tried.** So two completely different conclusions produce an identical symptom:
 * IPv6 is broken on the runner → force IPv4 and everything works
 * the portal refuses the runner's address range → the approach is dead
 
-The revised probe settles it in one run rather than guessing: raw TCP to port 443 **per
+The revised probe settled it in one run rather than guessing: raw TCP to port 443 **per
 address family**, then HTTPS twice — normal dual-stack resolution, then IPv4 forced through a
-`getaddrinfo` filter — printing the matrix. Verified locally that both paths return the
-expected SHA-256, that the filter leaves SNI and certificate validation intact, and that the
-forced path is a resolution change only: no URL, no parsing, nothing else moves.
+`getaddrinfo` filter.
 
-**Result of the IPv4 re-run: pending.** This section is finalised when it lands.
+**Result, second run: BLOCKED ON BOTH IPv4 AND IPv6.** Raw TCP to `103.78.200.187:443`
+**timed out**; the IPv6 address was unreachable. Egress `172.214.44.0`.
+
+That is conclusive, and the raw TCP result is what makes it conclusive. A timeout on a TCP
+handshake to the IPv4 address happens before TLS, before HTTP, and before any code this
+project wrote. **The portal refuses the runner's address range.** The IPv6 hypothesis was
+worth excluding and is now excluded.
+
+There is no cloud-scheduled refresh, and there cannot be one without a self-hosted runner on
+a network the portal serves. The automation runs locally instead — see §18.
 
 ### A correction to §2 while here
 
@@ -981,3 +988,109 @@ report date and build time on its face, so staleness is visible rather than sile
 hosted runners cannot reach the source, the refresh has to run somewhere that can — a
 machine on a network the portal serves — and the honest options are a scheduled task on such
 a machine, or a documented one-command manual refresh.
+
+---
+
+## 18. The daily refresh runs locally, because it has to
+
+§17 established that GitHub-hosted runners cannot reach the source. The refresh therefore
+runs as a **Windows scheduled task** on a machine the portal serves, with the same guarantees
+the CI job would have had.
+
+`scripts/daily_update.py`, wrapped by `scripts/daily_update.cmd`, registered by
+`scripts/register_daily_task.ps1`.
+
+### The order, and it stops at the first failure
+
+| # | Step | On failure |
+|---|---|---|
+| 1 | Target date = **yesterday in IST** | — |
+| 2 | Already parsed? | exit 0, **no network request** |
+| 3 | Fetch ONE report, existing 4-attempt jittered backoff | exit 1 loud |
+| 4 | Empty 200 upstream | **exit 0 quietly**, unless stale |
+| 5 | Exactly 206 rows; PDF's own date line agrees | exit 1 loud |
+| 6 | Closed vocabularies recognised | exit 1 loud |
+| 7 | **Reconcile against the report's own grand total** | exit 1 loud |
+| 8 | Rebuild DuckDB | exit 1 loud |
+| 9 | **Capacity gate** | **exit 2**, halt, no commit |
+| 10 | Newest data within 3 days of today IST | exit 1 loud |
+| 11 | Rebuild the view — **in season only** | exit 1 loud |
+| 12 | Commit with the report date in the subject, push | exit 1 loud |
+
+### Why each of the awkward ones is the way it is
+
+**IST, not UTC.** The report is Indian. A UTC "yesterday" is the wrong day for seven and a
+half hours out of every twenty-four, which would silently fetch the wrong report every
+evening.
+
+**Quiet when unpublished, loud when stale.** An empty 200 is how this server says "no report
+for that date" (§13). A one-day publishing lag must not produce a daily red alert, because an
+alarm that cries wolf stops being read. So it exits 0 — *unless* the newest data is more than
+three days old, at which point a lag is not a lag. The staleness check measures against the
+newest **parquet on disk**, not against the view's report date, so it keeps working through
+the seven off-season months when the view is deliberately not rebuilt.
+
+**Field warnings pass, unrecognised vocabulary blocks.** 190 of 732 historical days parse as
+`ok_with_warnings`; blocking on those would stop almost every run. What blocks is a value
+that fell through a *closed* vocabulary — a warning level or region code we thought we had
+enumerated. Silently bucketing a new category would corrupt every count that uses it.
+`fetch_dam.check_vocabularies()`.
+
+**Row count ≠ 206 stops for a human.** A dropped row and a genuinely new dam are
+indistinguishable from inside the parser. If a dam really is added, `N_SCHEMES_EXPECTED`
+changes by hand and the archive gains a note.
+
+**Off season it fetches but does not rebuild.** The season is 1 June – 31 October. Adding
+off-season dates to season facts would mix water years (§14), so the view is left alone and
+the site keeps showing the completed season with its date on its face. To stop git going
+quiet for seven months, each run appends one row to `data/processed/daily_log.csv` — report
+date, SHA-256, byte count, scheme count, state filling, worst residual. **That file is the
+dated archive**, versioned year-round, independent of whether the view moved.
+
+**The PDF is opened twice.** Once for the checks above, once by `parse_cached.py` which does
+the authoritative parquet and ledger write. That costs about fifteen seconds a day and buys
+one implementation of persistence instead of two that can drift.
+
+### Scheduling choices
+
+Default 09:15 local. On 12 September 2026 the day's report was **absent at 08:38 UTC and
+present by 09:30 UTC**, so the portal publishes during the following morning; since the task
+targets yesterday it has a full day of slack either way.
+
+`-StartWhenAvailable` is the important one: a laptop asleep at 09:15 runs the task when it
+next wakes rather than silently skipping the day. Without it, a closed lid is a missing day.
+No `-WakeToRun` — waking a machine to poll a government portal is not worth it. It runs in
+the logged-on session using the cached git credential, so **no password is stored anywhere**;
+the trade is that it will not fire while logged out.
+
+### The honest limitation
+
+**The site refreshes only when that machine is awake and logged in.** That is strictly worse
+than a cloud cron, and it is the direct consequence of §17 rather than a design preference.
+The page states its own report date and build time, so a gap shows on its face rather than
+being invisible.
+
+---
+
+## 19. TLS verification is back on
+
+§2 recorded that this host's certificate "does not validate in our environment", and the
+fetcher disabled verification on that basis, keeping the SHA-256 of every file as the
+integrity check instead.
+
+**Re-tested 12 September 2026: six consecutive verified handshakes**, TLSv1.2,
+`ECDHE-RSA-AES256-GCM-SHA384`, a valid Entrust OV certificate for `*.gujarat.gov.in`. Whether
+the chain was fixed server-side or the original finding was narrower than recorded cannot be
+determined retrospectively.
+
+So `backfill.ctx_noverify()` is replaced by **`make_ctx(insecure=False)`, verifying by
+default**. It **fails rather than falling back**: a silent downgrade to unverified is the same
+as not verifying, it just hides it. `--insecure` exists for a genuinely broken chain and says
+so loudly in the log. The SHA-256 recording stays either way — content integrity and
+transport integrity answer different questions.
+
+**A scheduled risk, not a hypothetical one: the observed certificate expires 26 September
+2026**, fourteen days after this was written. A late or mis-chained renewal will make every
+fetch fail on that date. That is correct behaviour, but it will look exactly like a portal
+outage — so check the certificate before concluding the source has gone down. The failure
+message in `daily_update.py` says so at the point where it matters.

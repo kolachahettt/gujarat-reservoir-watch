@@ -211,6 +211,84 @@ def canon_district(raw):
     return re.sub(r"\s+", " ", str(raw)).strip(), False
 
 
+# Above this fraction of the source's own total, a residual is not rounding and
+# the day is not trusted. The observed clean-day residual is 4.85e-6, which is
+# the abstract rounding 206 two-decimal values.
+MATERIAL_RESIDUAL = 1e-5
+
+N_SCHEMES_EXPECTED = 206
+
+
+def reconcile(det, abstract):
+    """Check the parsed detail rows against the report's OWN grand total.
+
+    The strongest check available on a single day, because the source is
+    checking itself: page 1's abstract is computed by WRD, not by us, so
+    agreement means the 206 rows were read in the right columns with no wrapped
+    number silently truncated (§4 hazard 2). A parse that shifts a column will
+    almost always break the sum; one that matches to 10^-5 did not.
+
+    Returns a dict with `ok`, both residuals and the numbers behind them.
+    """
+    out = {"ok": False, "reason": None, "n_parsed": int(len(det))}
+    if abstract is None or getattr(abstract, "empty", True):
+        out["reason"] = "abstract not parsed, so nothing to reconcile against"
+        return out
+    tot = abstract[abstract["region"] == "Total"]
+    if tot.empty:
+        out["reason"] = "no Total row found in the abstract"
+        return out
+
+    # Two rows are labelled Total: a 45-scheme sub-total of North+Central+South
+    # and the state grand total. Pick by scheme count, never by position.
+    grand = tot.loc[tot["n_schemes"].idxmax()]
+    out["n_abstract"] = int(grand["n_schemes"])
+    pairs = (("design", float(grand["design_gross_mcm"]),
+              float(det["design_gross_mcm"].sum())),
+             ("today", float(grand["today_gross_mcm"]),
+              float(det["present_gross_mcm"].sum())))
+    worst = 0.0
+    for label, src, ours in pairs:
+        ratio = abs(ours - src) / src if src else (0.0 if ours == 0 else 1.0)
+        worst = max(worst, ratio)
+        out[label] = {"abstract": round(src, 2), "parsed": round(ours, 2),
+                      "residual_mcm": round(ours - src, 2),
+                      "residual_ratio": ratio}
+    out["worst_ratio"] = worst
+    if out["n_abstract"] != out["n_parsed"]:
+        out["reason"] = (f"scheme count disagrees: abstract says "
+                         f"{out['n_abstract']}, parsed {out['n_parsed']}")
+        return out
+    if worst > MATERIAL_RESIDUAL:
+        out["reason"] = (f"residual {worst:.2e} of total exceeds "
+                         f"{MATERIAL_RESIDUAL:.0e} — the parse does not "
+                         f"reproduce the source's own total")
+        return out
+    out["ok"] = True
+    return out
+
+
+def check_vocabularies(det):
+    """Unrecognised closed-vocabulary values, which must block a publish.
+
+    Distinct from field warnings, which are normal — 190 of 732 days parse as
+    `ok_with_warnings` and blocking on those would stop almost every run. What
+    must block is a value that fell through a CLOSED vocabulary, because that
+    means a category we thought we had enumerated has grown, and silently
+    bucketing it would corrupt every count that uses it.
+    """
+    bad = {}
+    warn_ok = set(WARNING_VOCAB.values())
+    seen = set(det["warning"].dropna().unique())
+    if seen - warn_ok:
+        bad["warning"] = sorted(seen - warn_ok)
+    region_ok = set(REGION_CANON.values())
+    seen_r = set(det["region"].dropna().unique())
+    if seen_r - region_ok:
+        bad["region"] = sorted(seen_r - region_ok)
+    return bad
+
+
 def is_header(row):
     """Hazard 1 (§4): the two-row header repeats on every detail page."""
     joined = " ".join(clean(c, False) or "" for c in row[:8]).lower()

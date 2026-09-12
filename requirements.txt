@@ -1,0 +1,29 @@
+# Pinned exactly, and the pinning matters more here than in most projects.
+#
+# This pipeline reads ruled tables out of a PDF and selects them BY COLUMN
+# COUNT (see scripts/README.md and PROJECT_BRIEF §4). That makes it sensitive
+# to how pdfplumber infers table structure: a change in its line-detection
+# heuristics can shift a column, and a shifted column produces 206 plausible
+# rows of wrong data rather than an error.
+#
+# The grand-total reconciliation in scripts/daily_update.py is the backstop —
+# a shifted column almost always breaks the sum — but the first line of
+# defence is not changing the extractor underneath a working parser.
+#
+# Versions below are the ones the 732-day archive was parsed with, verified
+# against the source's own totals. If you upgrade, re-parse a known day with
+# --force and confirm the reconciliation residual is still ~1e-6:
+#     python scripts/fetch_dam.py --date 2026-09-11
+#
+# Install:
+#     python -m pip install -r requirements.txt
+
+pdfplumber==0.11.10        # table extraction; the sensitive one
+pdfminer.six==20260107     # pdfplumber's text/layout engine
+pypdfium2==5.13.0          # pdfplumber's rendering backend
+Pillow==12.3.0             # image handling for the above
+
+pandas==2.3.3              # dataframes throughout
+numpy==1.26.4              # pandas' numeric layer
+pyarrow==23.0.1            # parquet read/write for the per-day store
+duckdb==1.5.5              # the star schema and every analytical query

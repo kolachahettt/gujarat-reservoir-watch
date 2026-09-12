@@ -320,17 +320,23 @@ the report's own abstract. On 11 September 2026 the residual was −0.05 MCM out
 
 **Days of water is a snapshot, stated above** — not a drawdown estimate.
 
-**The source is not reachable from a GitHub-hosted runner, so the site cannot refresh
-itself.** Probed on 12 September 2026: a runner on egress IP `64.236.134.161` got
-`Network is unreachable` on every attempt, while the same request from an Indian residential
-address succeeded in 21 s with a byte-for-byte SHA-256 match. That error is `ENETUNREACH` —
-no route to the address — rather than a refusal, and the host publishes both an A record
-(`103.78.200.187`) and an AAAA record (`2001:df6:c800::674e:c8bb`), so a runner with IPv6
-configured but unrouted would fail this way before ever trying IPv4. **A second probe forcing
-IPv4 is testing that**; `.github/workflows/probe-reachability.yml` reports the matrix, and
-this paragraph will be finalised once it has run. Either way the consequence is the same
-shape: **the published page is a dated snapshot, not a live feed**, and it states its own
-report date and build time so staleness is visible rather than silent.
+**The source blocks cloud runners, so the refresh runs locally.** Probed twice on
+12 September 2026 from GitHub-hosted runners: **blocked on both IPv4 and IPv6.** Raw TCP to
+`103.78.200.187:443` timed out and the IPv6 address was unreachable, from egress
+`172.214.44.0`. The same request from an Indian residential address succeeded in 21 s with a
+byte-for-byte SHA-256 match.
+
+The first run looked like it might be an IPv6 artefact — the host publishes both an A and an
+AAAA record, and `Network is unreachable` is `ENETUNREACH`, a routing failure rather than a
+refusal. Forcing IPv4 ruled that out: it fails too. **The portal refuses the address range.**
+
+So there is no cloud-scheduled refresh, and there cannot be one without a self-hosted runner
+on a network the portal serves. Instead `scripts/daily_update.py` runs as a Windows scheduled
+task on a machine that can reach it — same guarantees as the CI job would have had:
+grand-total reconciliation, the capacity gate, IST date computation, quiet when the report
+is not yet published, loud when data goes stale. One consequence is honest and unavoidable:
+**the page refreshes only when that machine is awake**, and it states its own report date and
+build time so staleness is visible rather than silent.
 
 **The colour palette was not machine-validated.** It uses only values documented as passing
 in the reference palette it was built against (2026 orange; prior years the blue sequential
