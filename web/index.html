@@ -34,6 +34,27 @@
      inside a card. Declared as a variable and overridden on .facet rather
      than hardcoded, so a chart moved between the two keeps a correct halo. */
   --chart-bg:var(--page);
+  /* ---------- type scale ----------
+     Six steps, ratios 1.18 / 1.23 / 1.25 / 1.25 / 1.60. Replaces seventeen
+     rendered sizes, eleven of which sat between 7.5px and 13.5px — steps of
+     4-7%, far below the ~12% at which a size difference reads as hierarchy
+     rather than as inconsistency.
+
+     Body is 16px. It was 11.5px, which is a reference-instrument size, not a
+     reading size; the FT, Reuters and Our World in Data all set body between
+     16 and 18.
+
+     --t-xs is for eyebrows and table headers, which are uppercase and tracked
+     and so read larger than their nominal size. Nothing below 11px. */
+  --t-xs:11px; --t-sm:13px; --t-md:16px;
+  --t-lg:20px; --t-xl:25px; --t-display:40px;
+  /* Three line-heights, from eight. 1 is kept for the display numeral, where
+     a ratio above 1 just adds slack under a single line of digits. */
+  --lh-body:1.55; --lh-data:1.4; --lh-tight:1.2;
+  /* Measure. 68ch lands near 80 rendered characters for this face — prose was
+     running to 266 characters at the 1480px max-width. */
+  --measure:68ch;
+
   --now:#eb6834; --now-text:#c2410c;
   /* The label that sits ON the accent fill. It cannot be a fixed white: in
      dark mode --now-text is a LIGHT orange (it has to be, to read against a
@@ -104,14 +125,14 @@ body{margin:0;background:var(--page,#f9f9f7);
 header.hd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
   justify-content:space-between;border-bottom:1px solid var(--border);
   padding-bottom:12px}
-h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
-.prov{font-size:11.5px;color:var(--text-secondary);line-height:1.55}
-.prov code{font-size:10.5px;color:var(--muted);word-break:break-all}
+h1{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.01em}
+.prov{font-size:var(--t-sm);color:var(--text-secondary);line-height:var(--lh-body)}
+.prov code{font-size:var(--t-xs);color:var(--muted);word-break:break-all}
 .srch{position:relative;min-width:270px}
-.srch input{width:100%;padding:7px 9px;font-size:12.5px;font-family:inherit;
+.srch input{width:100%;padding:7px 9px;font-size:var(--t-md);font-family:inherit;
   border:1px solid var(--border);border-radius:6px;background:var(--surface-1);
   color:var(--text-primary)}
-.srch label{display:block;font-size:10.5px;text-transform:uppercase;
+.srch label{display:block;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.07em;color:var(--muted);margin-bottom:4px}
 .results{position:absolute;z-index:40;top:100%;left:0;right:0;max-height:280px;
   overflow:auto;background:var(--surface-1);border:1px solid var(--border);
@@ -119,10 +140,10 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
   box-shadow:0 6px 22px rgba(0,0,0,.13)}
 .results.on{display:block}
 .results button{display:block;width:100%;text-align:left;padding:6px 9px;
-  font-size:12px;font-family:inherit;background:none;border:0;cursor:pointer;
+  font-size:var(--t-sm);font-family:inherit;background:none;border:0;cursor:pointer;
   color:var(--text-primary)}
 .results button:hover,.results button:focus{background:var(--page)}
-.results .rg{font-size:10.5px;color:var(--muted)}
+.results .rg{font-size:var(--t-xs);color:var(--muted)}
 
 /* ---------- headline ---------- */
 .headline{margin:18px 0 6px;display:flex;flex-wrap:wrap;gap:26px;
@@ -132,26 +153,56 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
    compliant, but a 1% margin on the single most important number on the page.
    It uses the text orange for the headroom; the chart line beside it keeps the
    brighter --now, so the two are close rather than identical. Worth it. */
-.hero .n{font-size:42px;line-height:1;letter-spacing:-.02em;color:var(--now-text)}
-.hero .u{font-size:13px;color:var(--text-secondary);margin-top:5px}
-.hero .sub{font-size:12px;color:var(--text-secondary);margin-top:9px;
-  max-width:270px;line-height:1.5}
-.statechart{flex:1;min-width:330px}
+.hero .n{font-size:var(--t-display);line-height:1;letter-spacing:-.02em;color:var(--now-text)}
+.hero .u{font-size:var(--t-md);color:var(--text-secondary);margin-top:5px}
+.hero .sub{font-size:var(--t-md);color:var(--text-secondary);margin-top:9px;
+  max-width:270px;line-height:var(--lh-body)}
+/* BOUNDING THE CHART'S TEXT, NOT JUST ITS WIDTH.
+   SVG font-size is in viewBox units, so it scales with the container. With
+   flex:1 and no cap this chart reached 806px for a 470-unit viewBox — scale
+   1.72 — which rendered its 11-unit axis labels at 18.9px, LARGER than the
+   16px body text. The hierarchy inverted: axis furniture outranked prose.
+
+   560px holds the scale at or under 1.19, so in-chart text lands between 11
+   and 13.1px — below body, above the 10px floor, at every viewport.
+
+   The cost is a smaller headline chart on a wide screen, and the honest fix
+   is a viewBox sized to its container so one unit is always one pixel. That
+   needs per-chart geometry, because the state chart and a facet have very
+   different container widths and currently share one G. Logged, not done. */
+.statechart{flex:1;min-width:330px;max-width:560px}
 .kv{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
-.kv div{font-size:11.5px;color:var(--text-secondary)}
+.kv div{font-size:var(--t-sm);color:var(--text-secondary)}
 .kv b{font-variant-numeric:tabular-nums;color:var(--text-primary);
   font-weight:600}
 
 /* ---------- legend ---------- */
 .legend{display:flex;flex-wrap:wrap;gap:15px;align-items:center;
   margin:16px 0 4px;padding:9px 12px;background:var(--surface-1);
-  border:1px solid var(--border);border-radius:7px;font-size:11.5px;
+  border:1px solid var(--border);border-radius:7px;font-size:var(--t-sm);
   color:var(--text-secondary)}
+
+/* ---------- measure ----------
+   Prose ran to 266 characters per line in the footer and 246 in the
+   methodology list at the 1480px max-width, against an optimum of 45-75 and a
+   tolerable ceiling near 90. Nothing had a max-width; every block simply filled
+   the container. These caps are on the text blocks only — tables, charts and
+   the facet grid still use the full width, because their job is comparison
+   across the row, not reading along it. */
+.prov,.hero .sub,.agebanner,.cross,.dnote,.capnote,.sparkcap,.nofc,
+details.meth div,details.meth li,.placement .pbody,footer.ft{
+  max-width:var(--measure)}
+/* A headline wants two or three lines, not four. 34ch put the widest line at
+   23 characters and wrapped an 82-character headline four times; 50ch gives
+   about 35 and is still inside the header column, which binds first anyway. */
+h1{max-width:50ch}
+h2,h2 .q{max-width:52ch}
+
 /* ---------- masthead as kicker, h1 as the finding ---------- */
 /* The site name and date, above a headline that now asserts something. Small
    and uppercase so it reads as identification rather than competing with the
    finding underneath it. */
-.kicker{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;
+.kicker{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;
   color:var(--muted);margin-bottom:3px;font-variant-numeric:tabular-nums}
 
 /* ---------- keyboard and screen-reader plumbing ---------- */
@@ -167,7 +218,7 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
 .skip{position:absolute;left:8px;top:-40px;z-index:20;
   background:var(--surface-1);color:var(--text-primary);
   border:1px solid var(--border);border-radius:6px;padding:7px 12px;
-  font-size:12.5px;text-decoration:none;transition:top .12s}
+  font-size:var(--t-md);text-decoration:none;transition:top .12s}
 .skip:focus{top:8px;outline:2px solid var(--now-text);outline-offset:1px}
 /* The skip target takes focus programmatically, so it must not draw a ring as
    though it were an interactive control. */
@@ -180,7 +231,7 @@ main:focus{outline:none}
    rather than a live one — it becomes a banner above everything, since a
    reader who does not know how old the numbers are is reading them wrong. */
 .agebanner{display:none;margin:10px 0 0;padding:9px 12px;border-radius:7px;
-  font-size:12.5px;line-height:1.5;border:1px solid}
+  font-size:var(--t-md);line-height:var(--lh-body);border:1px solid}
 .agebanner.on{display:block}
 .agebanner.stale{color:var(--warn-fg);background:var(--warn-bg);
   border-color:var(--warn-bd)}
@@ -216,28 +267,28 @@ main:focus{outline:none}
 .facet{background:var(--surface-1);border:1px solid var(--border);
   border-radius:8px;padding:11px 12px 9px;--chart-bg:var(--surface-1)}
 .fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
-.fh .nm{font-size:13.5px;font-weight:600}
-.fh .meta{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
-.fnums{display:flex;gap:13px;margin:3px 0 5px;font-size:11.5px;
+.fh .nm{font-size:var(--t-lg);font-weight:600}
+.fh .meta{font-size:var(--t-xs);color:var(--muted);font-variant-numeric:tabular-nums}
+.fnums{display:flex;gap:13px;margin:3px 0 5px;font-size:var(--t-sm);
   color:var(--text-secondary);flex-wrap:wrap}
 .fnums b{font-variant-numeric:tabular-nums;color:var(--text-primary)}
 .fnums .dv{color:var(--now-text);font-weight:600;font-variant-numeric:tabular-nums}
 .plot{position:relative}
 .plot svg{display:block;width:100%;height:auto;touch-action:none}
-.cross{font-size:11.5px;line-height:1.5;margin-top:6px;
+.cross{font-size:var(--t-md);line-height:var(--lh-body);margin-top:6px;
   color:var(--text-secondary);border-top:1px solid var(--border);
   padding-top:6px}
 .cross b{color:var(--text-primary)}
 .cross .none{color:var(--muted)}
-.capnote{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+.capnote{font-size:var(--t-xs);color:var(--muted);margin-top:4px;line-height:var(--lh-data)}
 
 /* ---------- tooltip ---------- */
 .tip{position:fixed;z-index:60;pointer-events:none;display:none;
   background:var(--tip-bg);border:1px solid var(--border);border-radius:7px;
-  padding:8px 10px;font-size:11.5px;color:var(--text-primary);min-width:172px;
+  padding:8px 10px;font-size:var(--t-sm);color:var(--text-primary);min-width:172px;
   box-shadow:0 8px 26px rgba(0,0,0,.17)}
 .tip.on{display:block}
-.tip .d{font-size:11px;color:var(--text-secondary);margin-bottom:5px;
+.tip .d{font-size:var(--t-sm);color:var(--text-secondary);margin-bottom:5px;
   padding-bottom:4px;border-bottom:1px solid var(--border)}
 .tip table{border-collapse:collapse;width:100%}
 .tip td{padding:1.5px 0;font-variant-numeric:tabular-nums}
@@ -248,8 +299,8 @@ main:focus{outline:none}
   color:var(--text-secondary);font-variant-numeric:tabular-nums}
 
 /* ---------- tables ---------- */
-h2{font-size:15px;margin:30px 0 3px;letter-spacing:-.01em}
-h2 .q{font-weight:400;font-size:12px;color:var(--text-secondary);
+h2{font-size:var(--t-lg);margin:30px 0 3px;letter-spacing:-.01em}
+h2 .q{font-weight:400;font-size:var(--t-sm);color:var(--text-secondary);
   display:block;margin-top:3px;letter-spacing:0}
 /* The tables carry nine columns and cannot compress below about 660px.
    Without this wrapper `width:100%` could not shrink past the content minimum,
@@ -259,13 +310,13 @@ h2 .q{font-weight:400;font-size:12px;color:var(--text-secondary);
   border:1px solid var(--border);border-radius:7px;background:var(--surface-1);
   margin-top:9px}
 .tablewrap table.dt{margin-top:0;border:0;border-radius:0;min-width:660px}
-.scrollhint{display:none;font-size:10.5px;color:var(--muted);margin-top:5px}
+.scrollhint{display:none;font-size:var(--t-xs);color:var(--muted);margin-top:5px}
 @media (max-width:700px){.scrollhint{display:block}}
 
-table.dt{width:100%;border-collapse:collapse;font-size:12px;margin-top:9px;
+table.dt{width:100%;border-collapse:collapse;font-size:var(--t-sm);margin-top:9px;
   background:var(--surface-1);border:1px solid var(--border);
   border-radius:7px;overflow:hidden}
-table.dt th{text-align:left;font-size:10.5px;text-transform:uppercase;
+table.dt th{text-align:left;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.055em;color:var(--muted);font-weight:600;
   padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
 table.dt td{padding:5.5px 9px;border-bottom:1px solid var(--border);
@@ -276,7 +327,7 @@ table.dt td.n{text-align:right;font-variant-numeric:tabular-nums;
 table.dt td.nm{color:var(--text-primary);font-weight:600}
 table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
   color:var(--now-text);font-weight:600}
-.flag{display:inline-block;font-size:9.5px;text-transform:uppercase;
+.flag{display:inline-block;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.05em;border:1px solid var(--border);border-radius:3px;
   padding:0 4px;color:var(--muted);margin-left:5px;vertical-align:1px}
 
@@ -285,60 +336,60 @@ table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
   border:1px solid var(--border);border-radius:8px;padding:13px 14px;
   display:none}
 .detail.on{display:block}
-.detail h3{margin:0 0 2px;font-size:15px}
-.detail .sub{font-size:11.5px;color:var(--muted)}
+.detail h3{margin:0 0 2px;font-size:var(--t-lg)}
+.detail .sub{font-size:var(--t-sm);color:var(--muted)}
 .dgrid{display:grid;gap:11px;margin-top:11px;
   grid-template-columns:repeat(auto-fit,minmax(136px,1fr))}
 .dgrid .c{border-left:2px solid var(--border);padding-left:9px}
-.dgrid .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.055em;
+.dgrid .k{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.055em;
   color:var(--muted)}
-.dgrid .v{font-size:16px;margin-top:2px;font-variant-numeric:tabular-nums}
-.dgrid .v.sm{font-size:12.5px;line-height:1.35}
-.dgrid .v.none{color:var(--muted);font-size:12.5px}
+.dgrid .v{font-size:var(--t-lg);margin-top:2px;font-variant-numeric:tabular-nums}
+.dgrid .v.sm{font-size:var(--t-md);line-height:var(--lh-data)}
+.dgrid .v.none{color:var(--muted);font-size:var(--t-md)}
 /* Names the two figures a tile is derived from, so the reader can check it
    against the tiles beside it rather than taking it on trust. */
-.dgrid .vsub{font-size:11px;color:var(--muted);margin-top:2px}
-.dnote{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5;
+.dgrid .vsub{font-size:var(--t-sm);color:var(--muted);margin-top:2px}
+.dnote{font-size:var(--t-sm);color:var(--muted);margin-top:10px;line-height:var(--lh-body);
   border-top:1px solid var(--border);padding-top:8px}
 .spark{margin:11px 0 2px;max-width:520px}
 .spark svg{display:block;width:100%;height:auto}
-.sparkcap{font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.sparkcap{font-size:var(--t-xs);color:var(--muted);line-height:var(--lh-data);margin-top:3px}
 .sparkcap b{color:var(--now-text)}
 .close{float:right;background:none;border:1px solid var(--border);
-  border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:11px;
+  border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:var(--t-sm);
   padding:2px 7px;font-family:inherit}
 
 /* ---------- methodology / footer ---------- */
 details.meth{margin:20px 0 0;background:var(--surface-1);
   border:1px solid var(--border);border-radius:8px;padding:10px 13px}
-details.meth summary{cursor:pointer;font-size:12.5px;font-weight:600}
-details.meth div{font-size:11.5px;color:var(--text-secondary);
-  line-height:1.62;margin-top:9px}
+details.meth summary{cursor:pointer;font-size:var(--t-md);font-weight:600}
+details.meth div{font-size:var(--t-md);color:var(--text-secondary);
+  line-height:var(--lh-body);margin-top:9px}
 details.meth ul{margin:6px 0;padding-left:19px}
-details.meth code{font-size:11px;color:var(--text-primary)}
+details.meth code{font-size:var(--t-sm);color:var(--text-primary)}
 .tblbtn{background:none;border:1px solid var(--border);border-radius:5px;
-  color:var(--text-secondary);cursor:pointer;font-size:10.5px;padding:2px 7px;
+  color:var(--text-secondary);cursor:pointer;font-size:var(--t-xs);padding:2px 7px;
   font-family:inherit;margin-top:6px}
 .tv{display:none;margin-top:7px}
 .tv.on{display:block}
-.tv table{width:100%;border-collapse:collapse;font-size:10.5px}
+.tv table{width:100%;border-collapse:collapse;font-size:var(--t-xs)}
 .tv th,.tv td{padding:2.5px 4px;text-align:right;
   font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border)}
 .tv th:first-child,.tv td:first-child{text-align:left}
 .tv th{color:var(--muted);font-weight:600}
 footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--border);
-  font-size:11px;color:var(--muted);line-height:1.65}
+  font-size:var(--t-sm);color:var(--muted);line-height:var(--lh-body)}
 /* The SHA-256 and the source URL are long unbroken strings. Without this they
    set a minimum width on the footer and pushed the page 36px wider than a
    375px phone — the last of the horizontal overflow. */
 code{overflow-wrap:anywhere;word-break:break-word}
-.nofc{margin-top:9px;font-size:11px;color:var(--text-secondary)}
+.nofc{margin-top:9px;font-size:var(--t-sm);color:var(--text-secondary)}
 
 /* ---------- view switcher & second view ---------- */
 .views{display:flex;gap:0;margin-top:9px;border:1px solid var(--border);
   border-radius:6px;overflow:hidden;width:max-content}
 .views button{background:var(--surface-1);border:0;cursor:pointer;
-  font-family:inherit;font-size:11.5px;padding:5px 13px;
+  font-family:inherit;font-size:var(--t-sm);padding:5px 13px;
   color:var(--text-secondary);border-right:1px solid var(--border)}
 .views button:last-child{border-right:0}
 /* White on --now was 3.20:1, the worst failure on the page and on a primary
@@ -351,51 +402,51 @@ code{overflow-wrap:anywhere;word-break:break-word}
   color:var(--on-accent);font-weight:600}
 .hdrow{display:flex;gap:7px;align-items:stretch;margin-top:9px;flex-wrap:wrap}
 .dlbtn{background:var(--surface-1);border:1px solid var(--border);
-  border-radius:6px;cursor:pointer;font-family:inherit;font-size:11.5px;
+  border-radius:6px;cursor:pointer;font-family:inherit;font-size:var(--t-sm);
   padding:5px 11px;color:var(--text-secondary);white-space:nowrap}
 .dlbtn:hover{color:var(--text-primary);border-color:var(--muted)}
 .dlbtn:disabled{opacity:.6;cursor:default}
 .filters{display:flex;gap:7px;align-items:center;margin:13px 0 5px;
   flex-wrap:wrap}
-.filters span.lb{font-size:10.5px;text-transform:uppercase;
+.filters span.lb{font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.06em;color:var(--muted)}
 .filters button{background:var(--surface-1);border:1px solid var(--border);
-  border-radius:5px;cursor:pointer;font-family:inherit;font-size:11.5px;
+  border-radius:5px;cursor:pointer;font-family:inherit;font-size:var(--t-sm);
   padding:3px 9px;color:var(--text-secondary)}
 .filters button[aria-pressed="true"]{border-color:var(--now);
   color:var(--text-primary);font-weight:600}
 .placement{background:var(--surface-1);border:1px solid var(--border);
   border-left:2px solid var(--muted);border-radius:7px;padding:11px 13px;
-  margin:11px 0;font-size:11.5px;color:var(--text-secondary);line-height:1.6}
+  margin:11px 0;font-size:var(--t-md);color:var(--text-secondary);line-height:var(--lh-body)}
 .placement b{color:var(--text-primary)}
-.placement code{font-size:11px;color:var(--text-primary)}
+.placement code{font-size:var(--t-sm);color:var(--text-primary)}
 /* Collapsible, because on a phone three paragraphs of caveat pushed the chart
    entirely below the fold. The claim itself stays in the always-visible
    summary — the reasoning is one tap away, not hidden. */
 .placement summary{cursor:pointer;color:var(--text-primary);font-weight:600;
-  font-size:12px;line-height:1.45}
+  font-size:var(--t-sm);line-height:var(--lh-data)}
 .placement summary::marker{color:var(--muted)}
 .placement .pbody{margin-top:9px}
 .scat{background:var(--surface-1);border:1px solid var(--border);
   border-radius:8px;padding:11px 12px;margin-top:10px}
 .scat svg{display:block;width:100%;height:auto}
 .dotleg{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
-  margin-top:10px;font-size:11px;color:var(--text-secondary)}
+  margin-top:10px;font-size:var(--t-sm);color:var(--text-secondary)}
 .dotleg .grp{display:flex;gap:8px;align-items:flex-end}
-.dotleg .t{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+.dotleg .t{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;
   color:var(--muted);margin-bottom:3px}
 .ramp{display:flex;gap:0;align-items:center}
 .ramp i{width:26px;height:11px;display:inline-block}
 .ramp i:first-child{border-radius:2px 0 0 2px}
 .ramp i:last-child{border-radius:0 2px 2px 0}
-.rampx{display:flex;justify-content:space-between;font-size:10px;
+.rampx{display:flex;justify-content:space-between;font-size:var(--t-xs);
   color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
 .szleg{display:flex;gap:11px;align-items:flex-end}
-.szleg div{text-align:center;font-size:10px;color:var(--muted);
+.szleg div{text-align:center;font-size:var(--t-xs);color:var(--muted);
   font-variant-numeric:tabular-nums}
 .szleg svg{display:block;margin:0 auto 2px}
 .reglegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;
-  font-size:11.5px;color:var(--text-secondary)}
+  font-size:var(--t-sm);color:var(--text-secondary)}
 .reglegend .ri{display:flex;align-items:center;gap:6px}
 .reglegend b{color:var(--text-primary)}
 .reglegend .rv{font-variant-numeric:tabular-nums;font-weight:600;
@@ -890,9 +941,9 @@ function rainCeiling(regions){
 let G = {};
 function setGeometry(){
   G = isNarrow()
-    ? {W: 308, PADL: 25, PADR: 7,  SH: 104, GAP: 8, RH: 26, AX: 14,
+    ? {W: 308, PADL: 27, PADR: 7,  SH: 104, GAP: 10, RH: 26, AX: 18,
        SW: 308, SHH: 470}               // scatter: portrait
-    : {W: 470, PADL: 30, PADR: 12, SH: 112, GAP: 9, RH: 30, AX: 15,
+    : {W: 470, PADL: 34, PADR: 12, SH: 112, GAP: 11, RH: 30, AX: 19,
        SW: 940, SHH: 430};              // scatter: landscape
   G.TOTH = G.SH + G.GAP + G.RH + G.AX;
 }
@@ -982,12 +1033,12 @@ function gapAnnotation(g, xOf, yOf, latestDay, G){
       y2="${yRef.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
     <line x1="${dx - cap}" x2="${dx + cap}" y1="${yNow.toFixed(1)}"
       y2="${yNow.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
-    <text x="${lx}" y="${l1y.toFixed(1)}" text-anchor="end" font-size="8.5"
+    <text x="${lx}" y="${l1y.toFixed(1)}" text-anchor="end" font-size="11"
       font-weight="700" fill="var(--text-primary)" stroke="var(--chart-bg)"
       stroke-width="2.6" paint-order="stroke"
       stroke-linejoin="round">${bigTxt}</text>
     ${!sub ? "" : `<text x="${lx}" y="${l2y.toFixed(1)}" text-anchor="end"
-      font-size="7.5" fill="var(--muted)" stroke="var(--chart-bg)"
+      font-size="11" fill="var(--muted)" stroke="var(--chart-bg)"
       stroke-width="2.4" paint-order="stroke"
       stroke-linejoin="round">${sub}</text>`}`;
 }
@@ -1005,7 +1056,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
     g += `<line x1="${G.PADL}" x2="${G.W-G.PADR}" y1="${yOf(p)}" y2="${yOf(p)}"
       stroke="var(--grid)" stroke-width="1"/>`;
     g += `<text x="${G.PADL-5}" y="${yOf(p)+3.2}" text-anchor="end"
-      font-size="8.5" fill="var(--muted)"
+      font-size="11" fill="var(--muted)"
       style="font-variant-numeric:tabular-nums">${p}</text>`;
   }
   /* month ticks */
@@ -1014,13 +1065,13 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
     ax += `<line x1="${xOf(d)}" x2="${xOf(d)}" y1="${G.SH-6}" y2="${G.SH-2}"
       stroke="var(--baseline)" stroke-width="1"/>`;
     ax += `<text x="${xOf(d)}" y="${axY}" text-anchor="middle"
-      font-size="9" fill="var(--muted)">${nm}</text>`;
+      font-size="11" fill="var(--muted)">${nm}</text>`;
   }
   /* latest-report rule: prior years run to 31 Oct, 2026 stops here. Saying so
      stops the shorter line reading as a collapse. */
   const lr = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
       y2="${G.SH-6}" stroke="var(--baseline)" stroke-width="1"/>
-    <text x="${xOf(latestDay)-3}" y="10" text-anchor="end" font-size="8"
+    <text x="${xOf(latestDay)-3}" y="10" text-anchor="end" font-size="11"
       fill="var(--muted)">latest report</text>`;
 
   /* prior years: thin, ordered blue ramp, drawn first so 2026 sits on top */
@@ -1042,7 +1093,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
       stroke="var(--muted)" stroke-width="1" stroke-dasharray="2.5 3.5"/>
       ${y == null ? "" : `<circle cx="${xOf(md)}" cy="${yOf(y)}" r="3.4"
         fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>`}
-      <text x="${xOf(md)+4}" y="${G.SH-9}" font-size="8"
+      <text x="${xOf(md)+4}" y="${G.SH-9}" font-size="11"
         fill="var(--muted)">${dosLabel(md, CUR)}</text>`;
   }
   const cp = linePath(series[CUR]);
@@ -1053,7 +1104,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
   const lab = `<circle cx="${xOf(latestDay)}" cy="${yOf(ld)}" r="3.6"
       fill="var(--now)" stroke="var(--surface-1)" stroke-width="2"/>
     <text x="${xOf(latestDay)-6}" y="${yOf(ld)-6}" text-anchor="end"
-      font-size="10" font-weight="700" fill="var(--now-text)">2026</text>`;
+      font-size="13" font-weight="700" fill="var(--now-text)">2026</text>`;
 
   /* ---- rainfall: a SEPARATE panel, on the ONE scale every strip shares,
      sharing the x-axis. Never a second y-axis on the storage plot. ---- */
@@ -1090,7 +1141,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
       fill="var(--now)" opacity="0.6"/>`;
   }
   const pk = Math.max(0, ...Object.values(rain[CUR] || {}).filter(v => v != null));
-  rr += `<text x="${G.W-G.PADR}" y="${rTop-1}" text-anchor="end" font-size="7.5"
+  rr += `<text x="${G.W-G.PADR}" y="${rTop-1}" text-anchor="end" font-size="11"
     fill="var(--muted)">rain mm/day, regional mean · peak ${f1(pk)}</text>`;
   }
 
@@ -1178,22 +1229,22 @@ function regionsSVG(){
     g += `<line x1="${L}" x2="${W-R}" y1="${yp(v)}" y2="${yp(v)}"
       stroke="${zero ? "var(--baseline)" : "var(--grid)"}"
       stroke-width="${zero ? 1.4 : 1}"/>
-      <text x="${L-5}" y="${yp(v)+3}" text-anchor="end" font-size="9"
+      <text x="${L-5}" y="${yp(v)+3}" text-anchor="end" font-size="11"
         fill="var(--muted)" style="font-variant-numeric:tabular-nums">${
         v > 0 ? "+" + v : v}</text>`;
   }
   for(const [d, nm] of MONTHS){
-    g += `<text x="${xp(d)}" y="${H-B+14}" text-anchor="middle" font-size="9"
+    g += `<text x="${xp(d)}" y="${H-B+14}" text-anchor="middle" font-size="11"
       fill="var(--muted)">${nm}</text>`;
   }
   // The zero line needs saying in words, or it reads as a plain axis. Not on
   // a narrow screen though: there it lands on top of the lines, and the
   // subtitle and the note below already say it.
   if(!narrow){
-    g += `<text x="${L+4}" y="${yp(0)-5}" font-size="8.5" fill="var(--muted)">
+    g += `<text x="${L+4}" y="${yp(0)-5}" font-size="11" fill="var(--muted)">
         at its own prior four-year mean</text>`.replace(/\s+/g, " ");
   }
-  g += `<text x="${L-5}" y="${T-5}" text-anchor="start" font-size="9"
+  g += `<text x="${L-5}" y="${T-5}" text-anchor="start" font-size="11"
       fill="var(--text-secondary)">percentage points from each region's own
       prior-year mean</text>`.replace(/\s+/g, " ");
 
@@ -1239,7 +1290,7 @@ function regionsSVG(){
           y2="${e.y - 3.4}" stroke="${REGION_COL[e.d.code]}"
           stroke-width="1" opacity="0.6"/>`;
       }
-      labels += `<text x="${e.x + 9}" y="${e.y}" font-size="10.5"
+      labels += `<text x="${e.x + 9}" y="${e.y}" font-size="13"
         fill="var(--text-primary)">${esc(e.d.name)}
         <tspan fill="${REGION_COL[e.d.code]}" font-weight="700"
           style="font-variant-numeric:tabular-nums">${f1(e.v)}</tspan></text>`;
@@ -1377,7 +1428,7 @@ function schemeSpark(s, thin){
   const ser = s.series || {};
   const cur = ser[CUR] || {};
   if(!Object.keys(cur).length) return "";
-  const PH = 76, AXH = 16, H = PH + AXH;
+  const PH = 76, AXH = 19, H = PH + AXH;
   const xf = d => G.PADL + (d - 1) / (SEASON_DAYS - 1) * (G.W - G.PADL - G.PADR);
 
   /* The y domain follows the data above 100, it does not clamp to it.
@@ -1395,11 +1446,11 @@ function schemeSpark(s, thin){
   for(const p of (yMax > 100 ? [0, 50, 100, yMax] : [0, 50, 100])){
     g += `<line x1="${G.PADL}" x2="${G.W - G.PADR}" y1="${yf(p)}" y2="${yf(p)}"
       stroke="var(--grid)" stroke-width="1"/>
-      <text x="${G.PADL - 4}" y="${yf(p) + 3}" text-anchor="end" font-size="8"
+      <text x="${G.PADL - 4}" y="${yf(p) + 3}" text-anchor="end" font-size="11"
         fill="var(--muted)" style="font-variant-numeric:tabular-nums">${p}</text>`;
   }
   for(const [d, nm] of MONTHS){
-    g += `<text x="${xf(d)}" y="${H - 4}" text-anchor="middle" font-size="8.5"
+    g += `<text x="${xf(d)}" y="${H - 4}" text-anchor="middle" font-size="11"
       fill="var(--muted)">${nm}</text>`;
   }
   const days = Object.keys(cur).map(Number);
@@ -1419,7 +1470,7 @@ function schemeSpark(s, thin){
   lines += `<circle cx="${xf(latest)}" cy="${yf(cur[latest])}" r="3.2"
       fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
     <text x="${xf(latest) - 5}" y="${yf(cur[latest]) - 6}" text-anchor="end"
-      font-size="9" font-weight="700" fill="var(--now-text)">${CUR}</text>`;
+      font-size="11" font-weight="700" fill="var(--now-text)">${CUR}</text>`;
 
   return `<div class="spark">
     <svg viewBox="0 0 ${G.W} ${H}" role="img"
@@ -1544,29 +1595,29 @@ function scatterSVG(list){
   for(const v of (narrow ? [-100,-50,0,50] : [-100,-75,-50,-25,0,25,50])){
     g += `<line x1="${xp(v)}" x2="${xp(v)}" y1="${T}" y2="${H2-B}"
       stroke="${v===0?"var(--baseline)":"var(--grid)"}" stroke-width="1"/>`;
-    g += `<text x="${xp(v)}" y="${H2-B+14}" text-anchor="middle" font-size="9.5"
+    g += `<text x="${xp(v)}" y="${H2-B+14}" text-anchor="middle" font-size="11"
       fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
   }
   for(const v of (narrow ? [1,100,8000] : [1,10,100,1000,8000])){
     g += `<line x1="${L}" x2="${W2-R}" y1="${yp(v)}" y2="${yp(v)}"
       stroke="var(--grid)" stroke-width="1"/>`;
-    g += `<text x="${L-6}" y="${yp(v)+3.2}" text-anchor="end" font-size="9.5"
+    g += `<text x="${L-6}" y="${yp(v)+3.2}" text-anchor="end" font-size="11"
       fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>=1000?(v/1000)+"k":v}</text>`;
   }
-  g += `<text x="${xp(0)}" y="${H2-B+27}" text-anchor="middle" font-size="10"
+  g += `<text x="${xp(0)}" y="${H2-B+27}" text-anchor="middle" font-size="13"
       fill="var(--text-secondary)">${narrow
         ? "deviation, percentage points"
         : "deviation from the prior same-date mean, percentage points"}</text>`;
   g += `<text x="${L - (narrow ? 34 : 0)}" y="${T-5}" text-anchor="start"
-      font-size="9" fill="var(--text-secondary)">${narrow
+      font-size="11" fill="var(--text-secondary)">${narrow
         ? "capacity, MCM (log)" : "design capacity, MCM (log)"}</text>`;
   /* Two anchored labels rather than one string with arrows in the middle —
      the combined version read as a single ambiguous arrow. Abbreviated on a
      phone: the full wording does not fit and a clipped label is worse than a
      short one. */
-  g += `<text x="${xp(xs[0])+4}" y="${H2-B-7}" font-size="9.5"
+  g += `<text x="${xp(xs[0])+4}" y="${H2-B-7}" font-size="11"
       fill="var(--muted)">${narrow ? "← below" : "← further below prior years"}</text>`;
-  g += `<text x="${xp(xs[1])-4}" y="${H2-B-7}" text-anchor="end" font-size="9.5"
+  g += `<text x="${xp(xs[1])-4}" y="${H2-B-7}" text-anchor="end" font-size="11"
       fill="var(--muted)">${narrow ? "above →" : "above prior years →"}</text>`;
 
   /* Largest first so small dots land on top and stay clickable; a 1.5px
@@ -1610,7 +1661,7 @@ function scatterLegend(){
            stroke="var(--surface-1)" stroke-width="1.5"/></svg>${b.lb}</div>`
         ).join("")}</div>
     </div>
-    <div class="grp" style="color:var(--muted);max-width:260px;line-height:1.5">
+    <div class="grp" style="color:var(--muted);max-width:34ch;line-height:var(--lh-body)">
       Click a point for that scheme's detail, including days of water at
       today's release rate.
     </div>`;
@@ -2179,11 +2230,11 @@ function wire(){
       v < 100 ? `${f1(v)} days`
       : v <= 365 ? `${Math.round(v).toLocaleString()} days`
       : `${Math.round(v).toLocaleString()} days
-         <span style="font-size:11px;color:var(--muted)">(about
+         <span style="font-size:var(--t-sm);color:var(--muted)">(about
          ${(v / 365).toFixed(1)} years)</span>`;
     const dw = (s.days_water_at_release == null || !rel)
       ? `<div class="v none">no current release</div>`
-      : `<div class="v sm" style="font-size:16px">${dayFmt(s.days_water_at_release)}</div>`;
+      : `<div class="v sm" style="font-size:var(--t-lg)">${dayFmt(s.days_water_at_release)}</div>`;
     /* Storage in this panel is printed to the source's own two decimals, not
        the one decimal used in the tables, so that dividing the two tiles
        reproduces the percentage above them exactly. One decimal closes at
@@ -2201,18 +2252,18 @@ function wire(){
           <div class="v">${f2(s.pct_filling)}%</div>
           <div class="vsub">gross storage ÷ design gross</div></div>
         <div class="c"><div class="k">Gross storage</div>
-          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
           <div class="vsub">all the water in the reservoir</div></div>
         <div class="c"><div class="k">Design gross</div>
-          <div class="v">${f2(s.design_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="v">${f2(s.design_gross_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
           <div class="vsub">capacity when full</div></div>
         <div class="c"><div class="k">Live storage</div>
-          <div class="v">${f2(s.present_live_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="v">${f2(s.present_live_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
           <div class="vsub">the part that can be released</div></div>
         <div class="c"><div class="k">Canal release</div>
           <div class="v">${rel ? f1(s.outflow_canal_cusecs)+
-            ' <span style="font-size:11px;color:var(--muted)">cusecs</span>' :
-            '<span style="font-size:12.5px;color:var(--muted)">none</span>'}</div></div>
+            ' <span style="font-size:var(--t-sm);color:var(--muted)">cusecs</span>' :
+            '<span style="font-size:var(--t-md);color:var(--muted)">none</span>'}</div></div>
         <div class="c"><div class="k">Days of water <span style="text-transform:none;letter-spacing:0">at today's release rate</span></div>
           ${dw}</div>
         <div class="c"><div class="k">Same date, prior years</div>
