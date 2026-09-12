@@ -355,6 +355,23 @@ def parse_detail(pdf):
                             failures.append({
                                 "page": pno, "sr_no": rec.get("sr_no"),
                                 "reason": f"region not recognised: {val!r}"})
+                    elif name == "district":
+                        # Hazard 5 (§13). Fixed HERE rather than downstream:
+                        # text fields only collapse whitespace, so a district
+                        # name wrapped mid-word in the PDF cell arrives as
+                        # 'Surendranaga r'. Stripping whitespace from text
+                        # instead would give 'GirSomnath', so it takes a closed
+                        # vocabulary — the same technique WARNING_VOCAB uses for
+                        # 'WARNI NG' and REGION_CANON for 'SOUTH GUJARAT'.
+                        #
+                        # An unrecognised district is NOT a failure. Unlike
+                        # warning and region, the district list is open: Gujarat
+                        # has created seven districts since 2011 and may create
+                        # more, so a name not in the vocabulary is far more
+                        # likely to be a legitimate district than a parse fault.
+                        # It is kept verbatim and left alone.
+                        val, _known = canon_district(cell)
+                        rec[name] = val
                     else:
                         rec[name] = s
                 if bad:

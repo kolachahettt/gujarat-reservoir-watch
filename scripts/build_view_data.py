@@ -371,15 +371,22 @@ def main():
     # reads a truncated 'Devbhumi', which produced a phantom 28th district in
     # published output. The raw parse stays untouched and auditable; the
     # vocabulary lives in fetch_dam so a future re-parse applies it at source.
+    # This WAS a downstream patch that rewrote district here, leaving the
+    # parquet and DuckDB holding the broken values. The fix now lives in
+    # fetch_dam.parse_detail, so this is a CHECK rather than a repair: if any
+    # district still needs rewriting, a day was parsed with the old code and
+    # the fix has silently regressed.
     canon = tod["district"].map(lambda d: fd.canon_district(d)[0])
-    moved = int((canon != tod["district"]).sum())
-    if moved:
-        for a, b in sorted(set(zip(tod.loc[canon != tod["district"], "district"],
-                                   canon[canon != tod["district"]]))):
-            print(f"district canonicalised: {a!r} -> {b!r}")
-    tod["district"] = canon
-    print(f"districts after canonicalisation: {tod['district'].nunique()} "
-          f"({moved} row(s) relabelled)")
+    stale = tod.loc[canon != tod["district"], "district"].unique()
+    if len(stale):
+        print(f"WARNING: {len(stale)} district value(s) not canonical in the "
+              f"parsed data: {sorted(stale)}")
+        print("         The parser fix did not reach these rows — re-parse "
+              "the affected days.")
+        tod["district"] = canon          # do not publish the broken value
+    else:
+        print(f"districts: {tod['district'].nunique()} distinct, all canonical "
+              f"at parse time")
 
     dev = tod.merge(base, on="scheme_id")
     dev["dev_pp"] = dev["pct_filling"] - dev["mean_prior"]
@@ -402,10 +409,46 @@ def main():
     sch = tod.merge(base[["scheme_id", "mean_prior", "n_prior"]],
                     on="scheme_id", how="left").sort_values("scheme_name")
     sch["dev_pp"] = sch["pct_filling"] - sch["mean_prior"]
+
+    # ---- per-scheme five-year series, for the detail sparkline -------------
+    # Same construction as the regional facets: aligned day-of-season, one
+    # value per scheme per day, the scheme's own season capacity as the
+    # denominator so a restatement between seasons does not put a step in the
+    # line. Thinned to every THIN_TO-th day: at 153 days x 5 seasons x 206
+    # schemes the full series would add about 2.5 MB to a 220 KB file, and a
+    # sparkline cannot resolve single days anyway. The thinning is stated in
+    # the interface rather than left for a reader to infer.
+    THIN_TO = 3
+    per = con.execute(f"""
+        SELECT f.scheme_id,
+               EXTRACT(year FROM f.report_date)::INT AS season,
+               f.report_date,
+               100.0 * f.present_gross_mcm / nullif(c.cap_mcm, 0) AS pct
+        FROM fact_storage f
+        JOIN cap c ON c.scheme_id = f.scheme_id
+                  AND c.season = EXTRACT(year FROM f.report_date)
+        WHERE EXTRACT(month FROM f.report_date) IN ({months})
+          AND f.present_gross_mcm IS NOT NULL
+    """).df()
+    per["report_date"] = pd.to_datetime(per["report_date"])
+    per["dos"] = per["report_date"].dt.date.map(day_of_season)
+    latest_dos = int(per[per["season"] == CURRENT_SEASON]["dos"].max())
+    # Keep every THIN_TO-th day, and always the latest day of the current
+    # season so the line ends where the headline number is.
+    per = per[(per["dos"] % THIN_TO == 1) | (per["dos"] == latest_dos)]
+    series_by_scheme = {}
+    for (sid, season), grp in per.groupby(["scheme_id", "season"]):
+        series_by_scheme.setdefault(int(sid), {})[str(int(season))] = {
+            int(r.dos): round(float(r.pct), 1)
+            for r in grp.itertuples() if pd.notna(r.pct)}
+
     schemes = rows(sch, ["scheme_id", "scheme_name", "district", "region",
                          "pct_filling", "present_live_mcm", "design_gross_mcm",
                          "outflow_canal_cusecs", "days_water_at_release",
                          "warning", "mean_prior", "n_prior", "dev_pp"])
+    # Attach each scheme's own five-year series.
+    for row in schemes:
+        row["series"] = series_by_scheme.get(row["scheme_id"], {})
 
     # ---- coordinates, if anyone has supplied them --------------------------
     coords, coords_meta = {}, {
@@ -466,6 +509,7 @@ def main():
             "season_current": CURRENT_SEASON,
             "season_window": "1 June – 31 October",
             "crossover_min_run": CROSSOVER_MIN_RUN,
+            "scheme_series_thin_to": THIN_TO,
             "capacity_tolerance_pct": eps * 100,
             "n_schemes": int(len(tod)),
             "n_releasing": n_rel,

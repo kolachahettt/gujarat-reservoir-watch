@@ -111,8 +111,15 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
 .legend .sep{color:var(--border)}
 
 /* ---------- facets ---------- */
+/* minmax(min(100%, 380px), 1fr), not minmax(410px, 1fr).
+   auto-fit CANNOT go below its own minimum, so a fixed 410px made every facet
+   35px wider than a 375px phone and pushed the page into horizontal scroll.
+   But simply lowering it to 300px was a desktop regression: at 1425px it gave
+   four columns instead of three, shrinking each facet and its text with it.
+   `min(100%, 380px)` resolves to the container width on a phone — so one
+   column always fits — and to 380px on a desktop, which keeps three. */
 .grid{display:grid;gap:13px;margin-top:11px;
-  grid-template-columns:repeat(auto-fit,minmax(410px,1fr))}
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
 .facet{background:var(--surface-1);border:1px solid var(--border);
   border-radius:8px;padding:11px 12px 9px}
 .fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
@@ -151,6 +158,17 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
 h2{font-size:15px;margin:30px 0 3px;letter-spacing:-.01em}
 h2 .q{font-weight:400;font-size:12px;color:var(--text-secondary);
   display:block;margin-top:3px;letter-spacing:0}
+/* The tables carry nine columns and cannot compress below about 660px.
+   Without this wrapper `width:100%` could not shrink past the content minimum,
+   so instead of scrolling internally the table pushed the PAGE to 704px on a
+   375px screen. Scroll it here, not there. */
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border:1px solid var(--border);border-radius:7px;background:var(--surface-1);
+  margin-top:9px}
+.tablewrap table.dt{margin-top:0;border:0;border-radius:0;min-width:660px}
+.scrollhint{display:none;font-size:10.5px;color:var(--muted);margin-top:5px}
+@media (max-width:700px){.scrollhint{display:block}}
+
 table.dt{width:100%;border-collapse:collapse;font-size:12px;margin-top:9px;
   background:var(--surface-1);border:1px solid var(--border);
   border-radius:7px;overflow:hidden}
@@ -186,6 +204,10 @@ table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
 .dgrid .v.none{color:var(--muted);font-size:12.5px}
 .dnote{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5;
   border-top:1px solid var(--border);padding-top:8px}
+.spark{margin:11px 0 2px;max-width:520px}
+.spark svg{display:block;width:100%;height:auto}
+.sparkcap{font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.sparkcap b{color:var(--now)}
 .close{float:right;background:none;border:1px solid var(--border);
   border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:11px;
   padding:2px 7px;font-family:inherit}
@@ -210,6 +232,10 @@ details.meth code{font-size:11px;color:var(--text-primary)}
 .tv th{color:var(--muted);font-weight:600}
 footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--border);
   font-size:11px;color:var(--muted);line-height:1.65}
+/* The SHA-256 and the source URL are long unbroken strings. Without this they
+   set a minimum width on the footer and pushed the page 36px wider than a
+   375px phone — the last of the horizontal overflow. */
+code{overflow-wrap:anywhere;word-break:break-word}
 .nofc{margin-top:9px;font-size:11px;color:var(--text-secondary)}
 
 /* ---------- view switcher & second view ---------- */
@@ -235,6 +261,13 @@ footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--border);
   margin:11px 0;font-size:11.5px;color:var(--text-secondary);line-height:1.6}
 .placement b{color:var(--text-primary)}
 .placement code{font-size:11px;color:var(--text-primary)}
+/* Collapsible, because on a phone three paragraphs of caveat pushed the chart
+   entirely below the fold. The claim itself stays in the always-visible
+   summary — the reasoning is one tap away, not hidden. */
+.placement summary{cursor:pointer;color:var(--text-primary);font-weight:600;
+  font-size:12px;line-height:1.45}
+.placement summary::marker{color:var(--muted)}
+.placement .pbody{margin-top:9px}
 .scat{background:var(--surface-1);border:1px solid var(--border);
   border-radius:8px;padding:11px 12px;margin-top:10px}
 .scat svg{display:block;width:100%;height:auto}
@@ -280,7 +313,7 @@ footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--border);
     <h2 style="margin-top:14px">All 206 schemes — one point each
       <span class="q">Sized by design capacity, coloured by deviation from the
         same-date mean of prior years. Points only; no filled areas.</span></h2>
-    <div class="placement" id="placement"></div>
+    <details class="placement" id="placement"></details>
     <div class="filters" id="filters"></div>
     <div class="scat"><div id="scatPlot"></div><div class="dotleg" id="scatLeg"></div></div>
   </section>
@@ -354,23 +387,46 @@ const esc = s => String(s).replace(/[&<>"]/g, c =>
 const f1 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(1);
 const f2 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(2);
 
-/* ---------------- chart geometry ---------------- */
-const W = 470, PADL = 30, PADR = 12;
-const SH = 112;                 // storage plot height
-const GAP = 9;                  // gap between the two panels
-const RH = 30;                  // rainfall strip height
-const AX = 15;                  // x-axis label band
-const TOTH = SH + GAP + RH + AX;
-const xOf = d => PADL + (d - 1) / (SEASON_DAYS - 1) * (W - PADL - PADR);
-const yOf = p => SH - 6 - (p / 100) * (SH - 16);
+/* ---------------- chart geometry ----------------
+   Breakpoint-driven viewBox, NOT a scaled one. This is the whole trick, and
+   getting it wrong is what made the phone layout bad: an SVG with a 470-wide
+   viewBox rendered into a 307px card is scaled to 0.65, and every font in it
+   shrinks with it — 9px axis labels land at 5.9px. Choosing a viewBox that
+   matches the container instead keeps text at its true size, so the narrow
+   layout is genuinely readable rather than merely smaller.
 
-function linePath(map, year){
+   NARROW_MAX is the breakpoint. Below it, one facet per row at a 375px phone
+   leaves 307px inside the card (375 - 44 root padding - 24 card padding), so
+   the narrow viewBox is 308 and renders at ~1.0. */
+const NARROW_MAX = 560;
+const isNarrow = () => window.innerWidth <= NARROW_MAX;
+
+let G = {};
+function setGeometry(){
+  G = isNarrow()
+    ? {W: 308, PADL: 25, PADR: 7,  SH: 104, GAP: 8, RH: 26, AX: 14,
+       SW: 308, SHH: 470}               // scatter: portrait
+    : {W: 470, PADL: 30, PADR: 12, SH: 112, GAP: 9, RH: 30, AX: 15,
+       SW: 940, SHH: 430};              // scatter: landscape
+  G.TOTH = G.SH + G.GAP + G.RH + G.AX;
+}
+setGeometry();
+const xOf = d => G.PADL + (d - 1) / (SEASON_DAYS - 1) * (G.W - G.PADL - G.PADR);
+const yOf = p => G.SH - 6 - (p / 100) * (G.SH - 16);
+
+/* Scales are passed in so the same path builder serves the facets and the
+   scheme sparkline, which have different heights and different x padding.
+   `step` is the expected gap between consecutive days: the facet series is
+   daily (1) but the per-scheme series is thinned, and without this a thinned
+   series would be drawn as 51 disconnected dots. */
+function linePath(map, xf, yf, step){
+  xf = xf || xOf; yf = yf || yOf; step = step || 1;
   const ks = Object.keys(map).map(Number).sort((a,b)=>a-b);
   if(!ks.length) return "";
   let out = "", prev = null;
   for(const k of ks){
-    const cmd = (prev === null || k !== prev + 1) ? "M" : "L";
-    out += cmd + xOf(k).toFixed(1) + " " + yOf(map[k]).toFixed(1) + " ";
+    const cmd = (prev === null || k - prev > step) ? "M" : "L";
+    out += cmd + xf(k).toFixed(1) + " " + yf(map[k]).toFixed(1) + " ";
     prev = k;
   }
   return out.trim();
@@ -380,22 +436,22 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
   /* The state headline carries no rainfall strip: a regional mean of regional
      means is not a quantity worth showing, and an empty panel reads as "no
      rain" rather than "not shown". */
-  const rTop = SH + GAP;
-  const totH = showRain ? TOTH : SH + AX;
+  const rTop = G.SH + G.GAP;
+  const totH = showRain ? G.TOTH : G.SH + G.AX;
   const axY = totH - 3;
   let g = "";
   /* gridlines: solid hairlines, one shade off the surface (never dashed) */
   for(const p of [0,25,50,75,100]){
-    g += `<line x1="${PADL}" x2="${W-PADR}" y1="${yOf(p)}" y2="${yOf(p)}"
+    g += `<line x1="${G.PADL}" x2="${G.W-G.PADR}" y1="${yOf(p)}" y2="${yOf(p)}"
       stroke="var(--grid)" stroke-width="1"/>`;
-    g += `<text x="${PADL-5}" y="${yOf(p)+3.2}" text-anchor="end"
+    g += `<text x="${G.PADL-5}" y="${yOf(p)+3.2}" text-anchor="end"
       font-size="8.5" fill="var(--muted)"
       style="font-variant-numeric:tabular-nums">${p}</text>`;
   }
   /* month ticks */
   let ax = "";
   for(const [d,nm] of MONTHS){
-    ax += `<line x1="${xOf(d)}" x2="${xOf(d)}" y1="${SH-6}" y2="${SH-2}"
+    ax += `<line x1="${xOf(d)}" x2="${xOf(d)}" y1="${G.SH-6}" y2="${G.SH-2}"
       stroke="var(--baseline)" stroke-width="1"/>`;
     ax += `<text x="${xOf(d)}" y="${axY}" text-anchor="middle"
       font-size="9" fill="var(--muted)">${nm}</text>`;
@@ -403,14 +459,14 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
   /* latest-report rule: prior years run to 31 Oct, 2026 stops here. Saying so
      stops the shorter line reading as a collapse. */
   const lr = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
-      y2="${SH-6}" stroke="var(--baseline)" stroke-width="1"/>
+      y2="${G.SH-6}" stroke="var(--baseline)" stroke-width="1"/>
     <text x="${xOf(latestDay)-3}" y="10" text-anchor="end" font-size="8"
       fill="var(--muted)">latest report</text>`;
 
   /* prior years: thin, ordered blue ramp, drawn first so 2026 sits on top */
   let pri = "";
   for(const y of YRS){
-    const p = linePath(series[y], y);
+    const p = linePath(series[y]);
     if(p) pri += `<path d="${p}" fill="none" stroke="${COL[y]}"
       stroke-width="1.4" stroke-linejoin="round" opacity="0.85"/>`;
   }
@@ -421,14 +477,14 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
     /* Dashed because it marks a threshold event — the one place dashing is
        meaningful rather than noise. Kept recessive: the marker locates the
        event, the orange line is still the figure. */
-    mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${SH-6}"
+    mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${G.SH-6}"
       stroke="var(--muted)" stroke-width="1" stroke-dasharray="2.5 3.5"/>
       <circle cx="${xOf(md)}" cy="${yOf(series[CUR][md])}" r="3.4"
         fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
-      <text x="${xOf(md)+4}" y="${SH-9}" font-size="8"
+      <text x="${xOf(md)+4}" y="${G.SH-9}" font-size="8"
         fill="var(--muted)">${dosLabel(md, CUR)}</text>`;
   }
-  const cp = linePath(series[CUR], CUR);
+  const cp = linePath(series[CUR]);
   const cur = `<path d="${cp}" fill="none" stroke="var(--now)"
     stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
   /* direct label on the one series that matters */
@@ -444,12 +500,12 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
   if(showRain){
   const rmax = Math.max(6, ...Object.values(rain[CUR] || {}),
     ...YRS.flatMap(y => Object.values(rain[y] || {})));
-  const ry = v => rTop + RH - (v / rmax) * (RH - 4);
-  rr = `<line x1="${PADL}" x2="${W-PADR}" y1="${rTop+RH}" y2="${rTop+RH}"
+  const ry = v => rTop + G.RH - (v / rmax) * (G.RH - 4);
+  rr = `<line x1="${G.PADL}" x2="${G.W-G.PADR}" y1="${rTop+G.RH}" y2="${rTop+G.RH}"
       stroke="var(--baseline)" stroke-width="1"/>
-    <text x="${PADL-5}" y="${rTop+8}" text-anchor="end" font-size="8"
+    <text x="${G.PADL-5}" y="${rTop+8}" text-anchor="end" font-size="8"
       fill="var(--muted)" style="font-variant-numeric:tabular-nums">${rmax.toFixed(0)}</text>
-    <text x="${PADL-5}" y="${rTop+RH+2}" text-anchor="end" font-size="8"
+    <text x="${G.PADL-5}" y="${rTop+G.RH+2}" text-anchor="end" font-size="8"
       fill="var(--muted)">0</text>`;
   /* prior-year mean rainfall, as a reference line */
   const pm = {};
@@ -463,28 +519,87 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
   if(pmPath) rr += `<path d="${pmPath}" fill="none" stroke="var(--muted)"
     stroke-width="1.2" opacity="0.9"/>`;
   /* 2026 daily rain: thin bars, 2px surface gap, 1px rounded ends */
-  const bw = Math.max(1.1, (W-PADL-PADR)/SEASON_DAYS - 0.7);
+  const bw = Math.max(1.1, (G.W-G.PADL-G.PADR)/SEASON_DAYS - 0.7);
   for(const [k,v] of Object.entries(rain[CUR] || {})){
     if(v <= 0) continue;
-    const h = Math.max(0.8, rTop + RH - ry(v));
+    const h = Math.max(0.8, rTop + G.RH - ry(v));
     rr += `<rect x="${(xOf(+k)-bw/2).toFixed(1)}" y="${ry(v).toFixed(1)}"
       width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="0.7"
       fill="var(--now)" opacity="0.6"/>`;
   }
-  rr += `<text x="${W-PADR}" y="${rTop-1}" text-anchor="end" font-size="7.5"
+  rr += `<text x="${G.W-G.PADR}" y="${rTop-1}" text-anchor="end" font-size="7.5"
     fill="var(--muted)">rain mm/day, regional mean</text>`;
   }
 
-  const hitH = showRain ? rTop + RH : SH - 6;
-  return `<svg viewBox="0 0 ${W} ${totH}" role="img" tabindex="0"
+  const hitH = showRain ? rTop + G.RH : G.SH - 6;
+  return `<svg viewBox="0 0 ${G.W} ${totH}" role="img" tabindex="0"
       aria-label="Percent filling by day of season, 2026 against 2022 to 2025${
         showRain ? ", with daily rainfall below" : ""}" data-id="${idPrefix}">
     ${g}${ax}${lr}${pri}${cur}${mk}${lab}${rr}
     <line class="xh" x1="0" x2="0" y1="4" y2="${hitH}" stroke="var(--text-secondary)"
       stroke-width="1" opacity="0" pointer-events="none"/>
-    <rect class="hit" x="${PADL}" y="0" width="${W-PADL-PADR}" height="${hitH}"
+    <rect class="hit" x="${G.PADL}" y="0" width="${G.W-G.PADL-G.PADR}" height="${hitH}"
       fill="transparent" style="cursor:crosshair"/>
   </svg>`;
+}
+
+/* ---------------- scheme detail sparkline ----------------
+   The same treatment as a region facet — 2026 heavy, the four prior years thin
+   on the ordered blue ramp, aligned day-of-season, a latest-report rule — at a
+   smaller height and using the breakpoint geometry, so it is responsive by
+   construction rather than retrofitted.
+
+   Deliberately NO crossover marker. The per-scheme series is thinned to every
+   third day to keep the JSON small, and the marker rule is "five CONSECUTIVE
+   evaluable days". A thinned series cannot evaluate that rule, and drawing a
+   marker from data that cannot support it would be worse than omitting it. */
+function schemeSpark(s, thin){
+  const ser = s.series || {};
+  const cur = ser[CUR] || {};
+  if(!Object.keys(cur).length) return "";
+  const PH = 76, AXH = 16, H = PH + AXH;
+  const xf = d => G.PADL + (d - 1) / (SEASON_DAYS - 1) * (G.W - G.PADL - G.PADR);
+  const yf = p => PH - 5 - (Math.max(0, Math.min(100, p)) / 100) * (PH - 14);
+
+  let g = "";
+  for(const p of [0, 50, 100]){
+    g += `<line x1="${G.PADL}" x2="${G.W - G.PADR}" y1="${yf(p)}" y2="${yf(p)}"
+      stroke="var(--grid)" stroke-width="1"/>
+      <text x="${G.PADL - 4}" y="${yf(p) + 3}" text-anchor="end" font-size="8"
+        fill="var(--muted)" style="font-variant-numeric:tabular-nums">${p}</text>`;
+  }
+  for(const [d, nm] of MONTHS){
+    g += `<text x="${xf(d)}" y="${H - 4}" text-anchor="middle" font-size="8.5"
+      fill="var(--muted)">${nm}</text>`;
+  }
+  const days = Object.keys(cur).map(Number);
+  const latest = Math.max(...days);
+  g += `<line x1="${xf(latest)}" x2="${xf(latest)}" y1="3" y2="${yf(0)}"
+    stroke="var(--baseline)" stroke-width="1"/>`;
+
+  let lines = "";
+  for(const y of YRS){
+    const p = linePath(ser[y] || {}, xf, yf, thin);
+    if(p) lines += `<path d="${p}" fill="none" stroke="${COL[y]}"
+      stroke-width="1.2" opacity="0.85" stroke-linejoin="round"/>`;
+  }
+  lines += `<path d="${linePath(cur, xf, yf, thin)}" fill="none"
+    stroke="var(--now)" stroke-width="2.2" stroke-linejoin="round"
+    stroke-linecap="round"/>`;
+  lines += `<circle cx="${xf(latest)}" cy="${yf(cur[latest])}" r="3.2"
+      fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
+    <text x="${xf(latest) - 5}" y="${yf(cur[latest]) - 6}" text-anchor="end"
+      font-size="9" font-weight="700" fill="var(--now)">${CUR}</text>`;
+
+  return `<div class="spark">
+    <svg viewBox="0 0 ${G.W} ${H}" role="img"
+      aria-label="Percent filling by day of season for this scheme, ${CUR}
+      against ${YRS[0]} to ${YRS[YRS.length-1]}">${g}${lines}</svg>
+    <div class="sparkcap">% filling by day of season &mdash; <b>${CUR}</b>
+      against ${YRS[0]}&ndash;${YRS[YRS.length-1]}, the same four years as the
+      regional facets. Plotted every ${thin}rd day, so brief dips are not
+      resolved and no crossover date is marked.</div>
+  </div>`;
 }
 
 /* ---------------- crossover wording ----------------
@@ -581,7 +696,13 @@ const capR = v => (CAP_BINS.find(b => v < b.max) || CAP_BINS[4]).r;
 let FILTER = "ALL";
 
 function scatterSVG(list){
-  const W2 = 940, H2 = 430, L = 52, R = 18, T = 16, B = 42;
+  // Portrait on a phone rather than a squeezed landscape. At 0.4 scale the
+  // landscape version's labels land near 4px and nothing on it can be read;
+  // a viewBox that matches the container keeps them at their true size.
+  const narrow = isNarrow();
+  const W2 = G.SW, H2 = G.SHH;
+  const L = narrow ? 40 : 52, R = narrow ? 12 : 18;
+  const T = narrow ? 20 : 16, B = narrow ? 46 : 42;
   const xs = [-100, 50];
   const xp = v => L + (v - xs[0]) / (xs[1] - xs[0]) * (W2 - L - R);
   const lg = v => Math.log10(Math.max(1, v));
@@ -589,28 +710,34 @@ function scatterSVG(list){
   const yp = v => H2 - B - (lg(v) - ys[0]) / (ys[1] - ys[0]) * (H2 - T - B);
 
   let g = "";
-  for(const v of [-100,-75,-50,-25,0,25,50]){
+  // Fewer ticks when there is less room, rather than the same ticks smaller.
+  for(const v of (narrow ? [-100,-50,0,50] : [-100,-75,-50,-25,0,25,50])){
     g += `<line x1="${xp(v)}" x2="${xp(v)}" y1="${T}" y2="${H2-B}"
       stroke="${v===0?"var(--baseline)":"var(--grid)"}" stroke-width="1"/>`;
     g += `<text x="${xp(v)}" y="${H2-B+14}" text-anchor="middle" font-size="9.5"
       fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
   }
-  for(const v of [1,10,100,1000,8000]){
+  for(const v of (narrow ? [1,100,8000] : [1,10,100,1000,8000])){
     g += `<line x1="${L}" x2="${W2-R}" y1="${yp(v)}" y2="${yp(v)}"
       stroke="var(--grid)" stroke-width="1"/>`;
     g += `<text x="${L-6}" y="${yp(v)+3.2}" text-anchor="end" font-size="9.5"
       fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>=1000?(v/1000)+"k":v}</text>`;
   }
   g += `<text x="${xp(0)}" y="${H2-B+27}" text-anchor="middle" font-size="10"
-      fill="var(--text-secondary)">deviation from the prior same-date mean, percentage points</text>`;
-  g += `<text x="${L}" y="${T-4}" text-anchor="start" font-size="9"
-      fill="var(--text-secondary)">design capacity, MCM (log)</text>`;
+      fill="var(--text-secondary)">${narrow
+        ? "deviation, percentage points"
+        : "deviation from the prior same-date mean, percentage points"}</text>`;
+  g += `<text x="${L - (narrow ? 34 : 0)}" y="${T-5}" text-anchor="start"
+      font-size="9" fill="var(--text-secondary)">${narrow
+        ? "capacity, MCM (log)" : "design capacity, MCM (log)"}</text>`;
   /* Two anchored labels rather than one string with arrows in the middle —
-     the combined version read as a single ambiguous arrow. */
-  g += `<text x="${xp(-100)+5}" y="${H2-B-7}" font-size="9.5"
-      fill="var(--muted)">← further below prior years</text>`;
-  g += `<text x="${xp(50)-5}" y="${H2-B-7}" text-anchor="end" font-size="9.5"
-      fill="var(--muted)">above prior years →</text>`;
+     the combined version read as a single ambiguous arrow. Abbreviated on a
+     phone: the full wording does not fit and a clipped label is worse than a
+     short one. */
+  g += `<text x="${xp(xs[0])+4}" y="${H2-B-7}" font-size="9.5"
+      fill="var(--muted)">${narrow ? "← below" : "← further below prior years"}</text>`;
+  g += `<text x="${xp(xs[1])-4}" y="${H2-B-7}" text-anchor="end" font-size="9.5"
+      fill="var(--muted)">${narrow ? "above →" : "above prior years →"}</text>`;
 
   /* Largest first so small dots land on top and stay clickable; a 1.5px
      surface ring separates overlaps without drawing a border. */
@@ -664,7 +791,7 @@ function mapSVG(list, coords, geo){
   const pad = 0.35;
   const b = [Math.min(...lons)-pad, Math.min(...lats)-pad,
              Math.max(...lons)+pad, Math.max(...lats)+pad];
-  const W2 = 940, H2 = 640;
+  const W2 = G.SW, H2 = isNarrow() ? 520 : 640;
   const sx = (W2 - 20) / (b[2] - b[0]), sy = (H2 - 20) / (b[3] - b[1]);
   const k = Math.min(sx, sy);
   const px = lon => 10 + (lon - b[0]) * k;
@@ -701,8 +828,13 @@ let GEO = {state:null, districts:null};
 let REG = {};
 const regName = c => REG[c] || c;
 
+let CURRENT_VIEW = "Season";
+let RENDERED_AT = null;
+
 function render(d){
   DATA = d;
+  setGeometry();
+  RENDERED_AT = isNarrow();
   const m = d.meta;
   REG = Object.fromEntries(d.regions.map(r => [r.code, r.name]));
 
@@ -781,7 +913,7 @@ function render(d){
 
   /* deviation table 1 — no days-of-water here; that lives on scheme detail */
   document.getElementById("tblPP").innerHTML =
-    `<table class="dt"><thead><tr>
+    `<div class="tablewrap"><table class="dt"><thead><tr>
       <th>Scheme</th><th>District</th><th>Region</th>
       <th style="text-align:right">% now</th>
       <th style="text-align:right">Prior mean</th>
@@ -799,10 +931,11 @@ function render(d){
       <td class="n">${r.n_prior}</td>
       <td class="n">${f1(r.present_live_mcm)}</td>
       <td class="n">${f1(r.design_gross_mcm)}</td></tr>`).join("") +
-    `</tbody></table>`;
+    `</tbody></table></div>
+     <div class="scrollhint">Table scrolls sideways &rarr;</div>`;
 
   document.getElementById("tblVol").innerHTML =
-    `<table class="dt"><thead><tr>
+    `<div class="tablewrap"><table class="dt"><thead><tr>
       <th>Scheme</th><th>District</th><th>Region</th>
       <th style="text-align:right">Design MCM</th>
       <th style="text-align:right">% now</th>
@@ -817,7 +950,8 @@ function render(d){
       <td class="n">${f1(r.mean_prior)}</td>
       <td class="n">${f1(r.dev_pp)}</td>
       <td class="dev">${f1(r.shortfall_mcm)}</td></tr>`).join("") +
-    `</tbody></table>`;
+    `</tbody></table></div>
+     <div class="scrollhint">Table scrolls sideways &rarr;</div>`;
 
   /* methodology */
   const mid = m.midseason_exceptions.map(x =>
@@ -880,16 +1014,22 @@ function renderSchemesView(){
   const cm = DATA.coords_meta || {available:false, n_placed:0};
   const mapped = cm.available && Object.keys(DATA.coords || {}).length;
 
-  document.getElementById("placement").innerHTML = mapped
-    ? `<b>${cm.n_placed} of ${cm.n_schemes} schemes placed</b> from
+  const pel = document.getElementById("placement");
+  // Open on a wide screen, collapsed on a phone. The summary carries the
+  // claim either way.
+  pel.open = !isNarrow();
+  pel.innerHTML = (mapped
+    ? `<summary>${cm.n_placed} of ${cm.n_schemes} schemes placed on the map</summary>
+       <div class="pbody"><b>${cm.n_placed} of ${cm.n_schemes} schemes placed</b> from
        ${esc(cm.source || "supplied coordinates")}. District and state
        boundaries are drawn as outlines only — no area is filled, so no colour
        on this map stands for a district.
        ${cm.n_placed < cm.n_schemes
          ? `The ${cm.n_schemes - cm.n_placed} without coordinates are not
             plotted and are not implied to be anywhere; they remain in the
-            tables.` : ""}`
-    : `<b>This is not a map, and it cannot be one from this source.</b>
+            tables.` : ""}</div>`
+    : `<summary>Not a map &mdash; the source publishes no coordinates. Why, and what would fix it.</summary>
+       <div class="pbody"><b>This is not a map, and it cannot be one from this source.</b>
        The WRD daily report gives each dam a <b>district and taluka but never a
        coordinate</b> — there is no latitude or longitude column in any of the
        six tables in the file. OpenStreetMap name-matching resolved
@@ -910,7 +1050,8 @@ function renderSchemesView(){
        against the two axes the data does support.
        <b>Supply <code>${esc(cm.expected_file || "data/reference/dam_coordinates.csv")}</code></b>
        with columns <code>${(cm.expected_columns||[]).join(", ")}</code> and this
-       view renders the real map instead, with district outlines and no fills.`;
+       view renders the real map instead, with district outlines and no fills.
+       </div>`);
 
   const regions = ["ALL", ...DATA.regions.map(r => r.code)];
   const nm = c => c === "ALL" ? "All regions"
@@ -999,8 +1140,8 @@ function wire(){
     const hide = () => { tip.classList.remove("on"); xh.setAttribute("opacity","0"); };
     const dayAt = ev => {
       const b = svg.getBoundingClientRect();
-      const px = (ev.clientX - b.left) / b.width * W;
-      return Math.round((px - PADL) / (W - PADL - PADR) * (SEASON_DAYS - 1) + 1);
+      const px = (ev.clientX - b.left) / b.width * G.W;
+      return Math.round((px - G.PADL) / (G.W - G.PADL - G.PADR) * (SEASON_DAYS - 1) + 1);
     };
     const hit = svg.querySelector(".hit");
     hit.addEventListener("mousemove", ev => show(dayAt(ev), ev.clientX, ev.clientY));
@@ -1012,7 +1153,7 @@ function wire(){
       ev.preventDefault();
       kd = Math.max(1, Math.min(latest, kd + (ev.key === "ArrowRight" ? 1 : -1)));
       const b = svg.getBoundingClientRect();
-      show(kd, b.left + xOf(kd)/W*b.width, b.top + b.height/2);
+      show(kd, b.left + xOf(kd)/G.W*b.width, b.top + b.height/2);
     });
     svg.addEventListener("blur", hide);
   });
@@ -1066,6 +1207,7 @@ function wire(){
       <h3>${esc(s.scheme_name)}</h3>
       <div class="sub">${esc(s.district)} · ${esc(regName(s.region))} ·
         reading for ${DATA.meta.report_date}</div>
+      ${schemeSpark(s, DATA.meta.scheme_series_thin_to || 3)}
       <div class="dgrid">
         <div class="c"><div class="k">Filling now</div>
           <div class="v">${f2(s.pct_filling)}%</div></div>
@@ -1111,9 +1253,29 @@ function wire(){
     document.getElementById("detail").classList.remove("on");
     scrollTo({top:0, behavior:"smooth"});
   };
-  bs.Season.onclick = () => go("Season");
-  bs.Schemes.onclick = () => go("Schemes");
+  // Restore the view across a breakpoint re-render, so rotating a phone does
+  // not silently throw you back to the default view.
+  if(CURRENT_VIEW !== "Season"){
+    for(const [name, el] of Object.entries(vs)){
+      el.hidden = name !== CURRENT_VIEW;
+      bs[name].setAttribute("aria-current", String(name === CURRENT_VIEW));
+    }
+  }
+  window.__go = k => { CURRENT_VIEW = k; go(k); };
+  bs.Season.onclick = () => window.__go("Season");
+  bs.Schemes.onclick = () => window.__go("Schemes");
 }
+
+/* Crossing the breakpoint changes the viewBox, so the charts have to be
+   rebuilt rather than restretched. Only on an actual crossing - resizing a
+   desktop window by a few pixels must not re-render on every frame. */
+let _rzTimer = null;
+addEventListener("resize", () => {
+  clearTimeout(_rzTimer);
+  _rzTimer = setTimeout(() => {
+    if(DATA && isNarrow() !== RENDERED_AT) render(DATA);
+  }, 180);
+});
 
 fetch("data/reservoir_view.json")
   .then(r => r.json())
