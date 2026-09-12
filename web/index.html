@@ -522,6 +522,25 @@ function dataAgeDays(reportDate){
    wrong, or is in a timezone behind IST by enough, can legitimately see a
    report dated after their today. Saying so is better than printing
    "-1 days ago". */
+/* NIL is the source's word for "no warning in force", and on its own it reads
+   like missing data — which is the one thing it does not mean. The published
+   value is shown unaltered and the gloss sits beneath it, rather than
+   substituting friendlier wording for what the report actually says.
+
+   No severity ranking is offered. The names imply one, but the report
+   publishes neither the thresholds behind these levels nor an ordering of
+   them, so asserting one here would be inventing a fact about the source. */
+const WARN_NOTE = {
+  "NIL": "no warning in force for this dam today",
+  "ALERT": "a level the report publishes; thresholds are not published",
+  "HIGH ALERT": "a level the report publishes; thresholds are not published",
+  "WARNING": "a level the report publishes; thresholds are not published",
+  "DANGER": "a level the report publishes; thresholds are not published",
+};
+const warnNote = w =>
+  w == null ? "not published for this dam on this date"
+  : WARN_NOTE[w] || "not one of the five levels the report normally publishes";
+
 const ageWord = n =>
   n == null ? "an unknown date"
   : n < 0    ? `${-n} day${-n > 1 ? "s" : ""} ahead of your clock`
@@ -1312,8 +1331,11 @@ function render(d){
   const weakest = Object.entries(s.prior_at_now).sort((a,b)=>a[1]-b[1])[0];
   document.getElementById("heroN").textContent = f2(s.pct_now) + "%";
   document.getElementById("heroU").innerHTML =
+    // MCM expanded here because this is its first appearance on the page;
+    // every later use is the abbreviation alone.
     `of design capacity, statewide<br><span style="color:var(--muted)">
-     ${f1(s.mcm_now)} of ${f1(s.design_mcm)} MCM on ${m.report_date}</span>`;
+     ${f1(s.mcm_now)} of ${f1(s.design_mcm)} million cubic metres (MCM)
+     on ${m.report_date}</span>`;
   document.getElementById("heroS").innerHTML =
     `Against a four-year mean of <b>${f2(s.mean_prior_at_now)}%</b> on the same
      calendar date. The weakest prior year on this date was <b>${weakest[0]}</b>
@@ -1349,7 +1371,9 @@ function render(d){
        <b style="color:var(--text-secondary)">0–${RAIN_MAX} mm/day</b> scale,
        so bar heights compare across regions</span>
      <span class="sep">|</span>
-     <span class="it" style="color:var(--muted)">facets ordered worst deviation first</span>`;
+     <span class="txt" style="color:var(--muted)">facets ordered worst
+       deviation first, in <b style="color:var(--text-secondary)">pp</b> —
+       percentage points, the plain difference between two percentages</span>`;
 
   /* facets */
   document.getElementById("grid").innerHTML = d.regions.map(r => {
@@ -1364,7 +1388,7 @@ function render(d){
       <div class="fnums">
         <span>now <b>${f2(r.pct_now)}%</b></span>
         <span>prior mean <b>${f2(r.mean_prior_at_now)}%</b></span>
-        <span class="dv">${dev>0?"+":""}${f1(dev)} pp</span>
+        <span class="dv" title="percentage points below the prior four-year mean for this date">${dev>0?"+":""}${f1(dev)} pp</span>
         <span style="color:var(--muted)">${f1(r.mcm_now)} MCM</span>
       </div>
       <div class="plot" data-region="${r.code}">
@@ -1383,7 +1407,7 @@ function render(d){
       <th>Scheme</th><th>District</th><th>Region</th>
       <th style="text-align:right">% now</th>
       <th style="text-align:right">Prior mean</th>
-      <th style="text-align:right">Deviation</th>
+      <th style="text-align:right">Deviation, pp</th>
       <th style="text-align:right">Yrs</th>
       <th style="text-align:right">Live MCM</th>
       <th style="text-align:right">Design MCM</th></tr></thead><tbody>` +
@@ -1406,7 +1430,7 @@ function render(d){
       <th style="text-align:right">Design MCM</th>
       <th style="text-align:right">% now</th>
       <th style="text-align:right">Prior mean</th>
-      <th style="text-align:right">Deviation</th>
+      <th style="text-align:right">Deviation, pp</th>
       <th style="text-align:right">Shortfall MCM</th></tr></thead><tbody>` +
     d.deviation_volume.map(r => `<tr>
       <td class="nm">${esc(r.scheme_name)}</td>
@@ -1425,6 +1449,37 @@ function render(d){
      ${esc(x.change_dates)}</li>`).join("");
   document.getElementById("meth").innerHTML = `
     <ul>
+      <li><b>Units and terms.</b>
+        <ul>
+          <li><b>MCM</b> is <b>million cubic metres</b>, the unit the report
+            publishes storage in. One MCM is a thousand million litres.</li>
+          <li><b>Gross storage</b> is all the water in a reservoir.
+            <b>Live storage</b> is the part that can actually be released —
+            the rest sits below the lowest outlet as <b>dead storage</b> and
+            cannot be drawn off. So percent filling uses <em>gross</em>, while
+            days of water uses <em>live</em>, because live is the water a
+            release can come from. At Ukai today that is the difference
+            between 76.88% and 67.65%.<br>
+            Gross should equal live plus dead, and does on 99.8% of readings.
+            On 336 of 150,998 it does not, and the inconsistency is the
+            source's own rather than a parsing error — six schemes, four of
+            them for one entire water year each, where the published live and
+            dead figures do not add to the published gross. Those rows are
+            shown exactly as published; nothing is adjusted to make the
+            arithmetic close.</li>
+          <li><b>pp</b> is <b>percentage points</b> — the plain difference
+            between two percentages. A region at 22.80% against a prior mean of
+            76.95% is 54.2 pp below it, not 54.2% below it: those are different
+            quantities and only the first is stated here.</li>
+          <li><b>Warning level</b> is published per dam and takes one of five
+            values: <b>NIL</b>, <b>ALERT</b>, <b>HIGH ALERT</b>,
+            <b>WARNING</b>, <b>DANGER</b>. <b>NIL</b> means no warning is in
+            force for that dam on that date — it is not missing data. The
+            report does not publish the thresholds behind these, or a ranking
+            of them, so none is asserted here.</li>
+          <li><b>Cusecs</b> are cubic feet per second, the unit the report uses
+            for canal and river release.</li>
+        </ul></li>
       <li><b>Aligned day of season, never absolute date.</b> Day 1 is 1 June.
         Prior seasons run to 31 October; 2026 runs to day
         ${m.season_current === 2026 ? DATA.state.day_of_season : "—"}
@@ -1731,11 +1786,14 @@ function wire(){
           <div class="v">${f2(s.pct_filling)}%</div>
           <div class="vsub">gross storage ÷ design gross</div></div>
         <div class="c"><div class="k">Gross storage</div>
-          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
+          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="vsub">all the water in the reservoir</div></div>
         <div class="c"><div class="k">Design gross</div>
-          <div class="v">${f2(s.design_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
+          <div class="v">${f2(s.design_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="vsub">capacity when full</div></div>
         <div class="c"><div class="k">Live storage</div>
-          <div class="v">${f2(s.present_live_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div></div>
+          <div class="v">${f2(s.present_live_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="vsub">the part that can be released</div></div>
         <div class="c"><div class="k">Canal release</div>
           <div class="v">${rel ? f1(s.outflow_canal_cusecs)+
             ' <span style="font-size:11px;color:var(--muted)">cusecs</span>' :
@@ -1747,7 +1805,8 @@ function wire(){
             ? f2(s.mean_prior)+"% mean of "+s.n_prior+" yr"+(s.n_prior>1?"s":"")
             : '<span style="color:var(--muted)">no comparable prior year</span>'}</div></div>
         <div class="c"><div class="k">Warning level</div>
-          <div class="v sm">${esc(s.warning || "—")}</div></div>
+          <div class="v sm">${esc(s.warning || "—")}</div>
+          <div class="vsub">${warnNote(s.warning)}</div></div>
       </div>
       <div class="dnote">Days of water is this reservoir's live storage divided by
         <b>today's</b> canal release rate, and nothing more. Release rates are set
