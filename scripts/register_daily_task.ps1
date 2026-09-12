@@ -63,12 +63,14 @@ if (-not (Test-Path $cmd)) { throw "missing $cmd" }
 # Prove it runs before scheduling it. A task registered against a broken
 # command is worse than no task: it reports success at the scheduler level
 # while doing nothing useful.
-Write-Host "checking the wrapper runs (dry run, no commit)..." -ForegroundColor Cyan
-& $cmd --dry-run | Select-Object -Last 6
+# --check, not --dry-run. A dry run fetches, parses and rebuilds, skipping
+# only the commit, so using it here would mutate the data as a side effect of
+# registering a task. --check reads and reports, and writes nothing.
+Write-Host "pre-flight (nothing fetched, nothing written)..." -ForegroundColor Cyan
+& $cmd --check
 if ($LASTEXITCODE -ne 0) {
-    throw "dry run exited $LASTEXITCODE - fix that before scheduling. See logs\daily_update.log"
+    throw "pre-flight exited $LASTEXITCODE - fix that before scheduling. See logs\daily_update.log"
 }
-Write-Host "dry run OK" -ForegroundColor Green
 
 $action = New-ScheduledTaskAction -Execute $cmd -WorkingDirectory $repo
 $trigger = New-ScheduledTaskTrigger -Daily -At $At

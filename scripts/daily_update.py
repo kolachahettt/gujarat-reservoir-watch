@@ -139,6 +139,10 @@ def main():
                     help="commit but do not push")
     ap.add_argument("--insecure", action="store_true",
                     help="disable TLS verification (logged loudly)")
+    ap.add_argument("--check", action="store_true",
+                    help="pre-flight only: verify prerequisites and report what "
+                         "the next run would do. Touches nothing, fetches "
+                         "nothing, writes nothing but the log.")
     args = ap.parse_args()
 
     global _log_fh
@@ -158,6 +162,57 @@ def main():
         f"{', no push' if args.no_push else ''}")
     if args.insecure:
         log("TLS                !! VERIFICATION DISABLED via --insecure !!")
+
+    # ---- 0. pre-flight, if asked ----------------------------------------
+    # Deliberately separate from --dry-run, which is NOT side-effect free: it
+    # fetches, parses and rebuilds, and skips only the commit. A pre-flight
+    # that mutates state is not a pre-flight, and this one is what the task
+    # registration runs before scheduling anything.
+    if args.check:
+        rule("PRE-FLIGHT — nothing is fetched, nothing is written")
+        problems = []
+
+        def need(label, ok, detail=""):
+            log(f"  {'OK  ' if ok else 'FAIL'}  {label:<34} {detail}")
+            if not ok:
+                problems.append(label)
+
+        need("repository root", (ROOT / ".git").exists(), str(ROOT))
+        remote = git("remote", "get-url", "origin", check=False)
+        need("git remote origin", bool(remote), remote or "not configured")
+        upstream = git("rev-parse", "--abbrev-ref", "@{u}", check=False)
+        need("upstream branch", bool(upstream), upstream or "not set")
+        need("remote reachable (read)",
+             bool(git("ls-remote", "--heads", "origin", check=False)),
+             "anonymous read works")
+        for mod in ("pdfplumber", "duckdb", "pandas", "pyarrow"):
+            try:
+                __import__(mod)
+                need(f"import {mod}", True)
+            except Exception as e:                       # noqa: BLE001
+                need(f"import {mod}", False, str(e))
+        need("database", Path("data/processed/reservoir.duckdb").exists())
+        need("season capacities",
+             Path("data/processed/season_capacity.csv").exists())
+        need("view json", VIEW.exists())
+        newest = newest_loaded_date()
+        gap = (now_ist.date() - newest).days if newest else 9999
+        need("data freshness", gap <= args.max_stale_days,
+             f"newest {newest}, {gap} day(s) behind today IST")
+        need("working tree clean", not git("status", "--porcelain"),
+             "uncommitted changes would be swept into the daily commit"
+             if git("status", "--porcelain") else "")
+
+        parsed_t = (DAY_DIR / f"{target}.parquet").exists()
+        log("")
+        log(f"  next run targets {target} "
+            f"({'in' if in_season else 'OFF'} season)")
+        log(f"  already parsed   {parsed_t}"
+            f"{'  -> it would be a no-op' if parsed_t else ''}")
+        if problems:
+            die(1, "PRE-FLIGHT FAILED",
+                "Not fit to schedule:\n  " + "\n  ".join(problems))
+        die(0, "PRE-FLIGHT OK", "Safe to schedule.")
 
     # ---- 2. is there actually anything left to do? ----------------------
     # "Already parsed" is the wrong question, and getting it wrong strands
