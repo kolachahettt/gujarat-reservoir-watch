@@ -163,12 +163,57 @@ WARNING_VOCAB = {
 
 
 def normalise_warning(raw):
+    """Canonical warning level, plus whether it was known and whether repaired.
+
+    TRUNCATION IN THE SOURCE, NOT IN THE EXTRACTION
+    The detail table clips this cell in the PDF itself: on 2026-09-04 row 79
+    (Pingli) the cell holds 'HIGH' and the second word is not present anywhere
+    in the row, in extract_tables() OR in extract_text(). So it is not a cell
+    bounding box losing an overflow — WRD renders a clipped string. 'HIGH' is
+    not a level WRD publishes, and it is worse than merely wrong: it reads
+    MILDER than the 'ALERT' level that does exist, when the value it stands for
+    ('HIGH ALERT') is the more severe of the two.
+
+    The same report proves the intended value. The 14-column major-schemes
+    list, which this parser counts and discards, prints the level in full for
+    the schemes it covers — on 2022-07-13 Khambhala reads 'WARNI' in the detail
+    table and 'WARNING' in the major-schemes list, same scheme, same date. The
+    source contradicts itself and one side is complete.
+
+    Resolution is by UNIQUE PREFIX against the closed vocabulary, which is
+    total and unambiguous here because no vocabulary key is a prefix of another
+    (asserted below — 'HIGH' can only be 'HIGHALERT', 'WARNI' only 'WARNING').
+    A truncation that matched two members, or matched none, is still kept
+    verbatim and reported rather than guessed at.
+
+    Returns (value, known, repaired). `repaired` is True only for a
+    prefix-resolved value, so the repair is counted as a field warning rather
+    than passing silently — a fix that leaves no trace is indistinguishable
+    from data that was always clean.
+    """
     if raw is None:
-        return None, False
+        return None, False, False
     squashed = re.sub(r"\s+", "", str(raw)).upper()
     if squashed in WARNING_VOCAB:
-        return WARNING_VOCAB[squashed], True
-    return re.sub(r"\s+", " ", str(raw)).strip(), False
+        return WARNING_VOCAB[squashed], True, False
+    if squashed:
+        hits = [k for k in WARNING_VOCAB if k.startswith(squashed)]
+        if len(hits) == 1:
+            return WARNING_VOCAB[hits[0]], True, True
+    return re.sub(r"\s+", " ", str(raw)).strip(), False, False
+
+
+# The prefix rule above is only sound while this holds. Checked at import
+# rather than trusted: adding a level named 'WARN' would make 'WARNI' ambiguous
+# and silently change how 53 historical rows resolve.
+for _a in WARNING_VOCAB:
+    for _b in WARNING_VOCAB:
+        if _a != _b and _b.startswith(_a):
+            raise AssertionError(
+                f"WARNING_VOCAB key {_a!r} is a prefix of {_b!r}; the "
+                f"unique-prefix repair in normalise_warning is no longer "
+                f"unambiguous and must be reconsidered before use.")
+del _a, _b
 
 
 # Hazard 5 (brief §13). clean() strips ALL whitespace from numeric fields — that
@@ -211,12 +256,43 @@ def canon_district(raw):
     return re.sub(r"\s+", " ", str(raw)).strip(), False
 
 
-# Above this fraction of the source's own total, a residual is not rounding and
-# the day is not trusted. The observed clean-day residual is 4.85e-6, which is
-# the abstract rounding 206 two-decimal values.
-MATERIAL_RESIDUAL = 1e-5
-
 N_SCHEMES_EXPECTED = 206
+
+# WHY THIS IS AN ABSOLUTE MCM TOLERANCE AND NOT A FRACTION
+# It was MATERIAL_RESIDUAL = 1e-5, a fraction of the source's own total, set
+# from a single clean day whose residual was 4.85e-6. Against the full 733 days
+# about 45 exceed it, and the worst — 2e-4 to 3.3e-4 — are all OFF-SEASON. That
+# is not a worse parse. The residual was divided by each pair's own published
+# total, and "today's gross storage" in May is a fifth of what it is in
+# October, so the same absolute rounding error read five times worse. A
+# threshold whose denominator moves with the seasons measures the seasons.
+#
+# The noise here is rounding, and rounding is absolute. The 206 per-scheme
+# values are each published to two decimals, while WRD's grand total is
+# computed from unrounded figures and rounded once. Our sum of rounded values
+# therefore differs from their total by accumulated rounding:
+#
+#   worst case, every value rounding the same way   N * 0.005      = 1.03 MCM
+#   typical, independent and uniform      sqrt(N) * 0.005/sqrt(3)  = 0.041 MCM
+#
+# The observed median residual is 0.046 MCM, which matches the typical figure
+# and confirms the model — WRD does hold more precision than it publishes.
+#
+# The tolerance is twice the worst case. Not tuned to the observed maximum:
+# derived from the rounding bound, then checked against the distribution.
+# Doubling covers the case where the report's own total is itself inconsistent
+# by a cent or two without leaving room for anything structural.
+RESIDUAL_ROUNDING_MCM = N_SCHEMES_EXPECTED * 0.005          # 1.03
+MATERIAL_RESIDUAL_MCM = 2.0 * RESIDUAL_ROUNDING_MCM         # 2.06
+
+# WHAT THIS CHECK CANNOT SEE, stated rather than implied
+# A column shift misreads all 206 values and moves the total by thousands of
+# MCM, which is why reconciliation catches it. A wrapped value losing its last
+# digit moves a two-decimal figure by at most 0.09 MCM — an order of magnitude
+# BELOW the rounding floor, so reconciliation cannot detect it and never could.
+# It is a check against structural misreads, not against fine truncation. The
+# warning-cell truncation in normalise_warning is exactly the kind of defect it
+# would have missed, and did.
 
 # How many days behind today the newest data may be before it is stale. Lives
 # here rather than in daily_update.py because the published page states the
@@ -266,21 +342,27 @@ def reconcile(det, abstract):
               float(det["design_gross_mcm"].sum())),
              ("today", float(grand["today_gross_mcm"]),
               float(det["present_gross_mcm"].sum())))
-    worst = 0.0
+    worst, worst_mcm = 0.0, 0.0
     for label, src, ours in pairs:
         ratio = abs(ours - src) / src if src else (0.0 if ours == 0 else 1.0)
         worst = max(worst, ratio)
+        worst_mcm = max(worst_mcm, abs(ours - src))
         out[label] = {"abstract": round(src, 2), "parsed": round(ours, 2),
                       "residual_mcm": round(ours - src, 2),
                       "residual_ratio": ratio}
+    # The ratio is still reported — it is the readable form, and the logs and
+    # the ledger keep it — but the TEST is on absolute MCM. See the note on
+    # MATERIAL_RESIDUAL_MCM for why the fraction measured the season.
     out["worst_ratio"] = worst
+    out["worst_mcm"] = worst_mcm
     if out["n_abstract"] != out["n_parsed"]:
         out["reason"] = (f"scheme count disagrees: abstract says "
                          f"{out['n_abstract']}, parsed {out['n_parsed']}")
         return out
-    if worst > MATERIAL_RESIDUAL:
-        out["reason"] = (f"residual {worst:.2e} of total exceeds "
-                         f"{MATERIAL_RESIDUAL:.0e} — the parse does not "
+    if worst_mcm > MATERIAL_RESIDUAL_MCM:
+        out["reason"] = (f"residual {worst_mcm:.2f} MCM exceeds "
+                         f"{MATERIAL_RESIDUAL_MCM:.2f} MCM "
+                         f"({worst:.2e} of total) — the parse does not "
                          f"reproduce the source's own total")
         return out
     out["ok"] = True
@@ -306,6 +388,71 @@ def check_vocabularies(det):
     if seen_r - region_ok:
         bad["region"] = sorted(seen_r - region_ok)
     return bad
+
+
+def verify_day(det, abstract):
+    """Every check a day's rows must pass before anything is built on them.
+
+    THE THREE CHECKS
+      row_count   exactly N_SCHEMES_EXPECTED rows
+      vocabulary  no value fell through a closed vocabulary
+      reconcile   the rows reproduce the report's own grand total
+
+    WHY THIS IS ONE FUNCTION RATHER THAN THREE CALLS AT EACH SITE
+    daily_update.py ran all three on the one report it fetches. parse_cached.py,
+    which is what run_pipeline.py drives, ran NONE of them — it checked only the
+    date line and that the detail table was non-empty. So a day that reached the
+    database through the scheduled path had been reconciled against the source's
+    own total, and the same day reaching it through a manual re-parse had not.
+    Two paths into one DuckDB file with different standards of proof is not a
+    defensible position, and which one a given row came from is not recorded.
+
+    The guidance text lives here with the check rather than at the call site,
+    because the advice does not depend on who is asking: a grown vocabulary
+    needs the same fix whether it was found by the daily run or a backfill.
+
+    Returns (problems, rec). `problems` is a list of dicts with `check`,
+    `summary` and `guidance`; empty means the day is trustworthy. `rec` is the
+    full reconcile result, kept even when it fails so the residuals can be
+    logged and recorded.
+    """
+    problems = []
+
+    if len(det) != N_SCHEMES_EXPECTED:
+        problems.append({
+            "check": "row_count",
+            "summary": f"{len(det)} rows, expected {N_SCHEMES_EXPECTED}",
+            "guidance": (
+                "A dropped row and a genuinely new scheme look identical from "
+                "here, so\nthis stops for a human either way. If a dam really "
+                "was added, update\nN_SCHEMES_EXPECTED in fetch_dam.py and "
+                "re-run."),
+        })
+
+    bad_vocab = check_vocabularies(det)
+    if bad_vocab:
+        problems.append({
+            "check": "vocabulary",
+            "summary": "; ".join(f"{k}: {v}" for k, v in bad_vocab.items()),
+            "guidance": (
+                "A closed vocabulary grew. Silently bucketing the new value "
+                "would\ncorrupt every count that uses it, so this blocks. Add "
+                "it to the\nvocabulary in fetch_dam.py once you know what it "
+                "means."),
+        })
+
+    rec = reconcile(det, abstract)
+    if not rec["ok"]:
+        problems.append({
+            "check": "reconcile",
+            "summary": rec.get("reason") or "did not reconcile",
+            "guidance": (
+                "The parsed rows do not reproduce the total the report computes "
+                "for\nitself. That is the strongest signal available that a "
+                "column shifted\nor a wrapped number was truncated."),
+        })
+
+    return problems, rec
 
 
 def is_header(row):
@@ -361,12 +508,17 @@ def parse_detail(pdf):
                             v = int(v) if v is not None else None
                         rec[name] = v
                     elif name == "warning":
-                        val, known = normalise_warning(cell)
+                        val, known, repaired = normalise_warning(cell)
                         rec[name] = val
                         if not known:
                             failures.append({
                                 "page": pno, "sr_no": rec.get("sr_no"),
                                 "reason": f"warning value not in vocabulary: {val!r}"})
+                        elif repaired:
+                            failures.append({
+                                "page": pno, "sr_no": rec.get("sr_no"),
+                                "reason": f"warning truncated in source: "
+                                          f"{clean(cell, False)!r} -> {val!r}"})
                     elif name == "region":
                         val, known = canon_region(cell)
                         rec[name] = val
@@ -473,34 +625,63 @@ def parse_rainfall(pdf):
     return df, failures, pages_used
 
 
+# Fallback table strategy for the abstract page. pdfplumber's default "lines"
+# strategy needs ruling lines, and on 2025-10-15..30 the abstract page carries
+# the text with no detectable rules, so extract_tables() returned NOTHING and
+# those 16 days were never reconciled at all — reconcile reported "abstract not
+# parsed" and nothing downstream noticed, because nothing downstream was
+# checking. Aligning on text positions instead recovers all seven rows.
+ABSTRACT_TEXT_SETTINGS = {"vertical_strategy": "text",
+                          "horizontal_strategy": "text"}
+
+ABSTRACT_WANT = ("North Gujarat", "Central Gujarat", "South Gujarat", "Kutch",
+                 "Saurashtra", "Total")
+
+
+def _abstract_rows(tables):
+    """Region rows out of whatever tables a strategy produced."""
+    out = []
+    for table in tables:
+        for raw in table:
+            cells = [clean(c, False) for c in raw]
+            label = cells[0] if cells else None
+            # The abstract carries TWO rows labelled Total: a sub-total of
+            # North+Central+South (45 schemes) and the state grand total
+            # (206 schemes, printed as "Total :"). Strip the colon so both
+            # are captured, then pick the grand total by scheme count.
+            if label:
+                label = label.rstrip(" :")
+            if label not in ABSTRACT_WANT:
+                continue
+            nums = [to_num(clean(c, True)) for c in raw[1:]]
+            nums = [n for n in nums if n is not None]
+            if len(nums) < 4:
+                continue
+            out.append({"region": label, "n_schemes": nums[0],
+                        "n_filled": nums[1], "design_gross_mcm": nums[2],
+                        "today_gross_mcm": nums[3]})
+    return out
+
+
 def parse_abstract(pdf):
-    """Hazard 3 (§4): each region prints twice, MCM then MCFT. Keep the MCM row."""
-    want = ("North Gujarat", "Central Gujarat", "South Gujarat", "Kutch",
-            "Saurashtra", "Total")
+    """Hazard 3 (§4): each region prints twice, MCM then MCFT. Keep the MCM row.
+
+    Two extraction strategies, tried in order. The default is kept first
+    because it is the one 717 of 733 days need and it uses the ruling lines the
+    document actually has; the text-aligned fallback runs only when the default
+    finds no region rows on a page that does carry the abstract marker. Both
+    read the same four values in the same order — scheme count, dams filled,
+    design gross, today's gross — which is why one downstream mapping serves
+    both, and the recovered days reconcile against the detail rows to between
+    6e-7 and 6e-6 of total.
+    """
     out = []
     for page in pdf.pages:
-        text = page.extract_text() or ""
-        if ABSTRACT_MARKER not in text:
+        if ABSTRACT_MARKER not in (page.extract_text() or ""):
             continue
-        for table in page.extract_tables():
-            for raw in table:
-                cells = [clean(c, False) for c in raw]
-                label = cells[0] if cells else None
-                # The abstract carries TWO rows labelled Total: a sub-total of
-                # North+Central+South (45 schemes) and the state grand total
-                # (206 schemes, printed as "Total :"). Strip the colon so both
-                # are captured, then pick the grand total by scheme count.
-                if label:
-                    label = label.rstrip(" :")
-                if label not in want:
-                    continue
-                nums = [to_num(clean(c, True)) for c in raw[1:]]
-                nums = [n for n in nums if n is not None]
-                if len(nums) < 4:
-                    continue
-                out.append({"region": label, "n_schemes": nums[0],
-                            "n_filled": nums[1], "design_gross_mcm": nums[2],
-                            "today_gross_mcm": nums[3]})
+        out = _abstract_rows(page.extract_tables())
+        if not out:
+            out = _abstract_rows(page.extract_tables(ABSTRACT_TEXT_SETTINGS))
         break
     # Same label can appear twice (sub-total and grand total); keep first of each.
     seen, dedup = set(), []

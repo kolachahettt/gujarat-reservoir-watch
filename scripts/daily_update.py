@@ -293,23 +293,15 @@ def main():
             f"trusted as\n{target}.")
 
     log(f"rows parsed        {len(det)}")
-    if len(det) != fd.N_SCHEMES_EXPECTED:
-        die(1, f"ROW COUNT {len(det)}, EXPECTED {fd.N_SCHEMES_EXPECTED}",
-            "A dropped row and a genuinely new scheme look identical from here, "
-            "so\nthis stops for a human either way. If a dam really was added, "
-            "update\nN_SCHEMES_EXPECTED in fetch_dam.py and re-run.")
-
     # Field warnings are normal; 190 of 732 historical days have them.
     log(f"field warnings     {len(det_fail)} (normal; not blocking)")
-    bad_vocab = fd.check_vocabularies(det)
-    if bad_vocab:
-        die(1, "UNRECOGNISED CLOSED-VOCABULARY VALUE",
-            "\n".join(f"{k}: {v}" for k, v in bad_vocab.items()) +
-            "\n\nA closed vocabulary grew. Silently bucketing the new value "
-            "would\ncorrupt every count that uses it, so this blocks. Add it "
-            "to the\nvocabulary in fetch_dam.py once you know what it means.")
 
-    rec = fd.reconcile(det, abstract)
+    # The three blocking checks — row count, closed vocabularies, and
+    # reconciliation against the report's own grand total — come from
+    # fd.verify_day, which parse_cached.py now calls for every cached day.
+    # They used to live only here, so this path and a manual re-parse held the
+    # same DuckDB file to different standards of proof.
+    problems, rec = fd.verify_day(det, abstract)
     if "design" in rec:
         log(f"design gross       abstract {rec['design']['abstract']:>12,.2f}"
             f"   parsed {rec['design']['parsed']:>12,.2f}"
@@ -317,13 +309,21 @@ def main():
         log(f"today  gross       abstract {rec['today']['abstract']:>12,.2f}"
             f"   parsed {rec['today']['parsed']:>12,.2f}"
             f"   {rec['today']['residual_ratio']:.2e}")
-    if not rec["ok"]:
-        die(1, "RECONCILIATION FAILED", (rec["reason"] or "") +
-            "\n\nThe parsed rows do not reproduce the total the report computes "
-            "for\nitself. That is the strongest signal available that a column "
-            "shifted\nor a wrapped number was truncated. Nothing committed.")
-    log(f"reconciliation     OK (worst residual {rec['worst_ratio']:.2e} "
-        f"of total)")
+    if problems:
+        # All of them, not just the first. Stopping at the first check to fail
+        # hides the rest, and a day with a shifted column often breaks the row
+        # count and the reconciliation together — seeing both says more about
+        # what went wrong than seeing either alone.
+        die(1, "VERIFICATION FAILED — " +
+               ", ".join(p["check"].upper() for p in problems),
+            "\n\n".join(f"[{p['check']}] {p['summary']}\n{p['guidance']}"
+                        for p in problems) +
+            "\n\nNothing committed.")
+    # MCM first, because MCM is what the tolerance is expressed in — the ratio
+    # is the readable form but is not what passed or failed.
+    log(f"reconciliation     OK (worst residual {rec['worst_mcm']:.3f} MCM "
+        f"of {fd.MATERIAL_RESIDUAL_MCM:.2f} allowed, "
+        f"{rec['worst_ratio']:.2e} of total)")
 
     state_pct = 100.0 * rec["today"]["parsed"] / rec["design"]["parsed"]
     log(f"state filling      {state_pct:.2f}%")
@@ -388,6 +388,32 @@ def main():
     # seven months. One row a day keeps the provenance versioned year-round.
     DAILY_LOG_CSV.parent.mkdir(parents=True, exist_ok=True)
     new = not DAILY_LOG_CSV.exists()
+    HEADER = ("report_date,fetched_utc,bytes,sha256,n_schemes,"
+              "state_pct_filling,worst_residual_ratio,worst_residual_mcm,"
+              "in_season")
+    # This file is append-only and predates worst_residual_mcm, so a file
+    # written before that column existed has one fewer field than the rows
+    # about to be appended to it. Appending regardless would leave a CSV whose
+    # rows disagree with its own header — silently, and only discoverable by
+    # whoever next tries to read it. So migrate the header and pad the old
+    # rows. Padded blank rather than back-computed: the value was not recorded
+    # at the time, and inventing it would misrepresent the archive.
+    if not new:
+        lines = DAILY_LOG_CSV.read_text(encoding="utf-8").splitlines()
+        if lines and lines[0] != HEADER and "worst_residual_mcm" not in lines[0]:
+            n_new = HEADER.count(",") + 1
+            out = [HEADER]
+            for ln in lines[1:]:
+                if not ln.strip():
+                    continue
+                f = ln.split(",")
+                # Blanks go BEFORE the final field: in_season stays last, or
+                # every historical row silently gains a new meaning.
+                f = f[:-1] + [""] * (n_new - len(f)) + [f[-1]]
+                out.append(",".join(f))
+            DAILY_LOG_CSV.write_text("\n".join(out) + "\n", encoding="utf-8")
+            log(f"migrated           {DAILY_LOG_CSV} header: added "
+                f"worst_residual_mcm, {len(out) - 1} existing row(s) padded")
     # Append-only, but not twice for the same day: a re-run after an
     # interrupted run must not duplicate the row.
     if not new and f"{target}," in DAILY_LOG_CSV.read_text(encoding="utf-8"):
@@ -395,12 +421,12 @@ def main():
     else:
         with open(DAILY_LOG_CSV, "a", encoding="utf-8", newline="") as fh:
             if new:
-                fh.write("report_date,fetched_utc,bytes,sha256,n_schemes,"
-                         "state_pct_filling,worst_residual_ratio,in_season\n")
+                fh.write(HEADER + "\n")
             fh.write(f"{target},"
                      f"{datetime.now(timezone.utc).isoformat(timespec='seconds')},"
                      f"{nbytes},{sha},{len(det)},{state_pct:.4f},"
-                     f"{rec['worst_ratio']:.3e},{int(in_season)}\n")
+                     f"{rec['worst_ratio']:.3e},{rec['worst_mcm']:.3f},"
+                     f"{int(in_season)}\n")
         log(f"appended to        {DAILY_LOG_CSV}")
 
     # ---- 12. commit and push --------------------------------------------

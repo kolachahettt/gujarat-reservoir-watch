@@ -27,6 +27,12 @@ from pathlib import Path
 
 import pandas as pd
 
+# The workers re-import this themselves — a ProcessPoolExecutor child does not
+# inherit the parent's modules on Windows (spawn, not fork). This one is for
+# main(), which reports the tolerance the verdicts were judged against.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fetch_dam as fd  # noqa: E402
+
 PDF_DIR = Path("data/raw/dam")
 DAY_DIR = Path("data/interim/day")
 RAIN_DIR = Path("data/interim/rain")
@@ -34,7 +40,8 @@ LEDGER = Path("data/interim/backfill_ledger.csv")
 DL_LOG = Path("data/interim/download_log.csv")
 
 LEDGER_COLS = ["report_date", "status", "http_status", "bytes", "sha256",
-               "pdf_date_line", "n_schemes", "n_rainfall", "note", "attempted_utc"]
+               "pdf_date_line", "n_schemes", "n_rainfall", "verify",
+               "worst_residual", "residual_mcm", "note", "attempted_utc"]
 
 
 def parse_one(pdf_path):
@@ -55,6 +62,10 @@ def parse_one(pdf_path):
             date_line = head[0].strip() if head else None
             det, det_fail, _, _ = fd.parse_detail(pdf)
             rain, _, _ = fd.parse_rainfall(pdf)
+            # Page 1's grand total, read while the PDF is still open. This is
+            # the only reason the abstract is parsed here at all, and it is
+            # cheap — parse_abstract stops at the page carrying the marker.
+            abstract = fd.parse_abstract(pdf)
     except Exception as e:                           # noqa: BLE001
         base.update({"status": "malformed", "pdf_date_line": None,
                      "note": f"parse_error:{type(e).__name__}"})
@@ -82,6 +93,46 @@ def parse_one(pdf_path):
                      "n_rainfall": len(rain)})
         return base
 
+    # The row count, the closed vocabularies and the reconciliation against the
+    # report's own grand total — the same three checks fd.verify_day runs for
+    # the daily fetch, which until now ran ONLY there. A day that entered the
+    # database through a manual re-parse had never been reconciled against the
+    # source's own total.
+    #
+    # ENFORCED. The first pass at this recorded the verdict without acting on
+    # it, because 246 of 733 days then failed and halting would have dropped a
+    # third of the archive. All three causes were defects, not over-strict
+    # checks, and all three are fixed: warning values truncated in the source
+    # are resolved against the closed vocabulary, parse_abstract falls back to
+    # a text strategy on the 16 days whose abstract page has no ruling lines,
+    # and the residual tolerance is now derived from the rounding bound instead
+    # of from one clean day.
+    #
+    # No parquet is written on failure, which is the convention the
+    # date_mismatch and malformed branches above already follow. build_db.py
+    # globs the parquet directory, so a day that cannot prove itself is simply
+    # not there to be ingested and build_db needs to know nothing about it. The
+    # day is re-parsed next run, since `unverified` is not in the OK set.
+    problems, rec = fd.verify_day(det, abstract)
+    if problems:
+        base.update({
+            "status": "unverified", "n_schemes": len(det),
+            "n_rainfall": len(rain),
+            "verify": "; ".join(f"{p['check']}: {p['summary']}"
+                                for p in problems),
+            "worst_residual": rec.get("worst_ratio"),
+            "residual_mcm": rec.get("worst_mcm"),
+            "note": "verification failed; no parquet written",
+        })
+        return base
+    verify = "pass" if not problems else "; ".join(
+        f"{p['check']}: {p['summary']}" for p in problems)
+    # Both forms recorded: MCM is what the threshold tests (the noise is
+    # rounding, which is absolute), the ratio is the readable form. Keeping
+    # both means the threshold can be re-calibrated from the ledger without
+    # re-parsing 733 PDFs to recover the other one.
+    residual_mcm = rec.get("worst_mcm")
+
     DAY_DIR.mkdir(parents=True, exist_ok=True)
     RAIN_DIR.mkdir(parents=True, exist_ok=True)
     det.assign(report_date=d).to_parquet(DAY_DIR / f"{d}.parquet", index=False)
@@ -90,6 +141,12 @@ def parse_one(pdf_path):
 
     base.update({"status": "ok" if not det_fail else "ok_with_warnings",
                  "n_schemes": len(det), "n_rainfall": len(rain),
+                 # Both retained even when the day passes: the residual is the
+                 # evidence that it reconciled, and a ledger that records only
+                 # failures cannot show that a check actually ran.
+                 "verify": verify,
+                 "worst_residual": rec.get("worst_ratio"),
+                 "residual_mcm": residual_mcm,
                  "note": "" if not det_fail else f"{len(det_fail)} field warnings"})
     return base
 
@@ -196,6 +253,50 @@ def main():
         print(f"\nSTOPPED EARLY — {len(no_parquet)} PDF(s) still unparsed. "
               "Re-run to continue.")
         sys.exit(3)
+
+    # Verification summary, grouped by which check failed so the shape of the
+    # problem is visible rather than a single pass/fail count.
+    ver = df["verify"].dropna() if "verify" in df.columns else pd.Series(
+        [], dtype=str)
+    if len(ver):
+        n_pass = int((ver == "pass").sum())
+        print(f"\nverification (fd.verify_day, same checks as the daily "
+              f"fetch): {n_pass}/{len(ver)} pass")
+        res = pd.to_numeric(df.get("residual_mcm"), errors="coerce").dropna()
+        if len(res):
+            print(f"  reconcile residual, MCM: median {res.median():.3f}   "
+                  f"p99 {res.quantile(.99):.3f}   max {res.max():.3f}   "
+                  f"(tolerance {fd.MATERIAL_RESIDUAL_MCM:.2f}, rounding bound "
+                  f"{fd.RESIDUAL_ROUNDING_MCM:.2f})")
+        fails = df[df["verify"].notna() & (df["verify"] != "pass")]
+        if len(fails):
+            kinds = {}
+            for _, r in fails.iterrows():
+                for part in str(r["verify"]).split("; "):
+                    kinds.setdefault(part.split(":")[0], []).append(
+                        r["report_date"])
+            for k in sorted(kinds):
+                v = sorted(kinds[k])
+                print(f"  {k:<12} {len(v):>4} day(s)   {v[0]} .. {v[-1]}")
+
+    # A day that failed verification is not a day to build on. Reported after
+    # the ledger is written so the evidence is on disk either way, and exits
+    # non-zero so run_pipeline.py halts at step 1 rather than rebuilding a
+    # database and three analyses on rows that do not add up.
+    unver = df[df["status"] == "unverified"]
+    if len(unver):
+        print("\n" + "!" * 88)
+        print(f"VERIFICATION FAILED ON {len(unver)} DAY(S) — nothing "
+              f"downstream should be built")
+        for _, r in unver.sort_values("report_date").iterrows():
+            print(f"  {r['report_date']}  {r['verify']}")
+        print("\nThese are the same three checks the daily fetch applies: 206 "
+              "rows, closed\nvocabularies recognised, and reconciliation "
+              "against the report's own grand\ntotal. No parquet was written "
+              "for the days above, so the database cannot pick\nthem up; they "
+              "are re-parsed on the next run. See fd.verify_day.")
+        print("!" * 88)
+        sys.exit(4)
 
 
 if __name__ == "__main__":

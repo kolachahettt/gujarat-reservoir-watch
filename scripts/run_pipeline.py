@@ -1,7 +1,10 @@
 """
 Gujarat Reservoir Watch — run the post-download pipeline in the agreed order.
 
-  1. parse every cached PDF (parallel, no network)
+  1. parse every cached PDF (parallel, no network), and VERIFY each day with
+     fd.verify_day — the same three checks the daily fetch applies: exactly 206
+     rows, closed vocabularies recognised, and the rows reconciling against the
+     report's own grand total
   2. rebuild DuckDB
   3. THE CAPACITY GATE — establishes one capacity per scheme-season, and halts
      everything on an UNACKNOWLEDGED within-season capacity change
@@ -18,6 +21,34 @@ baseline is the thing that does damage.
 
 If the gate trips, this script stops with exit code 2 and writes
 data/processed/GATE_TRIPPED.txt. Nothing downstream is produced.
+
+ON THE STEP-1 VERIFICATION
+--------------------------
+Those three checks used to run only in daily_update.py, so a day that reached
+the database through this path had never been reconciled against the source's
+own total while the same day arriving through the scheduled fetch had. Two
+paths into one DuckDB file with different standards of proof, and no record of
+which path a given row came from. One implementation (fd.verify_day) now
+serves both, the per-day verdict goes in the ledger's `verify` column, and a
+failure halts this script with exit code 4 — no parquet is written for a day
+that cannot prove itself, so build_db.py cannot ingest it.
+
+Turning that on required fixing what it found. The first pass recorded verdicts
+without acting on them because 246 of 733 days failed, and all three causes
+were defects rather than over-strict checks:
+
+  * parse_detail emitted warning values truncated IN THE SOURCE — 'HIGH' where
+    the report means 'HIGH ALERT', on 190 rows. Not a bounding-box artefact:
+    the second word is absent from the page text too. The same report prints
+    the level in full in its 14-column major-schemes list, which is how the
+    intended value is known rather than guessed.
+  * parse_abstract returned nothing for 2025-10-15..30 because those abstract
+    pages carry no ruling lines, so extract_tables() found no table at all.
+    Sixteen days were never reconciled and nothing noticed, because nothing
+    was checking.
+  * the residual tolerance was a fraction of each pair's own total, so the
+    same rounding error read five times worse in May than in October. It is
+    now an absolute MCM bound derived from the rounding arithmetic.
 
 Usage:
   python scripts/run_pipeline.py
