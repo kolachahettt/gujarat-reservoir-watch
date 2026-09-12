@@ -360,8 +360,22 @@ def main():
             f"successful fetch.\nSomething is skipping days.")
 
     # ---- 11. the view, in season only ------------------------------------
+    published, published_pct = target, state_pct
     if in_season:
         run(["scripts/build_view_data.py"], "build_view_data")
+        # Read back WHAT WAS PUBLISHED rather than assuming it is the date we
+        # fetched. build_view_data dates the view from the newest in-season day
+        # in the database, which is normally the day just fetched — but not if
+        # a newer day was already loaded, which happens after a missed day and
+        # catch-up. The commit subject must describe the committed content, or
+        # the git history stops being a reliable dated archive.
+        import json as _json
+        meta = _json.loads(VIEW.read_text(encoding="utf-8"))
+        published = date.fromisoformat(meta["meta"]["report_date"])
+        published_pct = meta["state"]["pct_now"]
+        if published != target:
+            log(f"note               fetched {target} but the view publishes "
+                f"{published}, which is the newest loaded day")
     else:
         log("\nOFF SEASON — view not rebuilt, by design. The season is "
             "1 Jun – 31 Oct;\nadding off-season dates to season facts would "
@@ -405,10 +419,15 @@ def main():
         die(0, "DRY RUN — NOT COMMITTED",
             "Everything up to the commit ran and passed. Staging was reset.")
 
-    subject = f"data: {target} report"
-    body = (f"State storage {state_pct:.2f}% of design capacity on {target}.\n\n"
-            f"{len(det)} schemes. Reconciled against the report's own grand "
-            f"total;\nworst residual {rec['worst_ratio']:.2e} of total. "
+    subject = f"data: {published} report"
+    fetched_note = ("" if published == target else
+                    f"Fetched {target}; the view publishes {published}, the "
+                    f"newest loaded day.\n")
+    body = (f"State storage {published_pct:.2f}% of design capacity on "
+            f"{published}.\n\n"
+            f"{fetched_note}"
+            f"{target}: {len(det)} schemes, reconciled against the report's own "
+            f"grand total;\nworst residual {rec['worst_ratio']:.2e} of total. "
             f"SHA-256 {sha}.\n"
             f"{'View rebuilt.' if in_season else 'Off season: archived, view not rebuilt.'}\n\n"
             f"Fetched locally — the source is unreachable from cloud runners "
@@ -433,8 +452,10 @@ def main():
             "username\ncould not be read, the cached credential has expired — "
             "run `git push`\nonce by hand to refresh it.")
     log("pushed to origin/main")
-    die(0, f"DONE — {target} PUBLISHED",
-        f"State {state_pct:.2f}%. GitHub Pages redeploys from the push.")
+    die(0, f"DONE — {published} PUBLISHED",
+        f"State {published_pct:.2f}% of design capacity. "
+        f"GitHub Pages redeploys from the push."
+        + ("" if published == target else f"\nFetched {target} this run."))
 
 
 if __name__ == "__main__":
