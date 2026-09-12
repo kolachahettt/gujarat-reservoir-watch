@@ -42,6 +42,7 @@ no reader could see.
 Usage:  python scripts/build_view_data.py
 """
 
+import argparse
 import json
 import sys
 from datetime import date, datetime, timezone
@@ -64,9 +65,20 @@ LEDGER = Path("data/interim/backfill_ledger.csv")
 OUT = Path("web/data/reservoir_view.json")
 
 SOURCE_URL = "https://wrd-dam.gujarat.gov.in/downloads/home_pdf.php?dt=<base64 date>"
+# Derived from the data in main(), never hardcoded. These are the fallbacks
+# only, and they are overwritten on every run.
+#
+# They WERE hardcoded, and the daily refresh is what exposed it: once
+# 2026-09-12 loaded, the facets and the headline picked up day 104 from the
+# series while the deviation tables, the scheme details and the provenance
+# footer all still said 2026-09-11, because they key off REPORT_DATE. A view
+# that dates itself one day behind the numbers it is showing is worse than a
+# stale one, because nothing on its face reveals the disagreement.
 REPORT_DATE = "2026-09-11"
 CURRENT_SEASON = 2026
 PRIOR_SEASONS = [2022, 2023, 2024, 2025]
+N_PRIOR_SEASONS = 4
+SEASON_MONTHS_SQL = (6, 7, 8, 9, 10)
 SEASON_START = (6, 1)          # 1 June
 SEASON_DAYS = 153              # to 31 October
 
@@ -148,10 +160,37 @@ def crossover(cur, priors, min_run):
 
 
 def main():
+    global REPORT_DATE, CURRENT_SEASON, PRIOR_SEASONS
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--date", default=None,
+                    help="report date to build for. Default: the newest "
+                         "in-season date in the database.")
+    args = ap.parse_args()
+
     for p in (DB, SEASON_CAP):
         if not p.exists():
             sys.exit(f"MISSING {p}. Run the pipeline first.")
     con = duckdb.connect(str(DB), read_only=True)
+
+    # The view dates itself from the data, so a daily refresh cannot leave the
+    # provenance and the tables disagreeing about which day is "today".
+    months = ",".join(str(m) for m in SEASON_MONTHS_SQL)
+    newest = con.execute(f"""
+        SELECT max(report_date) FROM fact_storage
+        WHERE EXTRACT(month FROM report_date) IN ({months})
+    """).fetchone()[0]
+    if newest is None:
+        sys.exit("no in-season dates loaded; nothing to build")
+    REPORT_DATE = args.date or str(newest)
+    CURRENT_SEASON = int(REPORT_DATE[:4])
+    PRIOR_SEASONS = [CURRENT_SEASON - n
+                     for n in range(N_PRIOR_SEASONS, 0, -1)]
+    have = con.execute("SELECT count(*) FROM fact_storage WHERE report_date = ?::DATE",
+                       [REPORT_DATE]).fetchone()[0]
+    if not have:
+        sys.exit(f"{REPORT_DATE} is not loaded; run the pipeline for it first")
+    print(f"building for {REPORT_DATE} (season {CURRENT_SEASON}, "
+          f"prior {PRIOR_SEASONS})")
     scap = pd.read_csv(SEASON_CAP)
     con.register("season_cap", scap[["scheme_id", "season", "capacity_class",
                                      "season_capacity_mcm"]])
