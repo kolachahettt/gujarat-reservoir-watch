@@ -819,10 +819,20 @@ function schemeSpark(s, thin){
   if(!Object.keys(cur).length) return "";
   const PH = 76, AXH = 16, H = PH + AXH;
   const xf = d => G.PADL + (d - 1) / (SEASON_DAYS - 1) * (G.W - G.PADL - G.PADR);
-  const yf = p => PH - 5 - (Math.max(0, Math.min(100, p)) / 100) * (PH - 14);
+
+  /* The y domain follows the data above 100, it does not clamp to it.
+     The old scale was Math.min(100, p), which drew a 102% reading flat along
+     the 100 line — so the one thing that would have revealed a wrong
+     denominator was the thing the chart hid. The denominator is fixed now, and
+     the published basis does not exceed 100, but if a future reading does it
+     must be visible rather than flattened. Gridlines stay at 0/50/100 so the
+     top line remains "full" and anything above it reads as above full. */
+  const top = Math.max(100, ...Object.values(ser).flatMap(s => Object.values(s)));
+  const yMax = top > 100 ? Math.ceil(top / 5) * 5 : 100;
+  const yf = p => PH - 5 - (Math.max(0, p) / yMax) * (PH - 14);
 
   let g = "";
-  for(const p of [0, 50, 100]){
+  for(const p of (yMax > 100 ? [0, 50, 100, yMax] : [0, 50, 100])){
     g += `<line x1="${G.PADL}" x2="${G.W - G.PADR}" y1="${yf(p)}" y2="${yf(p)}"
       stroke="var(--grid)" stroke-width="1"/>
       <text x="${G.PADL - 4}" y="${yf(p) + 3}" text-anchor="end" font-size="8"
@@ -855,10 +865,10 @@ function schemeSpark(s, thin){
     <svg viewBox="0 0 ${G.W} ${H}" role="img"
       aria-label="Percent filling by day of season for this scheme, ${CUR}
       against ${YRS[0]} to ${YRS[YRS.length-1]}">${g}${lines}</svg>
-    <div class="sparkcap">% filling by day of season &mdash; <b>${CUR}</b>
-      against ${YRS[0]}&ndash;${YRS[YRS.length-1]}, the same four years as the
-      regional facets. Plotted every ${thin}rd day, so brief dips are not
-      resolved and no crossover date is marked.</div>
+    <div class="sparkcap">Percent filling by day of season &mdash;
+      <b>${CUR}</b> against ${YRS[0]}&ndash;${YRS[YRS.length-1]}. Same basis as
+      the figure below, so the two always agree. Plotted every ${thin}rd day,
+      so brief dips are not resolved and no crossover date is marked.</div>
   </div>`;
 }
 

@@ -411,24 +411,35 @@ def main():
     sch["dev_pp"] = sch["pct_filling"] - sch["mean_prior"]
 
     # ---- per-scheme five-year series, for the detail sparkline -------------
-    # Same construction as the regional facets: aligned day-of-season, one
-    # value per scheme per day, the scheme's own season capacity as the
-    # denominator so a restatement between seasons does not put a step in the
-    # line. Thinned to every THIN_TO-th day: at 153 days x 5 seasons x 206
-    # schemes the full series would add about 2.5 MB to a 220 KB file, and a
-    # sparkline cannot resolve single days anyway. The thinning is stated in
-    # the interface rather than left for a reader to infer.
+    # Uses fact_storage.pct_filling - the SAME basis as the figure printed
+    # beside it on the detail panel - so the two cannot disagree.
+    #
+    # It previously used the season-capacity denominator borrowed from the
+    # regional facets, and that was wrong here. The facets aggregate many
+    # schemes, where a fixed per-season denominator stops a restatement
+    # putting a step in a line no rainfall caused. A single scheme's chart sits
+    # next to that scheme's published percentage, and for the three mid-season
+    # scheme-seasons the two bases diverged by up to 15 percentage points -
+    # Jhuj on 2025-07-16 read 102.1% against a published 87.12%. Values above
+    # 100% are impossible for a reservoir and were the tell.
+    #
+    # The trade is deliberate and the opposite of the facets': this line can
+    # now step where a capacity was restated between seasons. That step is in
+    # the published record, and on a per-scheme chart showing the published
+    # number is worth more than a smooth line.
+    #
+    # Thinned to every THIN_TO-th day: at 153 days x 5 seasons x 206 schemes
+    # the full series would add about 2.5 MB to a 220 KB file, and a sparkline
+    # cannot resolve single days anyway. Stated in the interface.
     THIN_TO = 3
     per = con.execute(f"""
         SELECT f.scheme_id,
                EXTRACT(year FROM f.report_date)::INT AS season,
                f.report_date,
-               100.0 * f.present_gross_mcm / nullif(c.cap_mcm, 0) AS pct
+               f.pct_filling AS pct
         FROM fact_storage f
-        JOIN cap c ON c.scheme_id = f.scheme_id
-                  AND c.season = EXTRACT(year FROM f.report_date)
         WHERE EXTRACT(month FROM f.report_date) IN ({months})
-          AND f.present_gross_mcm IS NOT NULL
+          AND f.pct_filling IS NOT NULL
     """).df()
     per["report_date"] = pd.to_datetime(per["report_date"])
     per["dos"] = per["report_date"].dt.date.map(day_of_season)
