@@ -110,6 +110,11 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
   border:1px solid var(--border);border-radius:7px;font-size:11.5px;
   color:var(--text-secondary)}
 .legend .it{display:flex;align-items:center;gap:6px}
+/* A legend entry that is a sentence rather than swatch-plus-label. It must NOT
+   be display:flex: the flex gap turns the text either side of a <b> into
+   separately-wrapping items, which on a phone broke the shared-scale note into
+   three ragged columns. */
+.legend .txt{display:inline}
 .sw{width:17px;height:0;border-top-style:solid;display:inline-block}
 .sw.thick{border-top-width:3px}
 .sw.thin{border-top-width:2px}
@@ -442,6 +447,38 @@ const f2 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(2);
 const NARROW_MAX = 560;
 const isNarrow = () => window.innerWidth <= NARROW_MAX;
 
+/* ---------------- one rainfall scale for all five strips ----------------
+   Set once from every region's data, never per facet. Per-facet scaling was
+   the defect: the ceilings ran 98 to 238 mm/day, so the tallest bar in each
+   strip was drawn the same height and a 2.4x difference in rainfall intensity
+   read as equal.
+
+   Computed over what is actually DRAWN — 2026 daily bars and the four-year
+   mean line — not over every prior-year daily value. The old ceiling used
+   those raw dailies even though only their mean is plotted, which pushed
+   Saurashtra's ceiling to 136.8 against a drawn maximum of 37.7 and squashed
+   its bars into a quarter of the panel for no reason.
+
+   The floor of 6 mm/day guards a dry season: without it a trace-rain year
+   would scale a 0.2 mm day to full panel height. */
+let RAIN_MAX = 6;
+function rainCeiling(regions){
+  let mx = 6;
+  for(const r of regions || []){
+    const rain = r.rain || {};
+    for(const v of Object.values(rain[CUR] || {})) if(v != null) mx = Math.max(mx, v);
+    for(let d = 1; d <= SEASON_DAYS; d++){
+      const v = YRS.map(y => (rain[y] || {})[d]).filter(x => x != null);
+      if(v.length === YRS.length)
+        mx = Math.max(mx, v.reduce((a, b) => a + b, 0) / v.length);
+    }
+  }
+  /* Round up to a readable step so the stated scale is a number a reader can
+     hold — 240, not 238.3. */
+  const step = mx <= 50 ? 5 : mx <= 120 ? 10 : 20;
+  return Math.ceil(mx / step) * step;
+}
+
 let G = {};
 function setGeometry(){
   G = isNarrow()
@@ -535,19 +572,20 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
     <text x="${xOf(latestDay)-6}" y="${yOf(ld)-6}" text-anchor="end"
       font-size="10" font-weight="700" fill="var(--now)">2026</text>`;
 
-  /* ---- rainfall: a SEPARATE panel with its own y-scale, sharing the x-axis.
-     Never a second y-axis on the storage plot. ---- */
+  /* ---- rainfall: a SEPARATE panel, on the ONE scale every strip shares,
+     sharing the x-axis. Never a second y-axis on the storage plot. ---- */
   let rr = "";
   if(showRain){
-  const rmax = Math.max(6, ...Object.values(rain[CUR] || {}),
-    ...YRS.flatMap(y => Object.values(rain[y] || {})));
+  /* The ceiling is stated once in the legend, so it is not repeated on each
+     strip. What IS per-strip is that region's own peak, printed beside the
+     caption: on a shared scale four of the five strips are genuinely short —
+     they genuinely got a fifth of South Gujarat's peak intensity, which is the
+     finding and not a rendering fault — and the number keeps a compressed
+     strip readable without hovering. */
+  const rmax = RAIN_MAX;
   const ry = v => rTop + G.RH - (v / rmax) * (G.RH - 4);
   rr = `<line x1="${G.PADL}" x2="${G.W-G.PADR}" y1="${rTop+G.RH}" y2="${rTop+G.RH}"
-      stroke="var(--baseline)" stroke-width="1"/>
-    <text x="${G.PADL-5}" y="${rTop+8}" text-anchor="end" font-size="8"
-      fill="var(--muted)" style="font-variant-numeric:tabular-nums">${rmax.toFixed(0)}</text>
-    <text x="${G.PADL-5}" y="${rTop+G.RH+2}" text-anchor="end" font-size="8"
-      fill="var(--muted)">0</text>`;
+      stroke="var(--baseline)" stroke-width="1"/>`;
   /* prior-year mean rainfall, as a reference line */
   const pm = {};
   for(let d=1; d<=SEASON_DAYS; d++){
@@ -568,8 +606,9 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
       width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="0.7"
       fill="var(--now)" opacity="0.6"/>`;
   }
+  const pk = Math.max(0, ...Object.values(rain[CUR] || {}).filter(v => v != null));
   rr += `<text x="${G.W-G.PADR}" y="${rTop-1}" text-anchor="end" font-size="7.5"
-    fill="var(--muted)">rain mm/day, regional mean</text>`;
+    fill="var(--muted)">rain mm/day, regional mean · peak ${f1(pk)}</text>`;
   }
 
   const hitH = showRain ? rTop + G.RH : G.SH - 6;
@@ -1113,6 +1152,7 @@ let RENDERED_AT = null;
 
 function render(d){
   DATA = d;
+  RAIN_MAX = rainCeiling(d.regions);   // one scale, before any strip is drawn
   setGeometry();
   RENDERED_AT = isNarrow();
   const m = d.meta;
@@ -1162,6 +1202,10 @@ function render(d){
        2026 rain, mm/day</span>
      <span class="it"><span class="sw thin" style="border-color:var(--muted)"></span>
        prior-year mean rain</span>
+     <span class="sep">|</span>
+     <span class="txt" style="color:var(--muted)">all five rain strips on one
+       <b style="color:var(--text-secondary)">0–${RAIN_MAX} mm/day</b> scale,
+       so bar heights compare across regions</span>
      <span class="sep">|</span>
      <span class="it" style="color:var(--muted)">facets ordered worst deviation first</span>`;
 
