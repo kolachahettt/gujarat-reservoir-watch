@@ -1112,3 +1112,186 @@ transport integrity answer different questions.
 fetch fail on that date. That is correct behaviour, but it will look exactly like a portal
 outage — so check the certificate before concluding the source has gone down. The failure
 message in `daily_update.py` says so at the point where it matters.
+
+---
+
+## 20. Unifying the verification found three parser defects
+
+Finding 6 of the audit was a process complaint: `reconcile`, the 206-row check and
+`check_vocabularies` ran **only** in `daily_update.py`. `parse_cached.py`, which is what
+`run_pipeline.py` drives, checked the PDF's own date line and that the detail table was
+non-empty, and nothing else. So a day that reached the DuckDB file through the scheduled
+fetch had been reconciled against the source's own grand total, and the same day reaching it
+through a manual re-parse had not — two paths into one database with different standards of
+proof, and no record of which path a given row came from.
+
+The fix is one shared function, `fd.verify_day`, called by both. The guidance text moved into
+it alongside each check, because the advice does not depend on who is asking: a grown
+vocabulary needs the same action whether the daily run or a backfill found it.
+
+**Enforcing it immediately would have halted the pipeline on a third of the archive.** Run
+against all 733 cached days, **246 failed at least one check**. That number is the finding.
+The first pass therefore *recorded* verdicts in the ledger without acting on them, and the
+246 decomposed into three defects — all of them real, none of them an over-strict check.
+
+### 20.1 Warning values truncated in the source
+
+`'HIGH'` where the report means `HIGH ALERT`, on **190 rows across 159 days**; `'WARNI'` for
+`WARNING` on **53 rows across 43 days**. Not cosmetic: `HIGH` is not a level WRD publishes,
+and it reads *milder* than the `ALERT` level that does exist while standing for the more
+severe one.
+
+Two hypotheses, both checked and both wrong:
+
+| Hypothesis | Why it was wrong |
+|---|---|
+| Stale parquet from before canonicalisation | A fresh parse of the same PDF emits the same `'HIGH'` |
+| pdfplumber clipping the cell to its bounding box | The second word is absent from `extract_text()` too — WRD renders a clipped string |
+
+**The report contradicts itself, and one side is complete.** The 14-column major-schemes list
+prints the level in full. On **2022-07-13, Khambhala reads `WARNI` in the detail table and
+`WARNING` in the major-schemes list** — same scheme, same date. That is where the intended
+value comes from, rather than from inference.
+
+`normalise_warning` resolves by **unique prefix against the closed vocabulary**, which is
+total and unambiguous because no vocabulary key is a prefix of another. That precondition is
+**asserted at import rather than trusted**: adding a level named `WARN` would make `WARNI`
+ambiguous and silently change how 53 historical rows resolve, so it raises instead. A
+truncation matching two members, or none, is still kept verbatim and reported. The function
+returns a third flag so a repair is logged as a field warning — a fix that leaves no trace is
+indistinguishable from data that was always clean.
+
+### 20.2 parse_abstract returned nothing for 2025-10-15 to 10-30
+
+`extract_tables()` finds **zero tables** on those abstract pages. The marker text is present;
+the ruling lines pdfplumber's default strategy needs are not. **Sixteen days were never
+reconciled at all**, and nothing noticed, because until this section nothing was checking.
+
+A text-alignment strategy recovers all seven region rows. It is a **fallback**, tried only
+when the default yields no rows on a page carrying the marker, so the other 717 days are
+untouched. The recovered days reconcile against the detail sums to between **6e-7 and
+5.9e-6** of total — which is how the fallback is known to have read the right cells rather
+than merely produced numbers.
+
+### 20.3 The residual tolerance measured the season, not the parse
+
+`MATERIAL_RESIDUAL = 1e-5` was a fraction of **each pair's own published total**, set from one
+clean day whose residual was 4.85e-6. But *today's gross storage* is a fifth of design in May
+and near-full in October, so the denominator moved with the season while the noise did not,
+and the same absolute rounding error read five times worse off-season. Every worst offender
+(2e-4 to 3.3e-4) was a March-May date.
+
+**The noise is rounding, and rounding is absolute.** 206 values each published to two
+decimals, against a grand total WRD computes unrounded and rounds once:
+
+| Quantity | Value |
+|---|---|
+| Worst case, every value rounding the same way — `N x 0.005` | **1.03 MCM** |
+| Typical, independent and uniform — `sqrt(N) x 0.005/sqrt(3)` | **0.041 MCM** |
+| **Observed median residual** | **0.046 MCM** |
+
+The observed median matching the typical figure confirms the model: WRD does hold more
+precision than it publishes. So `MATERIAL_RESIDUAL_MCM = 2 x 1.03 = 2.06 MCM`, **derived from
+the rounding bound rather than fitted to observed maxima**. `reconcile` still reports the
+ratio — it is the readable form — but tests on MCM.
+
+**What this check cannot see, stated rather than implied.** A wrapped value losing its last
+digit moves a two-decimal figure by at most **0.09 MCM**, an order of magnitude below the
+rounding floor. Reconciliation catches column shifts and gross misreads, never fine
+truncation. §20.1 is exactly the kind of defect it would miss — and did, for 733 days.
+
+### 20.4 Enforcement
+
+`parse_cached.py` now writes **no parquet** for a failing day and exits 4, so
+`run_pipeline.py` halts at step 1 and `build_db.py` — which globs the parquet directory —
+cannot ingest an unproven day without needing to know anything about this. The ledger gains
+`verify`, `worst_residual` and `residual_mcm`, so the verdict and its evidence are on disk for
+every day, pass or fail.
+
+**Rule:** a check that fails on historical data is a check that stops the pipeline forever.
+Measure the failure count *before* wiring enforcement, and treat a high count as a question
+about the data rather than a reason to loosen the check.
+
+---
+
+## 21. gross = live + dead does not always hold, and it is the source's arithmetic
+
+Caught while writing a units note for the page that asserted the identity held on every row.
+**Checking before publishing showed it is false**, which is the only reason it is not on the
+site as a false claim.
+
+**336 of 150,998 present readings** breach `live + dead = gross` by more than rounding
+(tolerance 0.011 MCM, since three two-decimal figures can differ by 0.01 from rounding alone);
+641 design readings do. Worst case **31.45 MCM**.
+
+**It is the source's inconsistency, not a parsing error.** Ver-II on 2023-09-18 prints design
+`31.88 / 0.16 / 0.00` and present `31.61 / 0.16 / 0.00` — live and dead do not add to gross —
+and the same report's 14-column major-schemes list independently repeats the `0.157` live
+figure. The same dam on 2026-09-12 prints `31.88 / 31.72 / 0.16`, which does add up.
+
+**The shape is familiar rather than random.** Six schemes, and four of them breach for one
+entire water year each:
+
+| Scheme | Rows | Span |
+|---|---|---|
+| Lakhigam | 161 | 2023-06-01 to 2024-05-31 |
+| Ver-II | 161 | 2023-06-01 to 2024-05-31 |
+| Patadungari | 159 | 2024-06-01 to 2025-06-02 |
+| Doswada | 157 | 2024-06-01 to 2025-05-30 |
+| Ukai | 2 | 2025-06-29 to 2025-06-30 |
+| Jhuj | 1 | 2024-06-01 |
+
+That is the §11 turn-of-the-water-year restatement pattern appearing in the **live/dead split**
+rather than in total capacity. Not yet investigated further.
+
+**No figure on the site depends on the identity.** Percent filling uses gross over design
+gross; days of water uses live. The units note states the 99.8% figure, names the exception
+count, attributes it to the source, and says those rows are published exactly as printed with
+nothing adjusted to make the arithmetic close.
+
+---
+
+## 22. Contrast was failing at body sizes, and the fix was to split the token
+
+Finding 19, measured per use **at the size each colour is actually used**, because WCAG asks
+different things of different sizes: body text 4.5:1, text at 24px (or 18.66px bold) 3:1,
+non-text graphics 3:1 under 1.4.11. A single "does the orange pass" answer is the wrong shape
+of question.
+
+**18 failing text uses in light mode, 5 in dark.** Both tokens failed, and neither should
+simply have been darkened.
+
+`--now` (#eb6834) measures **3.12:1**. As the 2026 line, the rain bars and the marker dots it
+is a non-text graphic and 3.12 **passes**. As text — deviation figures, the tooltip's
+current-season row, the direct `2026` labels — it fails. Darkening it everywhere would have
+changed the chart's identity for no accessibility gain, so the token is **split**: `--now`
+stays the graphic orange, `--now-text` (#c2410c, 5.04:1) carries text. Every remaining
+`var(--now)` in the file is a stroke, a fill or a legend swatch.
+
+`--muted` (#898781, **3.50:1**) is used at 7.5-12.5px in thirteen places, all body text by the
+size rule. Now **#6b6963** in light mode (5.35:1 on surface, 5.21:1 on page), still clearly
+recessive against the #0b0b0b primary. Dark mode keeps #898781, which is 4.85:1 on #1a1a19 and
+already passes — **only light mode moved**.
+
+**Two failures the finding had not identified:**
+
+1. The **active view button** was the worst on the page and on a primary control: white on
+   `--now` is **3.20:1**.
+2. Fixing it with the text orange then failed **in dark mode at 2.8:1**, because there
+   `--now-text` is a *light* orange — it has to be, to read against a near-black page — and
+   white on light orange is worse than white on mid orange. The polarity flips with the theme,
+   so the label colour is a token: `--on-accent`, white in light (5.18:1 on #c2410c) and
+   near-black in dark (6.23:1 on #f0793f). Both fills also clear 3:1 against their page, so the
+   active state has a visible edge, and `aria-current` carries it for assistive technology
+   rather than colour alone.
+
+**Verified against the rendered page, not the stylesheet.** A walker computes the real ratio
+for every visible text node from its own computed colour and its nearest opaque ancestor
+background, applies the size rule per element, and covers SVG `<text>` via `fill` — which the
+first version missed, because SVG text has no `color`. Run across light and dark, all three
+views, with the scheme detail open: **0 failures in every combination**. An earlier run of the
+same walker reported a false all-clear because it parsed only `rgb()` and CSS custom
+properties return hex.
+
+**Rule:** contrast is a measurement, not a judgement, and it is a measurement *per use*. The
+same hex can pass as a chart line and fail as a label beside it.
