@@ -333,17 +333,29 @@ a distribution. The interface shows the individual years rather than a band for 
 ## Repository layout
 
 ```
-README.md               this file
-DATA.md                 how to regenerate everything not in git
-PROJECT_BRIEF.md        the long-form working record
-.gitignore              raw PDFs and multi-GB source data stay out
+README.md              ← start here
+DATA.md                  how to regenerate everything not in git
+PROJECT_BRIEF.md         the long-form working record, including what went wrong
+.gitignore               raw PDFs and ~2.9 GB of source data stay out
 .github/workflows/       Pages deploy
-scripts/                the pipeline
-data/reference/         small committed lookups
-data/processed/         derived CSV/JSON — the audit trail (binaries ignored)
-web/                    THE DEPLOYABLE SITE — 4 files, 628 KB
-archive/                the predecessor project, kept separate
+scripts/
+  README.md            ← the pipeline in order, and the two checks that halt it
+  *.py                   six numbered stages plus four supporting scripts
+data/
+  reference/             small committed lookups
+  processed/             derived CSV/JSON — the audit trail (binaries ignored)
+  raw/  interim/         not in git; see DATA.md
+web/                   ← THE DEPLOYABLE SITE — 4 files, 628 KB, no backend
+  index.html             the interface. No analysis in the page
+  data/                  everything the page reads
+logs/                    run logs, not in git
+archive/
+  README.md            ← what the predecessor project found, and its two cautions
 ```
+
+Three entry points, depending on why you are here: **`README.md`** to understand what it
+is, **`scripts/README.md`** to run it, **`PROJECT_BRIEF.md`** to see why it is built this
+way. `archive/` is a finished project kept for its findings; nothing live depends on it.
 
 | Path | What |
 |---|---|

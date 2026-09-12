@@ -52,6 +52,10 @@ __pycache__/
 *.log
 *.err
 .claude/
+
+# Run logs from every script land here rather than beside the data they
+# produced. Transient; never committed.
+logs/
 data/processed/GATE_TRIPPED.txt
 .DS_Store
 Thumbs.db

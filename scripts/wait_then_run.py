@@ -40,7 +40,7 @@ import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-DL_LOG = Path("data/interim/download_run.log")
+DL_LOG = Path("logs/download_run.log")
 DL_CSV = Path("data/interim/download_log.csv")
 DL_DONE = Path("data/interim/download_DONE.json")
 PDF_DIR = Path("data/raw/dam")
