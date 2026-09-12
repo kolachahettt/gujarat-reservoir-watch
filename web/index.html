@@ -142,6 +142,13 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
   margin:16px 0 4px;padding:9px 12px;background:var(--surface-1);
   border:1px solid var(--border);border-radius:7px;font-size:11.5px;
   color:var(--text-secondary)}
+/* ---------- masthead as kicker, h1 as the finding ---------- */
+/* The site name and date, above a headline that now asserts something. Small
+   and uppercase so it reads as identification rather than competing with the
+   finding underneath it. */
+.kicker{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);margin-bottom:3px;font-variant-numeric:tabular-nums}
+
 /* ---------- keyboard and screen-reader plumbing ---------- */
 /* Visually hidden but still announced. NOT display:none and NOT
    visibility:hidden, either of which removes it from the accessibility tree —
@@ -403,7 +410,11 @@ code{overflow-wrap:anywhere;word-break:break-word}
 
   <header class="hd">
     <div>
-      <h1>Gujarat Reservoir Watch — season to date</h1>
+      <!-- The masthead is now a kicker and the h1 carries the finding. The h1
+           ships with the old label as its content, so a failed fetch still
+           renders a page that says what it is rather than an empty heading. -->
+      <div class="kicker" id="kicker">Gujarat Reservoir Watch</div>
+      <h1 id="headline">Gujarat Reservoir Watch — season to date</h1>
       <div class="prov" id="prov"></div>
     </div>
     <div class="srch">
@@ -437,7 +448,8 @@ code{overflow-wrap:anywhere;word-break:break-word}
   <div class="detail" id="detail"></div>
 
   <section id="viewRegions" hidden>
-    <h2 style="margin-top:14px">Which region is having the worst season
+    <h2 style="margin-top:14px"><span id="regTitle">Which region is having the
+      worst season</span>
       <span class="q">All five regions on one chart, current season only, each
         measured against <em>its own</em> prior four-year mean. Levels alone
         would conflate a structurally dry region with one having a bad
@@ -464,7 +476,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
       <div class="sub" id="heroS"></div>
     </div>
     <div class="statechart">
-      <div class="fh"><span class="nm">Gujarat — all 206 schemes</span>
+      <div class="fh"><span class="nm" id="stTitle">Gujarat — all 206 schemes</span>
         <span class="meta" id="stMeta"></span></div>
       <div class="plot" id="statePlot"></div>
       <div class="cross" id="stCross"></div>
@@ -540,6 +552,211 @@ function announce(msg){
 }
 const f1 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(1);
 const f2 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(2);
+
+/* ================= NARRATIVE TITLES =================
+   Every title on this page used to be a label — "Gujarat — all 206 schemes",
+   "Which region is having the worst season". The finding was always computed,
+   and always rendered underneath as caption text. These functions invert that:
+   the title asserts what the data says today, the mechanics move beneath it.
+
+   WHY TEMPLATES AND NOT PROSE
+   The page rebuilds daily. A written headline would go stale overnight, and on
+   the day the season turned wet it would be false. So each title is a set of
+   branches over the JSON, one of which is true by construction, with a label
+   fallback for when no comparison can be made at all.
+
+   EVERY FUNCTION IS PURE and returns {branch, text}. The branch id is written
+   to the DOM as data-title-branch, so a test can assert which one fired rather
+   than matching on wording.
+
+   RULES CARRIED FROM THE BRIEF
+     * No forecast language (§8). Every branch states an observed reading or a
+       comparison of observed readings.
+     * Precision capped at source (§8.7): percentages 2dp, gaps 1dp.
+     * No causal claim. Rainfall-to-storage is not established, so no title
+       says rain caused anything.
+     * Counts are generated, never written in: "four-year average" comes from
+       seasons_prior.length, so adding a season does not make the text lie.
+
+   OFF SEASON IS THE MAJORITY STATE, NOT AN EDGE CASE
+   The view is only rebuilt in season, so from 1 November to 31 May the page
+   shows a closed season — seven months of the year. Every title therefore has
+   a past-tense voicing rather than a present-tense one with the tense left to
+   luck. `atClose` carries it. */
+
+const TITLE_WINDOW_DAYS = 21;
+
+/* Each branch is written as a CLAUSE that can follow an off-season prefix
+   ("The 2026 season ended at 65.10% — over the last three weeks, …"). In
+   season there is no prefix, so the clause has to be capitalised. Skips any
+   leading tag, so "<b>Kutch</b> is…" capitalises the word and not the markup. */
+function capFirst(s){
+  const i = s.search(/[A-Za-z0-9]/);
+  return i < 0 ? s : s.slice(0, i) + s[i].toUpperCase() + s.slice(i + 1);
+}
+const assemble = (pre, clause) => pre ? pre + clause : capFirst(clause);
+
+/* Small counts spelled out, as prose rather than as data — "the four-year
+   average", not "the 4-year average". Only 2-9, because the figures that
+   matter stay numerals. */
+const NUM_WORD = ["zero", "one", "two", "three", "four", "five", "six",
+                  "seven", "eight", "nine"];
+const numWord = n => (n >= 2 && n <= 9) ? NUM_WORD[n] : String(n);
+
+/* The window phrase is derived from the constant, so changing the constant
+   cannot leave the prose claiming a period it no longer measures. */
+function windowPhrase(days){
+  if(days % 7 === 0 && days / 7 <= 9)
+    return `the last ${numWord(days / 7)} week${days === 7 ? "" : "s"}`;
+  return `the last ${days} days`;
+}
+
+/* Shared comparison of the current reading against the prior-year set. */
+function priorStanding(pctNow, meanPrior, priorAtNow){
+  const priors = Object.values(priorAtNow || {}).filter(v => v != null);
+  if(meanPrior == null || priors.length < 2 || pctNow == null) return null;
+  const gap = pctNow - meanPrior;
+  return {
+    gap,
+    gap1: Math.abs(gap).toFixed(1),
+    n: priors.length,
+    belowAll: pctNow < Math.min(...priors),
+    aboveAll: pctNow > Math.max(...priors),
+    level: Math.abs(gap) < 0.05,          // rounds to 0.0 at the shown precision
+  };
+}
+
+/* ---- Title 1: the page headline ---- */
+function headlineTitle(d, inSeason){
+  const m = d.meta, s = d.state;
+  const pct = f2(s.pct_now);
+  const first = Math.min(...m.seasons_prior);
+  const st = priorStanding(s.pct_now, s.mean_prior_at_now, s.prior_at_now);
+  /* Off season the page is a closed record, so the verb is past and the date
+     is "that date" rather than "this date" — the reader is not looking at
+     today. */
+  const was = inSeason ? "are" : "were";
+  const when = inSeason ? "this date" : "that date";
+  const lead = inSeason
+    ? `Gujarat's reservoirs are <b>${pct}%</b> full`
+    : `At the close of the ${m.season_current} season, Gujarat's reservoirs `
+      + `were <b>${pct}%</b> full`;
+
+  if(!st) return {branch: "Z",
+    text: `${lead} on ${esc(m.report_date)}`};
+  if(st.belowAll) return {branch: "A",
+    text: `${lead} — lower than any year since <b>${first}</b> on ${when}`};
+  if(st.level) return {branch: "C",
+    text: `${lead} — level with the ${numWord(st.n)}-year average for ${when}`};
+  if(st.gap < 0) return {branch: "B",
+    text: `${lead}, <b>${st.gap1}</b> points below the `
+        + `${numWord(st.n)}-year average for ${when}`};
+  if(st.aboveAll) return {branch: "E",
+    text: `${lead} — higher than any year since <b>${first}</b> on ${when}`};
+  return {branch: "D",
+    text: `${lead}, <b>${st.gap1}</b> points above the `
+        + `${numWord(st.n)}-year average for ${when}`};
+}
+
+/* ---- Title 2: the state chart ----
+   Branch A claims "every prior year kept rising", so it is gated on every
+   prior year actually having risen — not on their mean having risen. Measured
+   over 21 days those two differ: at 14 days 2023 fell 0.06 points while the
+   mean rose 5.95, which would have made the stronger wording false. A2 is the
+   honest weaker claim for that case. */
+function stateChartTitle(d, inSeason){
+  const m = d.meta, s = d.state;
+  const CURk = String(m.season_current);
+  const yrs = m.seasons_prior.map(String);
+  const ser = s.series || {};
+  const latest = s.day_of_season;
+  const st = priorStanding(s.pct_now, s.mean_prior_at_now, s.prior_at_now);
+  const label = {branch: "Z", text: `Gujarat — all ${m.n_schemes} schemes`};
+
+  const cross = s.crossover || {};
+  const run = cross.current_run || {};
+  const atClose = inSeason ? "" : `The ${m.season_current} season ended at `
+                                + `<b>${f2(s.pct_now)}%</b> — `;
+
+  /* Slope over a stated window. Stated in the title precisely so the claim is
+     checkable: a reader can read both endpoints off the chart. */
+  const from = latest - TITLE_WINDOW_DAYS;
+  const have = ser[CURk] && ser[CURk][from] != null && ser[CURk][latest] != null
+    && yrs.every(y => ser[y] && ser[y][from] != null && ser[y][latest] != null);
+  let dCur = null, everyPriorRose = false, dPriorMean = null;
+  if(have){
+    dCur = ser[CURk][latest] - ser[CURk][from];
+    const deltas = yrs.map(y => ser[y][latest] - ser[y][from]);
+    everyPriorRose = deltas.every(v => v > 0);
+    dPriorMean = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+  }
+
+  if(cross.case === "crossed" && cross.currently_below && run.qualifies){
+    if(have && dCur <= 0 && everyPriorRose) return {branch: "A",
+      text: assemble(atClose, `over ${windowPhrase(TITLE_WINDOW_DAYS)}, ${CURk} `
+          + `${inSeason ? "stopped" : "had stopped"} filling while every prior `
+          + `year kept rising`)};
+    if(have && dCur <= 0 && dPriorMean > 0) return {branch: "A2",
+      text: assemble(atClose, `over ${windowPhrase(TITLE_WINDOW_DAYS)}, ${CURk} `
+          + `${inSeason ? "stopped" : "had stopped"} filling while the `
+          + `prior-year average rose <b>${dPriorMean.toFixed(1)}</b> points`)};
+    return {branch: "B",
+      text: assemble(atClose, `${CURk} ${inSeason ? "has been" : "was"} below `
+          + `every prior year for <b>${run.length}</b> days`)};
+  }
+  if(cross.case === "crossed") return {branch: "C",
+    text: assemble(atClose, `${CURk} fell below every prior year earlier in `
+        + `the season, then recovered`)};
+  if(!st) return label;
+  if(st.gap > 0) return {branch: "E",
+    text: assemble(atClose, `${CURk} ${inSeason ? "is running" : "ran"} above `
+        + `the ${numWord(st.n)}-year average for `
+        + `${inSeason ? "this" : "that"} date`)};
+  return {branch: "D",
+    text: assemble(atClose, `${CURk} ${inSeason ? "is" : "was"} below the `
+        + `${numWord(st.n)}-year average, but stayed inside the range of `
+        + `those years`)};
+}
+
+/* ---- Title 3: the Regions view ----
+   Was the question "Which region is having the worst season". The answer was
+   already computed and printed below the chart. */
+function regionsTitle(d, inSeason){
+  const rs = (d.regions || [])
+    .filter(r => r.pct_now != null && r.mean_prior_at_now != null)
+    .map(r => ({name: r.name, dev: r.pct_now - r.mean_prior_at_now,
+                cap: r.design_mcm || 0}));
+  if(rs.length < 2) return {branch: "Z",
+    text: "Deviation from each region's own prior-year average"};
+  /* Stable tiebreak on capacity, so two regions at an identical deviation do
+     not reorder between builds. */
+  const by = [...rs].sort((a, b) => a.dev - b.dev || b.cap - a.cap);
+  const worst = by[0], best = by[by.length - 1];
+  const n = rs.length;
+  const is = inSeason ? "is" : "was";
+  const were = inSeason ? "are" : "were";
+
+  if(rs.every(r => r.dev > 0)) return {branch: "C",
+    text: `Every region ${is} above its own average — <b>${esc(best.name)}</b> `
+        + `by the most, at <b>${best.dev.toFixed(1)}</b> points`};
+  if(rs.every(r => r.dev < 0)) return {branch: "A",
+    text: `<b>${esc(worst.name)}</b> ${is} <b>${Math.abs(worst.dev).toFixed(1)}`
+        + `</b> points below its own average — the worst of ${numWord(n)} `
+        + `regions, and all ${numWord(n)} ${were} short`};
+  return {branch: "B",
+    text: `<b>${esc(worst.name)}</b> ${is} `
+        + `<b>${Math.abs(worst.dev).toFixed(1)}</b> points below its own `
+        + `average, while <b>${esc(best.name)}</b> ${is} `
+        + `<b>${best.dev.toFixed(1)}</b> above`};
+}
+
+/* Write a title and record which branch produced it. */
+function setTitle(id, t){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = t.text;
+  el.setAttribute("data-title-branch", t.branch);
+}
 
 /* ---------------- how old is this data ----------------
    The page is a static file. It can be opened an hour after it was built or
@@ -1366,6 +1583,15 @@ function render(d){
      ${m.dates_loaded} daily reports loaded, ${esc(m.season_window)} for
      ${m.seasons_prior.join(", ")} and ${m.season_current}
      &nbsp;·&nbsp; <code>SHA-256 ${esc(m.report_sha256||"—")}</code>`;
+
+  /* ---- narrative titles, generated from this build's data ----
+     Set after inSeason is known, because every one of them has a past-tense
+     voicing for the seven months the page shows a closed season. */
+  setTitle("headline", headlineTitle(d, inSeason));
+  setTitle("stTitle", stateChartTitle(d, inSeason));
+  setTitle("regTitle", regionsTitle(d, inSeason));
+  document.getElementById("kicker").textContent =
+    `Gujarat Reservoir Watch · ${m.report_date}`;
 
   const banner = document.getElementById("ageBanner");
   banner.className = "agebanner";
