@@ -159,12 +159,32 @@ def main():
     if args.insecure:
         log("TLS                !! VERIFICATION DISABLED via --insecure !!")
 
-    # ---- 2. do we already have it? --------------------------------------
-    if (DAY_DIR / f"{target}.parquet").exists():
-        log(f"\n{target} is already parsed; no network request made.")
+    # ---- 2. is there actually anything left to do? ----------------------
+    # "Already parsed" is the wrong question, and getting it wrong strands
+    # data: --dry-run is NOT side-effect free - it fetches, parses and
+    # rebuilds, and skips only the commit. Keying the early exit on the
+    # parquet alone meant a dry run consumed the day and the next real run
+    # reported nothing to do while the day sat uncommitted forever.
+    #
+    # The right question is whether the day is parsed AND recorded AND there
+    # is nothing outstanding to commit. Anything less and the run continues
+    # from wherever it got to. A cached PDF costs no network request either
+    # way, so continuing is cheap and makes the run self-healing.
+    parsed = (DAY_DIR / f"{target}.parquet").exists()
+    recorded = (DAILY_LOG_CSV.exists()
+                and f"{target}," in DAILY_LOG_CSV.read_text(encoding="utf-8"))
+    outstanding = git("status", "--porcelain", "--", str(VIEW),
+                      str(DAILY_LOG_CSV), "data/processed")
+    log(f"parsed / recorded  {parsed} / {recorded}")
+    if parsed and recorded and not outstanding:
         die(0, "NOTHING TO DO",
-            "This is the normal result of a second run on the same day.\n"
-            "One fetch per day is the budget and it has been spent.")
+            "The day is parsed, recorded in the daily log, and nothing is\n"
+            "outstanding to commit. This is the normal result of a second run\n"
+            "on the same day. No network request was made.")
+    if outstanding:
+        log("outstanding changes to commit:")
+        for ln in outstanding.splitlines():
+            log("  " + ln)
 
     # ---- 3. fetch one report --------------------------------------------
     rule("FETCH")
@@ -298,14 +318,20 @@ def main():
     # seven months. One row a day keeps the provenance versioned year-round.
     DAILY_LOG_CSV.parent.mkdir(parents=True, exist_ok=True)
     new = not DAILY_LOG_CSV.exists()
-    with open(DAILY_LOG_CSV, "a", encoding="utf-8", newline="") as fh:
-        if new:
-            fh.write("report_date,fetched_utc,bytes,sha256,n_schemes,"
-                     "state_pct_filling,worst_residual_ratio,in_season\n")
-        fh.write(f"{target},{datetime.now(timezone.utc).isoformat(timespec='seconds')},"
-                 f"{nbytes},{sha},{len(det)},{state_pct:.4f},"
-                 f"{rec['worst_ratio']:.3e},{int(in_season)}\n")
-    log(f"appended to        {DAILY_LOG_CSV}")
+    # Append-only, but not twice for the same day: a re-run after an
+    # interrupted run must not duplicate the row.
+    if not new and f"{target}," in DAILY_LOG_CSV.read_text(encoding="utf-8"):
+        log(f"already recorded   {target} is in {DAILY_LOG_CSV}, not re-appended")
+    else:
+        with open(DAILY_LOG_CSV, "a", encoding="utf-8", newline="") as fh:
+            if new:
+                fh.write("report_date,fetched_utc,bytes,sha256,n_schemes,"
+                         "state_pct_filling,worst_residual_ratio,in_season\n")
+            fh.write(f"{target},"
+                     f"{datetime.now(timezone.utc).isoformat(timespec='seconds')},"
+                     f"{nbytes},{sha},{len(det)},{state_pct:.4f},"
+                     f"{rec['worst_ratio']:.3e},{int(in_season)}\n")
+        log(f"appended to        {DAILY_LOG_CSV}")
 
     # ---- 12. commit and push --------------------------------------------
     rule("COMMIT")
