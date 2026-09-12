@@ -1188,12 +1188,32 @@ decimals, against a grand total WRD computes unrounded and rounds once:
 |---|---|
 | Worst case, every value rounding the same way — `N x 0.005` | **1.03 MCM** |
 | Typical, independent and uniform — `sqrt(N) x 0.005/sqrt(3)` | **0.041 MCM** |
-| **Observed median residual** | **0.046 MCM** |
+| **Observed median residual, in season** | **0.030 MCM** |
 
-The observed median matching the typical figure confirms the model: WRD does hold more
-precision than it publishes. So `MATERIAL_RESIDUAL_MCM = 2 x 1.03 = 2.06 MCM`, **derived from
-the rounding bound rather than fitted to observed maxima**. `reconcile` still reports the
+The observed median sitting just under the typical figure confirms the model: WRD does hold
+more precision than it publishes. So `MATERIAL_RESIDUAL_MCM = 2 x 1.03 = 2.06 MCM`, **derived
+from the rounding bound rather than fitted to observed maxima**. `reconcile` still reports the
 ratio — it is the readable form — but tests on MCM.
+
+**Measured across all 733 days after the fixes, the residual is bimodal and the split is
+exactly the season:**
+
+| | Days | Median | Max | Over the 1.03 rounding bound |
+|---|---|---|---|---|
+| In season (Jun–Oct) | 715 | 0.030 MCM | **0.110 MCM** | 0 |
+| Off season | 18 | 1.685 MCM | **1.740 MCM** | 18 |
+
+The off-season cluster is not rounding — rounding is random and would not land within a few
+hundredths of 1.7 on every one of eighteen days. It is a **source-side discrepancy confined to
+present storage**: on 2025-05-31 the design pair reconciles to **0.01 MCM** while the today
+pair is out by **−1.74**, so the parse is demonstrably reading the right columns and WRD's own
+stated total for today's gross storage is about 1.7 MCM above the sum of its own 206 published
+rows. Why only off season is not established.
+
+Two consequences. The tolerance has **95% headroom on everything the site publishes** (in
+season, max 0.110 against 2.06) and only 16% on the eighteen off-season probe days, which the
+view never uses. And if the gate ever trips on an off-season date, this discrepancy is the
+first thing to check, before suspecting the parser.
 
 **What this check cannot see, stated rather than implied.** A wrapped value losing its last
 digit moves a two-decimal figure by at most **0.09 MCM**, an order of magnitude below the
@@ -1211,6 +1231,26 @@ every day, pass or fail.
 **Rule:** a check that fails on historical data is a check that stops the pipeline forever.
 Measure the failure count *before* wiring enforcement, and treat a high count as a question
 about the data rather than a reason to loosen the check.
+
+### 20.5 Result of the full re-parse
+
+All 733 cached days re-parsed with the three fixes, 7,532 s at six workers:
+
+| | Before | After |
+|---|---|---|
+| Days passing all three checks | 487 / 733 | **733 / 733** |
+| Non-canonical warning values in `fact_storage` | 243 rows | **0** |
+| Days with no abstract to reconcile against | 16 | **0** |
+
+The warning arithmetic closes exactly: `HIGH ALERT` rose by **190** and `WARNING` by **53**,
+which are precisely the counts of `HIGH` and `WARNI` that existed, and `NIL` and `ALERT` did
+not move at all. The capacity gate passed on the rebuilt database.
+
+**Nothing on the published page changed.** Diffing the rebuilt view against the committed one
+key by key, the only difference is `built_utc`: every state figure, every per-scheme field and
+every region series is byte-identical. That is the expected result and worth stating — the
+report date on display (2026-09-12) already carried only canonical warning values, so a repair
+affecting 243 historical rows should move no figure on today's page, and it did not.
 
 ---
 
