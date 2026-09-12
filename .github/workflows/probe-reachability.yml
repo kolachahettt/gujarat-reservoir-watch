@@ -1,0 +1,194 @@
+name: Probe — can a runner reach the WRD server?
+
+# ---------------------------------------------------------------------------
+# This exists to answer ONE question before any daily automation is built:
+# will a GitHub-hosted runner, on a shared Azure IP, get a PDF out of
+# wrd-dam.gujarat.gov.in at all? If the portal refuses Azure ranges or
+# non-Indian addresses, the whole scheduled approach is dead and it is worth
+# knowing that in one minute rather than after a day's work.
+#
+# Deliberately minimal, so the result cannot be ambiguous:
+#   * no repo checkout      - nothing to break before the request
+#   * no pip install        - a dependency failure cannot masquerade as a block
+#   * Python stdlib only    - urllib, ssl, socket, base64, hashlib
+#   * no write permissions  - it cannot commit, publish or deploy anything
+#   * manual trigger only   - no schedule; it runs when you run it
+#
+# It fetches ONE url. The default date is one whose byte count and SHA-256 are
+# already known from a local run, so a match proves the runner sees the same
+# file rather than merely that something answered.
+# ---------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Report date, YYYY-MM-DD. The default has a known SHA-256."
+        required: false
+        default: "2026-09-11"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: probe-reachability
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch one PDF and report what happened
+        env:
+          TARGET_DATE: ${{ inputs.date }}
+        run: |
+          python3 <<'PY'
+          import base64, hashlib, os, socket, ssl, sys, time
+          import urllib.error, urllib.request
+
+          DATE = (os.environ.get("TARGET_DATE") or "2026-09-11").strip()
+          HOST = "wrd-dam.gujarat.gov.in"
+          URL  = f"https://{HOST}/downloads/home_pdf.php?dt="
+          UA   = {"User-Agent":
+                  "GujaratReservoirWatch/0.1 (research; contact via repo)"}
+
+          # Known-good bytes from a local fetch, so content can be verified and
+          # not just reachability.
+          KNOWN = {"2026-09-11": (276237, "10F4783D812B83530D6B108AC131E4B03"
+                                          "FDA075B48778183369BF4B60B2C4C28")}
+
+          def kv(k, v): print(f"  {k:<24} {v}", flush=True)
+          def rule(t): print(f"\n{'='*70}\n{t}\n{'='*70}", flush=True)
+
+          rule("CONTEXT")
+          # Best effort only. Never fatal, and it tells us which IP range the
+          # portal would have seen if it refuses us.
+          try:
+              with urllib.request.urlopen("https://api.ipify.org", timeout=15) as r:
+                  kv("runner egress IP", r.read().decode().strip())
+          except Exception as e:
+              kv("runner egress IP", f"(unavailable: {type(e).__name__})")
+
+          try:
+              ips = sorted({ai[4][0] for ai in socket.getaddrinfo(HOST, 443)})
+              kv("DNS resolves to", ", ".join(ips))
+          except Exception as e:
+              rule("VERDICT: DNS FAILURE")
+              print(f"Cannot resolve {HOST}: {type(e).__name__}: {e}")
+              print("Nothing else was attempted.")
+              sys.exit(1)
+
+          token = base64.b64encode(DATE.encode()).decode()
+          kv("target date", DATE)
+          kv("base64 token", token)
+          kv("url", URL + token)
+
+          def fetch(verify):
+              ctx = ssl.create_default_context()
+              if not verify:
+                  ctx.check_hostname = False
+                  ctx.verify_mode = ssl.CERT_NONE
+              req = urllib.request.Request(URL + token, headers=UA)
+              t0 = time.time()
+              with urllib.request.urlopen(req, timeout=120, context=ctx) as r:
+                  blob = r.read()
+              return {"status": r.status, "hdrs": dict(r.headers),
+                      "blob": blob, "secs": round(time.time() - t0, 1)}
+
+          rule("REQUEST")
+          # Verified first on purpose: locally this host's certificate does not
+          # validate, and knowing whether it validates on a runner's trust
+          # store decides whether verification can stay ON in automation.
+          res, verified, notes = None, None, []
+          for verify in (True, False):
+              label = "TLS verified" if verify else "TLS NOT verified"
+              try:
+                  res, verified = fetch(verify), verify
+                  kv(f"attempt [{label}]", f"HTTP {res['status']} "
+                                           f"in {res['secs']}s")
+                  break
+              except urllib.error.HTTPError as e:
+                  # An HTTP status means the server answered: reachable, but
+                  # possibly refusing us at the application layer.
+                  res = {"status": e.code, "hdrs": dict(e.headers or {}),
+                         "blob": b"", "secs": None}
+                  verified = verify
+                  kv(f"attempt [{label}]", f"HTTP {e.code} {e.reason}")
+                  break
+              except Exception as e:
+                  msg = f"{type(e).__name__}: {e}"
+                  kv(f"attempt [{label}]", f"FAILED - {msg}")
+                  notes.append(f"{label}: {msg}")
+
+          if res is None:
+              rule("VERDICT: BLOCKED AT THE NETWORK LAYER")
+              for n in notes: print(f"  {n}")
+              print("\nThe host resolves but no request completed, with or without")
+              print("certificate verification. A shared Azure IP being refused, or")
+              print("the portal being reachable only from within India, both look")
+              print("like this. The scheduled approach cannot work from a")
+              print("GitHub-hosted runner; a self-hosted runner would be needed.")
+              sys.exit(1)
+
+          rule("RESPONSE")
+          kv("status", res["status"])
+          kv("TLS verification", "PASSED" if verified else
+             "FAILED - fell back to unverified")
+          for h in ("Content-Type", "Content-Length", "Server", "Date"):
+              if h in res["hdrs"]: kv(h.lower(), res["hdrs"][h])
+          blob = res["blob"]
+          kv("bytes actually read", f"{len(blob):,}")
+          kv("first 8 bytes", repr(blob[:8]))
+          if blob:
+              kv("sha256", hashlib.sha256(blob).hexdigest().upper())
+
+          if res["status"] != 200:
+              rule(f"VERDICT: REFUSED — HTTP {res['status']}")
+              print("The server is reachable but would not serve the report. A 403")
+              print("here is the portal declining this client rather than a")
+              print("network block.")
+              sys.exit(1)
+
+          if len(blob) == 0:
+              rule("VERDICT: REACHABLE, but an empty 200")
+              print("HTTP 200 with a zero-length body is how this server says 'no")
+              print("report for that date' - it does not use 404. That is expected")
+              print("for a date not yet published.")
+              if DATE in KNOWN:
+                  print(f"\nBut {DATE} is a date that HAS a report locally")
+                  print(f"({KNOWN[DATE][0]:,} bytes), so an empty body for it points at")
+                  print("interception rather than a publishing lag. Worth a second look.")
+                  sys.exit(1)
+              print("\nReachability itself looks fine. Re-run against a date known")
+              print("to be published to confirm content.")
+              sys.exit(0)
+
+          if not blob.startswith(b"%PDF-"):
+              rule("VERDICT: SOMETHING IS INTERCEPTING")
+              print("HTTP 200 with a non-empty body that is not a PDF. Usually a")
+              print("captive portal, proxy notice or WAF challenge page.")
+              print("\nFirst 300 bytes:")
+              print(blob[:300].decode("utf-8", "replace"))
+              sys.exit(1)
+
+          rule("VERDICT: REACHABLE — got a PDF")
+          exp = KNOWN.get(DATE)
+          if exp:
+              got_sha = hashlib.sha256(blob).hexdigest().upper()
+              size_ok, sha_ok = len(blob) == exp[0], got_sha == exp[1]
+              kv("expected bytes", f"{exp[0]:,}")
+              kv("byte count", "MATCH" if size_ok else "DIFFERS")
+              kv("sha256", "MATCH" if sha_ok else "DIFFERS")
+              if sha_ok:
+                  print("\nByte-for-byte identical to the local copy. The runner sees")
+                  print("the same file, so the daily workflow is viable.")
+              else:
+                  print("\nA PDF arrived but it is not the file fetched locally. That")
+                  print("is not necessarily wrong - the report can be revised in")
+                  print("place - but it must be understood before automating, since")
+                  print("the whole archive assumes a published day is stable.")
+          else:
+              print(f"\nNo known hash for {DATE}; reachability confirmed, content")
+              print("not cross-checked. Re-run with the default date to do that.")
+          PY
