@@ -1152,10 +1152,18 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
   }
   /* latest-report rule: prior years run to 31 Oct, 2026 stops here. Saying so
      stops the shorter line reading as a collapse. */
+  /* Baseline derived from the font size. It was a literal 10, set when this
+     text was 8px; at 11px that put 1.8px of ink above the viewBox on every
+     chart on the page. LR_BAND is the bottom of this label's box, and the
+     2026 direct label below uses it to decide whether it has room to sit
+     above its endpoint — so the two cannot disagree about where the top band
+     ends. */
+  const LR_Y = AXIS_FS + 2;
+  const LR_BAND = LR_Y + 3;
   const lr = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
       y2="${G.SH-6}" stroke="var(--baseline)" stroke-width="1"/>
-    <text x="${xOf(latestDay)-3}" y="10" text-anchor="end" font-size="11"
-      fill="var(--muted)">latest report</text>`;
+    <text x="${xOf(latestDay)-3}" y="${LR_Y}" text-anchor="end"
+      font-size="${AXIS_FS}" fill="var(--muted)">latest report</text>`;
 
   /* prior years: thin, ordered blue ramp, drawn first so 2026 sits on top */
   let pri = "";
@@ -1182,12 +1190,23 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
   const cp = linePath(series[CUR]);
   const cur = `<path d="${cp}" fill="none" stroke="var(--now)"
     stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-  /* direct label on the one series that matters */
+  /* direct label on the one series that matters.
+     It sits above the endpoint by default. When the series ends high that puts
+     it in the "latest report" label's band at the top of the plot, which is
+     what collided in the South Gujarat facet at 375px — that region ends at
+     77%, high enough to reach it. Flipped below the point when the space above
+     is not there. Both labels are anchored at nearly the same x, so a vertical
+     test is sufficient; no horizontal case exists. */
   const ld = series[CUR][latestDay];
+  const LAB_FS = 13;
+  const above = yOf(ld) - 6;
+  const flip = above - LAB_FS < LR_BAND;
+  const labY = flip ? yOf(ld) + LAB_FS + 3 : above;
   const lab = `<circle cx="${xOf(latestDay)}" cy="${yOf(ld)}" r="3.6"
       fill="var(--now)" stroke="var(--surface-1)" stroke-width="2"/>
-    <text x="${xOf(latestDay)-6}" y="${yOf(ld)-6}" text-anchor="end"
-      font-size="13" font-weight="700" fill="var(--now-text)">2026</text>`;
+    <text x="${xOf(latestDay)-6}" y="${labY.toFixed(1)}" text-anchor="end"
+      font-size="${LAB_FS}" font-weight="700"
+      fill="var(--now-text)">2026</text>`;
 
   /* ---- rainfall: a SEPARATE panel, on the ONE scale every strip shares,
      sharing the x-axis. Never a second y-axis on the storage plot. ---- */
@@ -1265,6 +1284,46 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
    region order, never by rank, so nothing repaints when the ranking moves.
    Identity does not rest on colour: every line is direct-labelled on a wide
    screen, and the legend carries the same values on a narrow one. */
+/* ================= AXIS FURNITURE: ONE CONVENTION, BOTH CHARTS =================
+   Four of the six overlaps the layout audit found were the same two mistakes,
+   each made twice — once in the regions chart and once in the scatter:
+
+     THE ORIGIN CORNER WAS CLAIMED BY BOTH AXES. The y axis's extreme tick
+     label and the x axis's first tick label were placed a few pixels apart at
+     the corner where the axes meet, so "-60" sat on "Jun" and "1" sat on
+     "-100".
+
+     AN AXIS TITLE SAT IN THE OTHER AXIS'S TICK BAND. The scatter's x-axis
+     title was 13px below an 11px tick row while itself being 13px, so its box
+     ran back up into the ticks; its y-axis title began left of the y tick
+     column on a phone and ran into "8k".
+
+   Rather than nudge four labels, two rules, both derived from the font sizes
+   so that a future type change cannot quietly reintroduce them:
+
+     1. The x-axis tick band starts far enough below the plot floor to clear
+        the descender box of a y-axis label sitting ON the floor. That is what
+        separates the origin corner, and it keeps every label — dropping the
+        extreme tick would have been cheaper and would have cost the reader the
+        axis minimum.
+     2. An axis title clears the tick band by its own size plus a gap. The
+        y-axis title sits above the plot, clear of the topmost y tick.
+
+   Every offset below is a function of AXIS_FS / AXIS_TITLE_FS. The one thing
+   not to do here is write more magic numbers: the collisions existed because
+   14, 27 and 34 were set against a 7.5-10.5px type scale and outlived it. */
+const AXIS_FS = 11;          // tick labels in both charts
+const AXIS_TITLE_FS = 13;    // axis titles in both charts
+/* Plot floor to x-axis tick baseline. An 11px label on the floor has a box
+   reaching ~3px below its baseline, so the x band must start below that. */
+const X_TICK_DY = AXIS_FS + 8;
+/* Plot floor to x-axis title baseline: past the tick band, plus the title's
+   own ascent, plus a gap. */
+const X_TITLE_DY = X_TICK_DY + AXIS_TITLE_FS + 3;
+/* Plot top to y-axis title baseline, measured upward — clear of the topmost
+   y tick label, which sits just below the plot top. */
+const Y_TITLE_UP = AXIS_FS + 3;
+
 const REGION_ORDER = ["NG", "CG", "SG", "Sau", "Kutch"];
 const REGION_COL = {
   NG:    "var(--cat1)", CG: "var(--cat2)", SG: "var(--cat3)",
@@ -1291,7 +1350,10 @@ function regionsSVG(){
   const W = narrow ? 308 : 940, H = narrow ? 360 : 400;
   const L = narrow ? 34 : 46;
   const R = narrow ? 10 : 132;        // wide: a gutter for direct labels
-  const T = 16, B = 34;
+  /* T holds the y-axis title above the topmost tick, by the same rule as the
+     scatter. At 16 the title's ink ran 1px off the top of the viewBox and sat
+     level with the "+20" tick. */
+  const T = 30, B = 34;
 
   const devs = REGION_ORDER
     .map(code => ({r: DATA.regions.find(x => x.code === code)}))
@@ -1317,8 +1379,8 @@ function regionsSVG(){
         v > 0 ? "+" + v : v}</text>`;
   }
   for(const [d, nm] of MONTHS){
-    g += `<text x="${xp(d)}" y="${H-B+14}" text-anchor="middle" font-size="11"
-      fill="var(--muted)">${nm}</text>`;
+    g += `<text x="${xp(d)}" y="${H-B+X_TICK_DY}" text-anchor="middle"
+      font-size="${AXIS_FS}" fill="var(--muted)">${nm}</text>`;
   }
   // The zero line needs saying in words, or it reads as a plain axis. Not on
   // a narrow screen though: there it lands on top of the lines, and the
@@ -1327,9 +1389,11 @@ function regionsSVG(){
     g += `<text x="${L+4}" y="${yp(0)-5}" font-size="11" fill="var(--muted)">
         at its own prior four-year mean</text>`.replace(/\s+/g, " ");
   }
-  g += `<text x="${L-5}" y="${T-5}" text-anchor="start" font-size="11"
-      fill="var(--text-secondary)">percentage points from each region's own
-      prior-year mean</text>`.replace(/\s+/g, " ");
+  /* x=2, not 0: a glyph's left side bearing can sit a pixel or two left of the
+     anchor, which clipped this title against the viewBox edge. */
+  g += `<text x="2" y="${T-Y_TITLE_UP}" text-anchor="start"
+      font-size="${AXIS_FS}" fill="var(--text-secondary)">percentage points
+      from each region's own prior-year mean</text>`.replace(/\s+/g, " ");
 
   let lines = "", labels = "";
   const ends = [];
@@ -1352,7 +1416,16 @@ function regionsSVG(){
        clipped/overlapping-label anti-pattern. Where a label has been moved,
        a hairline connects it back to its endpoint so the association is not
        lost. */
-    const MIN = 13;
+    /* MIN was a literal 13, chosen when this label was 10.5px. The type retune
+       made it 13px, whose rendered box is about 19px tall — so the minimum
+       separation became SMALLER than the labels, and Saurashtra (-34.3) and
+       North Gujarat (-35.9), 1.6 pp apart, went back to sitting on top of each
+       other: a 137 x 6 px overlap at 1440px, the worst finding in the audit.
+       Derived from the font size now, at 1.55x to clear the em box rather than
+       the visual glyphs, so the stack cannot silently re-collide the next time
+       the scale moves. */
+    const FS_REGLABEL = 13;
+    const MIN = Math.ceil(FS_REGLABEL * 1.55);
     const placed = [...ends].sort((a, b) => a.y - b.y);
     for(let i = 1; i < placed.length; i++){
       if(placed[i].y - placed[i - 1].y < MIN)
@@ -1373,7 +1446,7 @@ function regionsSVG(){
           y2="${e.y - 3.4}" stroke="${REGION_COL[e.d.code]}"
           stroke-width="1" opacity="0.6"/>`;
       }
-      labels += `<text x="${e.x + 9}" y="${e.y}" font-size="13"
+      labels += `<text x="${e.x + 9}" y="${e.y}" font-size="${FS_REGLABEL}"
         fill="var(--text-primary)">${esc(e.d.name)}
         <tspan fill="${REGION_COL[e.d.code]}" font-weight="700"
           style="font-variant-numeric:tabular-nums">${f1(e.v)}</tspan></text>`;
@@ -1666,7 +1739,12 @@ function scatterSVG(list){
   const narrow = isNarrow();
   const W2 = G.SW, H2 = G.SHH;
   const L = narrow ? 40 : 52, R = narrow ? 12 : 18;
-  const T = narrow ? 20 : 16, B = narrow ? 46 : 42;
+  /* T grew to make room for the y-axis title ABOVE the topmost y tick. It used
+     to share that line, which is why "8k" and "capacity, MCM (log)" collided
+     on a phone. B holds the tick band plus the x-axis title, both now derived
+     from the font sizes. */
+  const T = narrow ? 34 : 30;
+  const B = Math.max(narrow ? 46 : 42, X_TITLE_DY + 6);
   const xs = [-100, 50];
   const xp = v => L + (v - xs[0]) / (xs[1] - xs[0]) * (W2 - L - R);
   const lg = v => Math.log10(Math.max(1, v));
@@ -1678,8 +1756,9 @@ function scatterSVG(list){
   for(const v of (narrow ? [-100,-50,0,50] : [-100,-75,-50,-25,0,25,50])){
     g += `<line x1="${xp(v)}" x2="${xp(v)}" y1="${T}" y2="${H2-B}"
       stroke="${v===0?"var(--baseline)":"var(--grid)"}" stroke-width="1"/>`;
-    g += `<text x="${xp(v)}" y="${H2-B+14}" text-anchor="middle" font-size="11"
-      fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
+    g += `<text x="${xp(v)}" y="${H2-B+X_TICK_DY}" text-anchor="middle"
+      font-size="${AXIS_FS}" fill="var(--muted)"
+      style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
   }
   for(const v of (narrow ? [1,100,8000] : [1,10,100,1000,8000])){
     g += `<line x1="${L}" x2="${W2-R}" y1="${yp(v)}" y2="${yp(v)}"
@@ -1687,12 +1766,17 @@ function scatterSVG(list){
     g += `<text x="${L-6}" y="${yp(v)+3.2}" text-anchor="end" font-size="11"
       fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>=1000?(v/1000)+"k":v}</text>`;
   }
-  g += `<text x="${xp(0)}" y="${H2-B+27}" text-anchor="middle" font-size="13"
-      fill="var(--text-secondary)">${narrow
+  g += `<text x="${xp(0)}" y="${H2-B+X_TITLE_DY}" text-anchor="middle"
+      font-size="${AXIS_TITLE_FS}" fill="var(--text-secondary)">${narrow
         ? "deviation, percentage points"
         : "deviation from the prior same-date mean, percentage points"}</text>`;
-  g += `<text x="${L - (narrow ? 34 : 0)}" y="${T-5}" text-anchor="start"
-      font-size="11" fill="var(--text-secondary)">${narrow
+  /* Above the plot and hard left, on its own line. It used to sit at T-5,
+     level with the topmost y tick, and on a phone it was also pushed 34px left
+     into the tick column — two reasons to collide with "8k", which it did. */
+  /* x=2, not 0: a glyph's left side bearing can sit a pixel or two left of the
+     anchor, which clipped this title against the viewBox edge. */
+  g += `<text x="2" y="${T-Y_TITLE_UP}" text-anchor="start"
+      font-size="${AXIS_FS}" fill="var(--text-secondary)">${narrow
         ? "capacity, MCM (log)" : "design capacity, MCM (log)"}</text>`;
   /* Two anchored labels rather than one string with arrows in the middle —
      the combined version read as a single ambiguous arrow. Abbreviated on a
