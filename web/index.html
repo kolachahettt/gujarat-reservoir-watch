@@ -202,6 +202,12 @@ header.hd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
 h1{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.01em}
 .prov{font-size:var(--t-sm);color:var(--text-secondary);line-height:var(--lh-body)}
 .prov code{font-size:var(--t-xs);color:var(--muted);word-break:break-all}
+/* A timestamp is one token even though it contains hyphens. Line breaking is
+   allowed AFTER a hyphen, so `2026-09-12T18:08:59+00:00` was splitting as
+   "built 2026-09-" / "12T18:08:59+00:00" — a date cut in half reads as two
+   different numbers. It is 160px at the phone measure, so it always fits on a
+   line of its own and nothing is lost by refusing to break it. */
+.nb{white-space:nowrap}
 .srch{position:relative;min-width:270px}
 .srch input{width:100%;padding:7px 9px;font-size:var(--t-md);font-family:inherit;
   border:1px solid var(--border);border-radius:6px;background:var(--surface-1);
@@ -420,7 +426,25 @@ main:focus{outline:none}
    on a wide, zero-height box; this is border-left on a tall, zero-width one. */
 .sw.vrule{width:0;height:11px;border-top:0;border-left-width:1px;
   border-left-style:solid;align-self:center}
-.legend .sep{color:var(--border)}
+/* A GROUP SEPARATOR IS A BORDER, NOT AN ELEMENT. It used to be
+   `<span class="sep">|</span>` between groups, which made it a flex item in its
+   own right — so when the band wrapped, a lone "|" could land at the start or
+   the end of a line, or on a line by itself at 375px. That reads as a
+   rendering fault rather than as punctuation. A border cannot be orphaned:
+   it is part of a box that always has content beside it. */
+.legend .br{border-left:1px solid var(--border);padding-left:14px}
+/* A rule belongs BETWEEN two items on one line. When the band wraps, a
+   group-starting item can land first on its row, and a leading hairline is the
+   same stray mark as the "|" it replaced, only quieter. Set by trimLegendRules()
+   on whichever items begin a row — which line they begin cannot be known in
+   CSS, only measured.
+
+   COLOUR ONLY, NOT THE BOX. Removing the border and its padding reflowed the
+   band, which changed which item began a row, which changed which rules should
+   be hidden — the measurement invalidated itself and never settled. Making the
+   rule transparent leaves every box exactly the size it was, so one pass is
+   correct and there is no second reflow to chase. */
+.legend .br.br-off{border-left-color:transparent}
 
 /* ---------- the small-multiple strip ---------- */
 /* FIVE ACROSS IS THE ONLY ARRANGEMENT WITHOUT AN ORPHAN ROW. There are five
@@ -452,6 +476,15 @@ main:focus{outline:none}
 .fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
 .fh .nm{font-size:var(--t-lg);font-weight:600}
 .fh .meta{font-size:var(--t-xs);color:var(--muted);font-variant-numeric:tabular-nums}
+/* THE STATE CHART'S CAPTION SITS UNDER ITS TITLE, NOT BESIDE IT. Both are flex
+   siblings with space-between, which is right when the title is a short label
+   like "Kutch" and wrong now that it is a generated sentence: the title took
+   the room and left the caption an 80px column that set "day 104 of the season
+   · % of design capacity" over three lines at 1440 and four at 375 — a third
+   column of axis furniture beside a headline. Stacked, the caption is one line
+   at both widths. Only the state chart: a facet's header IS a short label and
+   a deviation, which belong on one row. */
+.statechart .fh{flex-direction:column;align-items:flex-start;gap:3px}
 /* .fnums is gone with the card: its four figures are columns in the region
    table now, where they can be read down instead of across. */
 .plot{position:relative}
@@ -2235,6 +2268,27 @@ function scatterLegend(){
 /* The real map. Unreachable until coordinates exist; kept here so supplying
    them is the only remaining step. Admin geometry is drawn as STROKES ONLY —
    no filled areas — so nothing implies a value for a district. */
+/* Drop the group rule from any legend item that begins a row.
+   Grouped by the item's vertical CENTRE, not its top: the band is
+   align-items:center and the items are different heights, so two items on one
+   line have different tops and comparing tops would call half of them
+   row-leaders. Exposed for testing. */
+function trimLegendRules(){
+  for(const leg of document.querySelectorAll(".legend")){
+    const kids = [...leg.children];
+    let row = null;
+    for(const k of kids){
+      const r = k.getBoundingClientRect();
+      if(!r.height){ k.classList.remove("br-off"); continue; }
+      const cy = r.top + r.height / 2;
+      const starts = row === null || cy > row + 6;
+      if(starts) row = cy;
+      k.classList.toggle("br-off", starts);
+    }
+  }
+}
+window.__trimLegendRules = trimLegendRules;
+
 function mapSVG(list, coords, geo){
   const pts = list.filter(s => coords[s.scheme_id]);
   if(!pts.length) return "";
@@ -2344,7 +2398,7 @@ function render(d){
     `Report date <b>${m.report_date}</b>
      <span class="age${stale ? " stale" : ""}">— data from
      ${ageWord(age)}</span> &nbsp;·&nbsp; source: ${esc(m.source)}
-     &nbsp;·&nbsp; built ${esc(m.built_utc)}<br>
+     &nbsp;·&nbsp; built <span class="nb">${esc(m.built_utc)}</span><br>
      ${m.dates_loaded} daily reports loaded, ${esc(m.season_window)} for
      ${m.seasons_prior.join(", ")} and ${m.season_current}`;
   /* The SHA-256 used to sit here, above the fold: a 64-character monospace
@@ -2437,15 +2491,17 @@ function render(d){
      stay with the state chart in stage 2; the rain items, the shared rain
      scale and the facet-ordering note go to stage 4 with the charts they
      describe. Not a duplicated legend — two legends for two figures. */
+  /* `br` marks the item that STARTS a group; the rule is drawn on its left
+     edge. See .legend .br — the separator used to be its own element and could
+     be orphaned onto a line by itself. */
   const yearSwatches =
     `<span class="it"><span class="sw thick" style="border-color:var(--now)"></span>
        <b style="color:var(--text-primary)">${m.season_current}</b> — current season</span>
-     <span class="sep">|</span>
-     ` + YRS.map(y =>
-      `<span class="it"><span class="sw thin" style="border-color:${COL[y]}"></span>${y}</span>`
+     ` + YRS.map((y, i) =>
+      `<span class="it${i ? "" : " br"}"><span class="sw thin"
+         style="border-color:${COL[y]}"></span>${y}</span>`
      ).join("") +
-    `<span class="sep">|</span>
-     <span class="it"><span class="sw dash" style="border-color:var(--text-secondary)"></span>
+    `<span class="it br"><span class="sw dash" style="border-color:var(--text-secondary)"></span>
        crossed below all prior years</span>`;
   document.getElementById("legendYears").innerHTML = yearSwatches;
   document.getElementById("legend").innerHTML = yearSwatches +
@@ -2454,23 +2510,26 @@ function render(d){
        and not this one. Only on this legend: the state chart in stage 2 still
        labels its own rule inline, and repeating it there would be the second
        explanation of one line. */
-    `<span class="sep">|</span>
-     <span class="it"><span class="sw vrule"
+    `<span class="it br"><span class="sw vrule"
          style="border-left-color:var(--baseline)"></span>
        latest report — ${m.season_current} stops here, prior years run on</span>
-     <span class="sep">|</span>
-     <span class="it"><span class="sw bar" style="background:var(--now);opacity:.6"></span>
+     <span class="it br"><span class="sw bar" style="background:var(--now);opacity:.6"></span>
        ${m.season_current} rain, mm/day</span>
      <span class="it"><span class="sw thin" style="border-color:var(--muted)"></span>
        prior-year mean rain</span>
-     <span class="sep">|</span>
-     <span class="txt" style="color:var(--muted)">all five rain strips on one
+     <span class="txt br" style="color:var(--muted)">all five rain strips on one
        <b style="color:var(--text-secondary)">0–${RAIN_MAX} mm/day</b> scale,
        so bar heights compare across regions</span>
-     <span class="sep">|</span>
-     <span class="txt" style="color:var(--muted)">facets ordered worst
+     <span class="txt br" style="color:var(--muted)">facets ordered worst
        deviation first, in <b style="color:var(--text-secondary)">pp</b> —
        percentage points, the plain difference between two percentages</span>`;
+  /* SYNCHRONOUS, not requestAnimationFrame. rAF was the reflex and it is the
+     wrong tool: it does not fire in a hidden tab, so the legend would have
+     shipped with rules at line starts until something painted — and I could
+     not observe that here at all, because the preview pane does not run rAF
+     while hidden. getBoundingClientRect forces layout on demand, so nothing
+     needs deferring; the DOM above is already set. */
+  trimLegendRules();
 
   /* ---- the facets as a small-multiple strip ----
      Five bare panels, each a region name, its deviation and the shape. The
@@ -3145,7 +3204,11 @@ let _rzTimer = null;
 addEventListener("resize", () => {
   clearTimeout(_rzTimer);
   _rzTimer = setTimeout(() => {
-    if(DATA && isNarrow() !== RENDERED_AT) render(DATA);
+    if(DATA && isNarrow() !== RENDERED_AT) return render(DATA);
+    /* No re-render, but the legend may have re-wrapped, and which item begins
+       a row decides which group rules are drawn. Cheap: a rect read per item
+       on a settled resize, not per frame. */
+    trimLegendRules();
   }, 180);
 });
 
