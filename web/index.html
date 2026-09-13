@@ -121,7 +121,7 @@ body{margin:0;background:var(--page,#f9f9f7);
 .viz-root{background:var(--page);color:var(--text-primary);
   padding:20px 22px 40px;max-width:1480px;margin:0 auto}
 
-/* ================= THREE WIDTHS, ONE MEASURE =================
+/* ================= THREE WIDTHS, ONE LEFT EDGE =================
    Every block was full-width, with prose capped individually by max-width.
    That put the reading column wherever each element happened to start and let
    figures and prose share an edge, which is the "undesigned stack" reading.
@@ -129,29 +129,39 @@ body{margin:0;background:var(--page,#f9f9f7);
    One grid, three tracks, used by the root, by <main> and by each stage:
 
      text   the reading column, --col wide, where all prose and headings live
-     fig    a wider band for charts and tables, --fig-w overall
+     fig    the same left edge, running --fig-w to the RIGHT of it
      full   edge to edge, for the facet strip and the stage rules
+
+   FIGURES EXTEND RIGHT FROM THE TEXT EDGE; THEY DO NOT CENTRE AROUND IT.
+   The first version split the overhang in two and hung half off each side of
+   the measure, so fig-start sat --fig-side LEFT of text-start. Prose was then
+   centred inside the figure band while the figures themselves sat flush to the
+   page, and the two disagreed by half the overhang: 108px at an 800px viewport,
+   292px at 1440. Every heading and every section label was inset from the chart
+   it belonged to, which is why the masthead read as shoved right and the
+   eyebrows read as attached to nothing. It measured exactly as designed.
+   One line fixes it: fig-start IS text-start, and the whole overhang goes right.
 
    Placement instead of max-width, deliberately: a grid column does not fight
    with an element's own max-width, so h2 keeps its 52ch and the deck its 62ch
    INSIDE the text column rather than being overridden by it.
 
-   The side tracks are minmax(0, …) so they collapse to nothing on a phone and
-   the text column takes the full width — the same layout degrades to one
-   column without a breakpoint. */
+   The overhang and the margins are minmax(0, …) so they collapse in that order
+   as the viewport narrows: the figure band gives up its overhang first and the
+   text column takes the full width — one layout, no breakpoint. Below ~1125px
+   the margins are gone and text and figures share the page gutter. */
 .viz-root{
   --col:65ch;
   --fig-w:1080px;
-  --fig-side:calc((var(--fig-w) - var(--col)) / 2);
+  --fig-over:calc(var(--fig-w) - var(--col));
 }
 .viz-root, #main, .stage, .mininav{
   display:grid;
   grid-template-columns:
-    [full-start] minmax(0, 1fr)
-    [fig-start]  minmax(0, var(--fig-side))
-    [text-start] min(var(--col), 100%)
-    [text-end]   minmax(0, var(--fig-side))
-    [fig-end]    minmax(0, 1fr)
+    [full-start]           minmax(0, 1fr)
+    [fig-start text-start] min(var(--col), 100%)
+    [text-end]             minmax(0, var(--fig-over))
+    [fig-end]              minmax(0, 1fr)
     [full-end];
 }
 .viz-root > *, #main > *, .stage > *{grid-column:text-start / text-end}
