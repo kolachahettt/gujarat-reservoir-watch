@@ -204,6 +204,24 @@ h2,h2 .q{max-width:52ch}
    finding underneath it. */
 .kicker{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;
   color:var(--muted);margin-bottom:3px;font-variant-numeric:tabular-nums}
+/* The deck. One step under the h1 and at regular weight, so it reads as the
+   sentence after the headline rather than competing with it: 20px/400 against
+   25px/700. Its own measure, wider than body, because it is a single
+   paragraph meant to be read in two or three lines. */
+.deck{font-size:var(--t-lg);line-height:var(--lh-body);font-weight:400;
+  color:var(--text-secondary);margin:6px 0 0;max-width:62ch}
+.deck b{color:var(--text-primary);font-weight:700}
+/* On a phone the display sizes cost too much vertical room: at 25px the
+   headline ran to four lines and the 20px deck to another four, 324px of
+   header before the provenance, which pushed the state chart off an 812px
+   screen entirely. The verdict is worth the space; burying the evidence that
+   supports it is not. Both drop one step — still scale values, so this
+   introduces no new size. Breakpoint matches NARROW_MAX in the chart
+   geometry, so type and charts change register together. */
+@media (max-width:560px){
+  h1{font-size:var(--t-lg)}
+  .deck{font-size:var(--t-md)}
+}
 
 /* ---------- keyboard and screen-reader plumbing ---------- */
 /* Visually hidden but still announced. NOT display:none and NOT
@@ -471,6 +489,8 @@ code{overflow-wrap:anywhere;word-break:break-word}
            renders a page that says what it is rather than an empty heading. -->
       <div class="kicker" id="kicker">Gujarat Reservoir Watch</div>
       <h1 id="headline">Gujarat Reservoir Watch — season to date</h1>
+      <!-- Hidden until filled, so a failed fetch shows no empty deck. -->
+      <p class="deck" id="deck" hidden></p>
       <div class="prov" id="prov"></div>
     </div>
     <div class="srch">
@@ -712,6 +732,50 @@ function headlineTitle(d, inSeason){
   return {branch: "D",
     text: `${lead}, <b>${st.gap1}</b> points above the `
         + `${numWord(st.n)}-year average for ${when}`};
+}
+
+/* ---- The deck (standfirst) ----
+   The headline says the state is at a five-year low for the date. What it
+   cannot also say, without becoming a paragraph, is how WIDESPREAD that is —
+   and breadth is the judgement a cold reader was missing. Five regions all
+   short is a different story from one dry corner dragging an average down, and
+   the page had that number computed and never said it above the fold.
+
+   Same discipline as the titles: branches over the JSON, a past-tense voicing
+   for the seven off-season months, and a null return rather than a hedged
+   sentence when no baseline exists. */
+function deckText(d, inSeason){
+  const withBase = (d.schemes || []).filter(s => s.mean_prior != null);
+  const regs = (d.regions || [])
+    .filter(r => r.pct_now != null && r.mean_prior_at_now != null)
+    .map(r => ({name: r.name, dev: r.pct_now - r.mean_prior_at_now,
+                cap: r.design_mcm || 0}));
+  if(!withBase.length || regs.length < 2) return null;
+
+  const below = withBase.filter(s => s.dev_pp < 0).length;
+  const above = withBase.length - below;
+  const n = withBase.length;
+  const by = [...regs].sort((a, b) => a.dev - b.dev || b.cap - a.cap);
+  const worst = by[0], best = by[by.length - 1];
+  const nReg = regs.length;
+  const hold = inSeason ? "hold" : "held";
+  const are = inSeason ? "are" : "were";
+  const is = inSeason ? "is" : "was";
+
+  if(regs.every(r => r.dev > 0)) return {branch: "C",
+    text: `<b>${above}</b> of ${n} reservoirs ${hold} more water than their `
+        + `own average for this date, and every region ${is} above its own — `
+        + `<b>${esc(best.name)}</b> by ${best.dev.toFixed(1)} points.`};
+  if(regs.every(r => r.dev < 0)) return {branch: "A",
+    text: `<b>${below}</b> of ${n} reservoirs ${hold} less water than their `
+        + `own average for this date, and all ${numWord(nReg)} regions `
+        + `${are} short — <b>${esc(worst.name)}</b> by `
+        + `${Math.abs(worst.dev).toFixed(1)} points.`};
+  return {branch: "B",
+    text: `<b>${below}</b> of ${n} reservoirs ${are} below their own average `
+        + `for this date. <b>${esc(worst.name)}</b> ${is} furthest behind at `
+        + `${Math.abs(worst.dev).toFixed(1)} points, while `
+        + `<b>${esc(best.name)}</b> ${is} ${best.dev.toFixed(1)} above.`};
 }
 
 /* ---- Title 2: the state chart ----
@@ -1011,6 +1075,14 @@ function gapAnnotation(g, xOf, yOf, latestDay, G){
      ran to x=341.9 in a 308-wide box — clipped off the chart entirely, with
      nothing to indicate it had been. Anchoring at the edge makes rightward
      overflow impossible at any breakpoint. */
+  /* ONE SOURCE FOR THE FONT SIZES, used by both the fit test and the emitted
+     attributes. They were separate constants and diverged: the type retune
+     moved the emitted font-size from 7.5/8.5 units to 11, but the fit test
+     still measured against 7.5, so it was under-estimating widths by a factor
+     of 1.47 and admitted a sub-label that then overlapped the 2026 series
+     label. A width test that does not use the size it is testing is worse than
+     no test, because it looks like one. */
+  const FS_BIG = 11, FS_SUB = 11;
   const lx = G.W - G.PADR;
   const avail = lx - (dx + cap);
   /* Width estimated rather than measured, because the string has to be chosen
@@ -1018,14 +1090,25 @@ function gapAnnotation(g, xOf, yOf, latestDay, G){
      0.434em, so the test errs toward the shorter wording. */
   const fits = (txt, fs) => txt.length * fs * 0.46 <= avail;
   const big = `${Math.abs(diff).toFixed(1)} points ${above ? "above" : "below"}`;
-  const bigTxt = fits(big, 8.5) ? big
+  const bigTxt = fits(big, FS_BIG) ? big
                : `${Math.abs(diff).toFixed(1)} pp ${above ? "above" : "below"}`;
   const longSub = `the ${numWord(g.nPrior)}-year average for this date`;
   const shortSub = `the ${numWord(g.nPrior)}-year average`;
-  const sub = fits(longSub, 7.5) ? longSub : fits(shortSub, 7.5) ? shortSub : "";
-  /* Two lines of label, vertically centred on the dimension. The gap is only
-     ~17 units tall, so the text sits beside it rather than inside it. */
-  const l1y = sub ? mid - 1 : mid + 3, l2y = mid + 7.5;
+  const sub = fits(longSub, FS_SUB) ? longSub
+            : fits(shortSub, FS_SUB) ? shortSub : "";
+  /* Leading derived from the font size rather than fixed at 8.5 units, which
+     was set when the text was 7.5 units and left the two lines overlapping
+     each other once they grew to 11. Anchored just under the upper cap rather
+     than centred on the dimension, so the block clears the direct "2026"
+     label that sits at the lower end of the gap. */
+  /* 1.35, not 1.2. An SVG text getBBox is about 1.3em tall — ascent plus
+     descent, not the visual glyph height — so 1.2 leading leaves the two
+     boxes overlapping by a unit even though the letters do not touch. Setting
+     it above the em box means the geometric overlap assertion needs no
+     exceptions, which keeps the assertion worth running. */
+  const lead = FS_SUB * 1.35;
+  const l1y = sub ? yRef + FS_BIG : mid + FS_BIG * 0.35;
+  const l2y = l1y + lead;
   return `
     <line x1="${dx}" x2="${dx}" y1="${yRef.toFixed(1)}" y2="${yNow.toFixed(1)}"
       stroke="var(--text-secondary)" stroke-width="1"/>
@@ -1033,12 +1116,12 @@ function gapAnnotation(g, xOf, yOf, latestDay, G){
       y2="${yRef.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
     <line x1="${dx - cap}" x2="${dx + cap}" y1="${yNow.toFixed(1)}"
       y2="${yNow.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
-    <text x="${lx}" y="${l1y.toFixed(1)}" text-anchor="end" font-size="11"
+    <text x="${lx}" y="${l1y.toFixed(1)}" text-anchor="end" font-size="${FS_BIG}"
       font-weight="700" fill="var(--text-primary)" stroke="var(--chart-bg)"
       stroke-width="2.6" paint-order="stroke"
       stroke-linejoin="round">${bigTxt}</text>
     ${!sub ? "" : `<text x="${lx}" y="${l2y.toFixed(1)}" text-anchor="end"
-      font-size="11" fill="var(--muted)" stroke="var(--chart-bg)"
+      font-size="${FS_SUB}" fill="var(--muted)" stroke="var(--chart-bg)"
       stroke-width="2.4" paint-order="stroke"
       stroke-linejoin="round">${sub}</text>`}`;
 }
@@ -1747,13 +1830,27 @@ function render(d){
      ${ageWord(age)}</span> &nbsp;·&nbsp; source: ${esc(m.source)}
      &nbsp;·&nbsp; built ${esc(m.built_utc)}<br>
      ${m.dates_loaded} daily reports loaded, ${esc(m.season_window)} for
-     ${m.seasons_prior.join(", ")} and ${m.season_current}
-     &nbsp;·&nbsp; <code>SHA-256 ${esc(m.report_sha256||"—")}</code>`;
+     ${m.seasons_prior.join(", ")} and ${m.season_current}`;
+  /* The SHA-256 used to sit here, above the fold: a 64-character monospace
+     string that was one of the most visually distinctive things on first
+     paint, and of near-zero interest to a general reader. It is unchanged in
+     the footer and in every CSV export, so nothing about provenance is lost —
+     §8.3 asks that it be captured and shown, not that it outrank the finding. */
 
   /* ---- narrative titles, generated from this build's data ----
      Set after inSeason is known, because every one of them has a past-tense
      voicing for the seven months the page shows a closed season. */
   setTitle("headline", headlineTitle(d, inSeason));
+  const deck = deckText(d, inSeason);
+  const deckEl = document.getElementById("deck");
+  deckEl.hidden = !deck;
+  if(deck){
+    deckEl.innerHTML = deck.text;
+    deckEl.setAttribute("data-title-branch", deck.branch);
+  } else {
+    deckEl.innerHTML = "";
+    deckEl.removeAttribute("data-title-branch");
+  }
   setTitle("stTitle", stateChartTitle(d, inSeason));
   setTitle("regTitle", regionsTitle(d, inSeason));
   document.getElementById("kicker").textContent =
