@@ -865,6 +865,12 @@ table view carry every year's value.
 
 ## 16. The map cannot be built from this source — and what was built instead
 
+> **Superseded in part by §24.** Everything below is still true of *this*
+> source: the WRD report has no coordinate column, and OSM name-matching cannot
+> place the schemes. What changed is that a *different* source has them — the
+> map is built and on. This section is kept because the two dead ends in it are
+> the reason the third approach was designed the way it was.
+
 **The blocker, with evidence.** The WRD daily report gives every dam a **district and a
 taluka and never a coordinate**. There is no latitude or longitude column in any of the six
 tables in the file (checked against the parsed 206-row day: zero columns matching
@@ -1412,3 +1418,179 @@ became true and the link rendered at the top of the viewport.
 
 **Rule:** verifying focus behaviour needs `document.hasFocus()` checked first,
 or the result is meaningless.
+
+---
+
+## 24. The map, built — 179 of 206 dams, from the National Register of Large Dams
+
+§16 concluded the map could not be built and named the one thing that would fix
+it: "CWC's National Register of Large Dams and India-WRIS both publish reservoir
+positions". India-WRIS is still unreachable from this machine (§7, re-confirmed:
+TCP 443 times out). NRLD is reachable and has them.
+
+**Source.** `https://www.cwc.gov.in/sites/default/files/nrld-2019.pdf`,
+6,195,437 bytes, SHA-256 recorded in `data/raw/nrld/nrld-2019.provenance.json`.
+300 pages; Gujarat is pages 79–101, **632 dams**, each with a latitude and a
+longitude in degrees/minutes/seconds.
+
+### 24.1 Why the obvious extraction fails, and what works
+
+The Latitude column is 22pt wide. A DMS value does not fit, so it wraps to a
+second baseline **inside the row**, and `extract_text()` reads by line. Vijarkhi
+therefore comes out as `22° 24 ' 70° 10 ' 20" 59"` — the seconds for **both**
+columns after the degrees for both. No regex recovers which `59` belongs to
+which column, because what distinguishes them is horizontal position, and line
+reading has already discarded it. That is why the first attempt failed.
+
+**What works is the grid.** The page is ruled with 1,857 thin `rects` — there
+are no `lines` objects in this file at all — giving 21 exact vertical boundaries
+and 30 horizontal. Bucket every character into a cell, sort within the cell by
+(baseline, x), and each cell reads on its own. Column identity comes from the
+page's own header row, matched by name rather than by offset: col 4 `Latitude`,
+col 5 `Longitude`, col 9 `Neareast City` (the misspelling is the source's).
+
+**Result: 632 of 632 coordinates parsed, none outside Gujarat's bounding box.**
+The only source quirk is four rows writing seconds as `60"`, carried to the next
+whole minute rather than rejected — 60 seconds is a minute.
+
+Verified rather than assumed: a per-character dump of the disputed rows shows
+Khodiyar's cells on baseline 177 as `2@235 1@238 °@240 4@244 3@247 '@251` and on
+baseline 183 as `1@240 4@242 "@245`, reassembling to `21° 43' 14"`. Ukai lands
+0.3 km from its published position and Panam within about a metre.
+
+### 24.2 Matching is the hard part, and a name is never enough
+
+632 NRLD rows against 206 WRD schemes, joined on a name the two sources
+romanise differently. **No point is placed on a name resemblance.** Every
+accepted coordinate is corroborated by at least one fact that does not involve
+the name:
+
+* **Capacity.** WRD publishes design gross storage in MCM, NRLD in m³. Capacity
+  spans four orders of magnitude across the 206, so agreement within 10% is not
+  something two different dams do by chance. The disagreement distribution is
+  bimodal — 120 pairs agree within 1%, and the next population starts above 13%
+  — so the 10% threshold sits in a measured gap.
+* **Geography.** The NRLD coordinate must fall inside the district WRD assigns
+  the scheme, tested against the 2011 census polygons through the district
+  crosswalk. Post-2011 districts are tested against their parent, whose area is
+  a superset: coarser, still sound.
+
+Three defects in the matcher, each caught by that verification:
+
+1. **The ordinal is a hard constraint, not a fuzzy one.** `Sasoi-II`
+   fuzzy-matched `Sasoi` at 0.909 *and passed the district test*, because a II
+   sits near its I; only capacity caught it, 95% off. Same for `Bhadar (P)` →
+   `Bhadar`, 87% off. A near miss on the stem is a spelling variant; a mismatch
+   on the ordinal is a different dam.
+2. **Five WRD district spellings never joined the crosswalk** (Kachchh/KUTCH,
+   Mahesana/MEHSANA, Arvalli/ARAVALLI, Chhotaudepur/CHHOTA UDEPUR, Devbhumi
+   Dwarka/DEVBHOOMI DWARKA), which made 34 schemes *untestable* on geography
+   rather than tested.
+3. **The residual was transliteration, not misspelling.** WRD `Machchhu` / NRLD
+   `Machhu`; `Phodarness` / `Fodaraness`; `Waidy` / `Vaidy`. Folding to a
+   consonant skeleton (chh→c, ph→f, w→v, drop vowels) recovered 19 more, and
+   capacity agreed to 0.0–0.1% on most of them — which is what says the fold
+   found the right dams rather than merely plausible ones.
+
+**Distance, not in/out.** The district test's failures are two populations: four
+within 6.8 km of the boundary and five between 41 and 170 km, with nothing in
+between. Of the accepted points 175 are strictly inside and 5 within 1.01 km. So
+≤7 km is the test being coarse against generalised 2011 geometry for redrawn
+districts; ≥41 km is the source being wrong. Treating both as "rejected" would
+report a limitation of the test as an error in the data.
+
+### 24.3 Coverage, and what is deliberately not drawn
+
+**179 of 206 placed (86.9%) — 98.5% of the state's design capacity**, because
+the unplaced are nearly all small schemes.
+
+| tier | n | evidence |
+| --- | --- | --- |
+| A | 120 | name + district + capacity within 10% |
+| A-bdy | 3 | capacity agrees, ≤3.4 km outside a post-2011 district line |
+| B | 44 | name + district + taluka matches NRLD's nearest city |
+| C | 12 | **exact** name + district containment |
+
+The 27 not placed are in `data/reference/dam_coordinates_excluded.csv` with a
+reason each: **15** have no NRLD row, **5** have an NRLD coordinate that
+contradicts the district by 41–170 km, **3** are transliteration-folded matches
+with nothing corroborating them, **2** are parenthetical variants whose
+capacity disagrees, **1** fails both the district and capacity tests, and **1**
+released its NRLD row to a closer claim.
+
+### 24.3a Two defects the shipped file's own integrity check found
+
+Written down because both were invisible in the tier counts and only a check
+of the output caught them.
+
+**A folded name cannot also lean on the weakest verification.** Tier C has only
+district containment behind it, and a district holds many dams — which is
+precisely the reason OSM was rejected below. Exempting NRLD from that argument
+let `WNKL.-BHEY` reach `Vankol` at 31× the capacity and `Bantva-Kharo` reach
+`Bantwakharo` at 100×. The fold is a hypothesis about transliteration: with
+capacity or taluka agreeing it is fine, with neither it is a guess. Tier C now
+requires the name to match exactly before folding, which dropped it from 15 to
+12 and took its worst capacity disagreement from 99% to 35.7%.
+
+**One NRLD dam cannot be two schemes.** WRD lists both `Ozat-Weir` (1.9 MCM)
+and `Ozat- Weir(Vanthali)` (1.8 MCM) in Vanthali taluka; NRLD has a single
+`Ozat Weir (Vanthali)` at 1.8 MCM, and both schemes matched it. Two dots on one
+pixel, and a position asserted for a scheme that had not earned one. The closer
+capacity match keeps the row, the other is excluded with the reason, and the
+build asserts one-to-one: 179 placed schemes use 179 distinct NRLD rows and no
+two share a coordinate.
+
+Tier B keeps its capacity spread (median 23%, max 82%) deliberately. Its
+evidence is an exact name plus an **exact taluka** — 39 of the 44 match the
+taluka at 0.95 or better, most at 1.0 — and a taluka averages about 1,900 km².
+NRLD's 2019 gross storage and WRD's current design gross are not the same
+quantity measured on the same day, and §11 documents capacity being restated at
+the turn of the water year, so a 20% difference is expected there and is not
+evidence of a wrong dam.
+
+**NRLD has wrong coordinates.** Five of 632 Gujarat rows (0.8%) place a dam far
+outside its district *and* contradict the nearest town the register itself
+prints — Hanol's capacity agrees to 0.0% and its coordinate is 75 km out,
+Kankavati 0.2% and 63 km, Khodiyar 7.1% and 41 km. The dam is identified; the
+position is not trustworthy; nothing is drawn.
+
+**One dam is drawn outside the state outline, correctly.** Damanganga's dam is
+on the river at the Gujarat border, built jointly with Dadra & Nagar Haveli, so
+the register's coordinate sits about a kilometre beyond the boundary the map
+draws. Dropping a correct coordinate would be as wrong as inventing one, so it
+is plotted and the page explains it. The build script flags any such point
+rather than letting it pass silently.
+
+### 24.4 NRLD-2023 was tried and is unusable
+
+The 2023 edition (92,040,711 bytes, on Google Drive) is a **scan with an OCR
+layer**: font `HiddenHorzOCR`, one image per page, the header extracting as
+`!Wght-- l!!!ft.c:tM`, and the state column reading `GuJaret` / `Gujaret` /
+`GuJarel` / `Gujarat` / `GuJarat` on a single page. 59 of 344 PIC codes are
+malformed; 16 coordinates land outside Gujarat, nearly all reading `89°` where
+it must be `69°` — a 2,000 km error from one digit. Against 2019 on the same
+dams, **146 agree within 2 km and 109 disagree by more than 2 km**, up to 491 km.
+
+It adds nothing. Of the 15 schemes 2019 cannot place, the four that appear to
+hit all fail: one parses to `lat 0.089, lon None`, one has an OCR-damaged
+longitude, two mismatch the ordinal. It corrects none of the five bad
+coordinates. An OCR digit error inside a plausible range is exactly the failure
+the placement rule exists to prevent, so the 2023 edition is not used.
+
+**Also measured, for the record:** OSM with the same fold and the same district
+verification reaches **31 of 206 (15.0%)**, against the 9 (4.4%) §16 measured
+with exact matching. It is still not used, and the reason is sharper than the
+count: OSM has no capacity field, so verification would rest on district
+containment alone, and that is weak — `Sindhani` → `Nandana Lake` and `Survo` →
+`Saraya Lake` both pass containment on wrong names. Wikidata was rate-limited
+out (HTTP 429, "aggressively rate-limiting to 1 req / min … during active wdqs
+outage") and is unassessed.
+
+### 24.5 Rebuilding it
+
+    python scripts/build_dam_coords.py    # fetches NRLD if absent, writes both CSVs
+    python scripts/build_view_data.py     # picks them up; the map switches on
+
+`data/reference/dam_coordinates.csv` carries the evidence per row — tier, the
+matched NRLD name and PIC, capacity difference, kilometres outside the district,
+taluka similarity — so any point on the map can be traced to what justified it.

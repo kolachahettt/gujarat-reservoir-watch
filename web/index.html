@@ -2243,10 +2243,41 @@ function mapSVG(list, coords, geo){
   const pad = 0.35;
   const b = [Math.min(...lons)-pad, Math.min(...lats)-pad,
              Math.max(...lons)+pad, Math.max(...lats)+pad];
-  const W2 = G.SW, H2 = isNarrow() ? 520 : 640;
-  const sx = (W2 - 20) / (b[2] - b[0]), sy = (H2 - 20) / (b[3] - b[1]);
-  const k = Math.min(sx, sy);
-  const px = lon => 10 + (lon - b[0]) * k;
+  /* The OUTLINES have to fit too, not just the dots. Bounds taken from the dam
+     points alone left the state edge 2 units inside the viewBox — it happened
+     not to clip, by 2 units, which is not a margin anyone chose. Kutch reaches
+     further west than any dam on it, so the geometry decides the west edge. */
+  for(const fc of [geo.state, geo.districts]){
+    if(!fc) continue;
+    for(const f of fc.features){
+      const gm = f.geometry;
+      const ps = gm.type === "Polygon" ? [gm.coordinates]
+        : gm.type === "MultiPolygon" ? gm.coordinates : [];
+      for(const poly of ps) for(const ring of poly) for(const c of ring){
+        if(c[0] < b[0]) b[0] = c[0];
+        if(c[1] < b[1]) b[1] = c[1];
+        if(c[0] > b[2]) b[2] = c[0];
+        if(c[1] > b[3]) b[3] = c[1];
+      }
+    }
+  }
+  /* HEIGHT FOLLOWS THE GROUND, it is not a constant. Gujarat's extent here is
+     about 7.6° of longitude by 5.6° of latitude — WIDER than tall. A fixed
+     520-unit portrait box on a phone therefore used 226 of its 520 units and
+     left 294 units of empty space, with the map anchored to the bottom of it
+     because py() measures up from H2. The same constant was merely generous at
+     640 on a desktop, so the defect only showed on a phone.
+
+     Derived from the bounding box and the scale instead, so the viewBox is the
+     size of the thing being drawn at every width. Longitude is cosine-corrected
+     at Gujarat's mid-latitude: a degree of longitude here is about 0.92 of a
+     degree of latitude, and ignoring that stretches the state east-west. */
+  const W2 = G.SW;
+  const midLat = (b[1] + b[3]) / 2;
+  const lonScale = Math.cos(midLat * Math.PI / 180);
+  const k = (W2 - 20) / ((b[2] - b[0]) * lonScale);
+  const H2 = Math.round((b[3] - b[1]) * k) + 20;
+  const px = lon => 10 + (lon - b[0]) * lonScale * k;
   const py = lat => H2 - 10 - (lat - b[1]) * k;
   const ring = r => r.map((c,i) => (i?"L":"M") + px(c[0]).toFixed(1) + " "
     + py(c[1]).toFixed(1)).join(" ") + "Z";
@@ -2695,16 +2726,54 @@ function renderSchemesView(){
   // Open on a wide screen, collapsed on a phone. The summary carries the
   // claim either way.
   pel.open = !isNarrow();
+  /* The map states its own coverage. Partial coverage is fine; partial
+     coverage that looks complete is not, so the count, the share of storage
+     it represents, what verified each point and why the rest are missing are
+     all on the page rather than in a commit message. */
+  const tiers = cm.tiers || {};
+  const tierN = k => tiers[k] || 0;
+  const verified = tierN("A") + tierN("A-bdy");
+  const pel_ex = (cm.excluded || []);
   pel.innerHTML = (mapped
-    ? `<summary>${cm.n_placed} of ${cm.n_schemes} schemes placed on the map</summary>
-       <div class="pbody"><b>${cm.n_placed} of ${cm.n_schemes} schemes placed</b> from
-       ${esc(cm.source || "supplied coordinates")}. District and state
-       boundaries are drawn as outlines only — no area is filled, so no colour
-       on this map stands for a district.
+    ? `<summary>${cm.n_placed} of ${cm.n_schemes} dams placed${
+         cm.pct_capacity_placed
+           ? ` — ${cm.pct_capacity_placed}% of design capacity` : ""}</summary>
+       <div class="pbody"><b>${cm.n_placed} of ${cm.n_schemes} dams placed</b>
+       from ${esc(cm.source || "supplied coordinates")}${
+         cm.pct_capacity_placed
+           ? `, which is <b>${cm.pct_capacity_placed}%</b> of the state's design
+              capacity — the unplaced are nearly all small schemes` : ""}.
+       District and state boundaries are drawn as outlines only — no area is
+       filled, so no colour on this map stands for a district.
+       <br><br>
+       <b>No point here is a guess.</b> The register gives a latitude and
+       longitude for each dam; matching those rows to the WRD schemes is the
+       hard part, and a name resembling another name never places a dam. Every
+       point is corroborated by something that is not the name:
+       ${verified} agree with WRD's published design capacity to within 10% and
+       fall inside the district WRD assigns them${
+         tierN("B") ? `, ${tierN("B")} fall in the right district and match its
+         taluka` : ""}${
+         tierN("C") ? `, and ${tierN("C")} fall in the right district on an
+         exact name match` : ""}.
        ${cm.n_placed < cm.n_schemes
-         ? `The ${cm.n_schemes - cm.n_placed} without coordinates are not
-            plotted and are not implied to be anywhere; they remain in the
-            tables.` : ""}</div>`
+         ? `<br><br><b>The ${cm.n_schemes - cm.n_placed} not placed are not
+            drawn and are not implied to be anywhere</b>; they remain in the
+            tables and in the strip above.
+            ${pel_ex.length ? pel_ex.map(e =>
+              `${e.n} ${esc(e.reason)}`).join("; ") + "." : ""}
+            The register's own coordinate is wrong for a handful of dams — it
+            puts them 41 to 170&nbsp;km outside their district, contradicting
+            the nearest town the register itself prints — and those are left
+            off rather than drawn where the file says.` : ""}
+       ${cm.n_outside_state
+         ? `<br><br>One dam is drawn just <b>outside</b> the state outline, and
+            that is correct rather than a slip: the Damanganga dam sits on the
+            river at the Gujarat border and was built jointly with Dadra &amp;
+            Nagar Haveli, so the register's coordinate for it falls about a
+            kilometre beyond the boundary drawn here. Its water is Gujarat's
+            and the report carries it, so it is plotted where it is.` : ""}
+       </div>`
     : `<summary>Not a map &mdash; the source publishes no coordinates. Why, and what would fix it.</summary>
        <div class="pbody"><b>This is not a map, and it cannot be one from this source.</b>
        The WRD daily report gives each dam a <b>district and taluka but never a

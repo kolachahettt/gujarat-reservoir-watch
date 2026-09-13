@@ -59,6 +59,10 @@ DB = Path("data/processed/reservoir.duckdb")
 # map cannot be drawn, because the WRD report publishes district and taluka but
 # never coordinates. Columns: scheme_id, lat, lon [, source].
 COORDS = Path("data/reference/dam_coordinates.csv")
+# Written by the same script. Every scheme NOT placed, with the reason, so the
+# page can say which of the 206 are absent and why rather than just omitting
+# them silently.
+COORDS_EX = Path("data/reference/dam_coordinates_excluded.csv")
 SEASON_CAP = Path("data/processed/season_capacity.csv")
 MID = Path("data/processed/capacity_midseason_exceptions.csv")
 LEDGER = Path("data/interim/backfill_ledger.csv")
@@ -497,7 +501,35 @@ def main():
                 "source": (str(cdf["source"].iloc[0])
                            if "source" in cdf.columns and len(cdf) else "supplied"),
             })
-            print(f"coordinates: {len(coords)} of {len(tod)} schemes placed")
+            # The evidence mix travels with the coordinates. A map that places
+            # 183 of 206 has to be able to say what placed them and why the
+            # rest are missing, and neither fact can live only in a commit
+            # message — the page states it, so the page needs the numbers.
+            if "tier" in cdf.columns:
+                coords_meta["tiers"] = {
+                    str(k): int(v) for k, v in
+                    cdf["tier"].value_counts().sort_index().items()}
+            # Share of design capacity placed, which is the number that says
+            # how much of the STORAGE the map accounts for. 183 of 206 schemes
+            # is 98.8% of capacity, because the unplaced are nearly all small.
+            placed_mcm = float(tod[tod["scheme_id"].isin(coords)]
+                               ["design_gross_mcm"].sum())
+            all_mcm = float(tod["design_gross_mcm"].sum())
+            coords_meta["pct_capacity_placed"] = (
+                round(placed_mcm / all_mcm * 100, 1) if all_mcm else None)
+            if "outside_state_outline" in cdf.columns:
+                coords_meta["n_outside_state"] = int(
+                    (cdf["outside_state_outline"].astype(str).str.lower()
+                     == "yes").sum())
+            if COORDS_EX.exists():
+                exdf = pd.read_csv(COORDS_EX)
+                coords_meta["excluded"] = [
+                    {"reason": str(k), "n": int(v)} for k, v in
+                    exdf["reason"].value_counts().items()]
+                coords_meta["n_excluded"] = int(len(exdf))
+            print(f"coordinates: {len(coords)} of {len(tod)} schemes placed "
+                  f"({coords_meta['pct_capacity_placed']}% of capacity); "
+                  f"tiers {coords_meta.get('tiers')}")
 
     # ---- provenance --------------------------------------------------------
     led = pd.read_csv(LEDGER, dtype={"report_date": str})

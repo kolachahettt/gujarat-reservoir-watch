@@ -1,0 +1,28 @@
+scheme_id,scheme_name,district,design_gross_mcm,reason,detail
+19,Bhadar (P),Mahisagar,30.95,"parenthetical variant, capacity disagrees",'Bhadar' differs by 87.0%
+21,Machchhanala,Dahod,27.75,matched but nothing corroborates it,"'Machhanala': name match is a transliteration fold, taluka does not match, and capacity differs by 26.8%"
+23,WNKL.-BHEY,Dahod,13.3,matched but nothing corroborates it,"'Vankol': name match is a transliteration fold, taluka does not match, and capacity differs by 96.8%"
+32,Javanpura,Sabarkantha,2.5,no NRLD row found,best name similarity 0.71 to 'Hasanpur'
+65,Khodiyar,Amreli,29.94,NRLD coordinate contradicts the district,"'Khodiyar' at 21.7206,72.0047 is 41 km outside Amreli, capacity differs by 7.1%"
+67,Dhatarvadi,Amreli,26.92,NRLD coordinate contradicts the district,"'Wada tharawada' at 23.1683,70.0225 is 170 km outside Amreli, capacity differs by 96.3%"
+86,Hanol,Bhavnagar,5.6,NRLD coordinate contradicts the district,"'Hanol' at 21.6206,70.7425 is 75 km outside Bhavnagar, capacity differs by 0.0%"
+93,Ghelo-I,Amreli,10.09,no NRLD row found,best name similarity 0.40 to 'Adhoi-I'
+107,Kankavati,Jamnagar,6.82,NRLD coordinate contradicts the district,"'Kankavati' at 22.9950,71.2514 is 63 km outside Jamnagar, capacity differs by 0.2%"
+113,Phophal-II,Jamnagar,6.13,no NRLD row found,best name similarity 0.57 to 'Fulzar II'
+117,Shedhabhadthari,Devbhumi Dwarka,5.62,no NRLD row found,best name similarity 0.80 to 'Bed TR'
+118,Veradi,Devbhumi Dwarka,6.42,no NRLD row found,best name similarity 0.86 to 'Vardhari'
+122,Sindhani,Devbhumi Dwarka,8.73,near the district edge and capacity disagrees,"'Sindhani' at 21.9500,70.3500 is 7 km outside Devbhumi Dwarka, capacity differs by 29.9%"
+136,Bantva-Kharo,Junagadh,6.68,matched but nothing corroborates it,"'Bantwakharo': name match is a transliteration fold, taluka does not match, and capacity differs by 99.0%"
+147,Advana,Porbandar,2.61,no NRLD row found,best name similarity 0.83 to 'Ravana'
+174,Ghelo - S,Rajkot,6.06,no NRLD row found,best name similarity 0.80 to 'Ghasia'
+179,Kabir-Sarovar,Rajkot,6.49,no NRLD row found,best name similarity 0.77 to 'Bhadreshwar'
+186,Nimbmani,Surendranagar,6.18,no NRLD row found,best name similarity 0.67 to 'Limbali'
+195,Minsar (V),Devbhumi Dwarka,5.85,"parenthetical variant, capacity disagrees",'Daiminisar' differs by 47.3%
+197,Khedva,Sabarkantha,7.63,no NRLD row found,best name similarity 0.86 to 'Kuvadwa'
+199,Saran,Porbandar,1.69,no NRLD row found,best name similarity 0.86 to 'Surkhan'
+201,Gorathiya,Sabarkantha,4.15,no NRLD row found,best name similarity 0.80 to 'Ratia'
+202,Varansi,Kheda,3.18,no NRLD row found,best name similarity 0.86 to 'Virani'
+204,Rana Khirasara,Porbandar,4.02,no NRLD row found,best name similarity 0.62 to 'Khengar Sagar'
+205,Sasoi-II,Jamnagar,2.43,no NRLD row found,best name similarity 0.50 to 'Mesaria-2'
+206,Wagadiya,Jamnagar,2.27,NRLD coordinate contradicts the district,"'Vigodi' at 23.4850,69.0631 is 111 km outside Jamnagar, capacity differs by 13.7%"
+137,Ozat-Weir,Junagadh,1.95,NRLD row already claimed by a closer match,"'Ozat Weir (Vanthali)' is also scheme 138, which agrees on capacity to 0.0% against this one's 8.21%"
