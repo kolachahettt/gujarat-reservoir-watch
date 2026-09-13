@@ -198,6 +198,39 @@ details.meth div,details.meth li,.placement .pbody,footer.ft{
 h1{max-width:50ch}
 h2,h2 .q{max-width:52ch}
 
+/* ---------- the six stages ----------
+   The page was fourteen full-width siblings in one flow, separated by gaps of
+   9 to 30px with no common unit and no section boundaries — nothing told a
+   reader where one idea ended and the next began. Stages give it joints. */
+.stage{padding:34px 0 8px;border-top:1px solid var(--border)}
+.stage:first-of-type{padding-top:14px;border-top:0}
+/* The eyebrow labels the stage and is the same string as its mini-nav link, so
+   arriving from the nav lands on a matching label rather than on a guess. */
+.eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.08em;
+  color:var(--muted);margin:0 0 6px;font-weight:600}
+/* Sub-headings inside a stage: the two deviation tables are subordinate to the
+   stage heading, not siblings of it, so they step down rather than repeat h2. */
+.sub-h{font-size:var(--t-lg);font-weight:600;margin:26px 0 3px;max-width:52ch;
+  letter-spacing:-.01em}
+
+/* ---------- sticky mini-nav ----------
+   Replaces the tab bar, and sits after stage 2 rather than before the
+   headline: navigation ahead of the finding is dashboard chrome. Because the
+   stages are all in the document now, these are in-page links, not a mode
+   switch — so a reader who scrolls past them loses nothing. */
+.mininav{position:sticky;top:0;z-index:30;display:flex;flex-wrap:wrap;gap:2px;
+  margin:18px 0 0;padding:7px 0;background:var(--page);
+  border-bottom:1px solid var(--border)}
+.mininav a{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text-secondary);text-decoration:none;padding:5px 9px;
+  border-radius:5px;white-space:nowrap}
+.mininav a:hover{background:var(--surface-1);color:var(--text-primary)}
+.mininav a:focus-visible{outline:2px solid var(--now-text);outline-offset:1px}
+.mininav a[aria-current="true"]{background:var(--surface-1);
+  color:var(--text-primary);font-weight:600}
+/* Anchored sections must clear the sticky bar when jumped to. */
+.stage{scroll-margin-top:52px}
+
 /* ---------- masthead as kicker, h1 as the finding ---------- */
 /* The site name and date, above a headline that now asserts something. Small
    and uppercase so it reads as identification rather than competing with the
@@ -474,7 +507,9 @@ code{overflow-wrap:anywhere;word-break:break-word}
 </head>
 <body>
 <div class="viz-root" id="root">
-  <a class="skip" href="#main">Skip to the data</a>
+  <!-- Targets the first stage rather than <main>, so it lands on the chart
+       and not on the top of a container. -->
+  <a class="skip" href="#stage-proof">Skip to the data</a>
 
   <!-- One polite live region for the whole page. Announcements that are
        transient events rather than content — a CSV saved, a view changed —
@@ -493,23 +528,6 @@ code{overflow-wrap:anywhere;word-break:break-word}
       <p class="deck" id="deck" hidden></p>
       <div class="prov" id="prov"></div>
     </div>
-    <div class="srch">
-      <label for="q">Find a scheme</label>
-      <input id="q" type="text" placeholder="Name or district — e.g. Dholidhaja, Kachchh"
-             autocomplete="off" spellcheck="false">
-      <div class="results" id="res"></div>
-      <div class="hdrow">
-        <div class="views" role="group" aria-label="View">
-          <button id="vSeason" aria-current="true">Season</button>
-          <button id="vRegions" aria-current="false">Regions</button>
-          <button id="vSchemes" aria-current="false">Schemes</button>
-        </div>
-        <button id="dlCsv" class="dlbtn" type="button"
-                title="Download all 206 schemes for this report date as CSV">
-          &darr; CSV
-        </button>
-      </div>
-    </div>
   </header>
 
   <!-- Outside every view, not inside the Season one: how old the data is
@@ -521,11 +539,60 @@ code{overflow-wrap:anywhere;word-break:break-word}
        moved here programmatically without putting it in the tab order. -->
   <main id="main" tabindex="-1">
 
-  <div class="detail" id="detail"></div>
+  <!-- ================= SIX STAGES, ONE READING ORDER =================
+       This was three mutually exclusive tab views plus an undifferentiated
+       stack inside the default one. Tabs make three parallel stories and no
+       reading order; a single finding wants one path. So the former Regions
+       and Schemes views become stages 3 and 5 of a sequence, and the tab bar
+       is gone.
 
-  <section id="viewRegions" hidden>
-    <h2 style="margin-top:14px"><span id="regTitle">Which region is having the
-      worst season</span>
+       Stage 1 is the header above: kicker, headline, deck.
+         2  the proof        the state series with the gap drawn
+         3  the breadth      which region is worst
+         4  the depth        every region's season, then the worst reservoirs
+         5  look it up       search, the scatter, a scheme's detail
+         6  the working      method, definitions, provenance
+
+       Each stage carries an eyebrow that doubles as its mini-nav label, and a
+       heading that asserts what the stage shows rather than naming its
+       contents. Where a generated chart title already asserts it (stages 2 and
+       3) there is no second heading competing with it. -->
+
+  <section class="stage" id="stage-proof" aria-labelledby="stTitle">
+    <p class="eyebrow">The state of it</p>
+    <section class="headline">
+      <div class="hero">
+        <div class="n" id="heroN"></div>
+        <div class="u" id="heroU"></div>
+        <div class="sub" id="heroS"></div>
+      </div>
+      <div class="statechart">
+        <div class="fh"><span class="nm" id="stTitle">Gujarat — all 206 schemes</span>
+          <span class="meta" id="stMeta"></span></div>
+        <div class="plot" id="statePlot"></div>
+        <div class="cross" id="stCross"></div>
+        <!-- Year swatches only. The rain and facet-ordering items moved to
+             stage 4 with the charts they describe. -->
+        <div class="legend" id="legendYears"></div>
+      </div>
+    </section>
+  </section>
+
+  <!-- Sticky, and AFTER stage 2 rather than before the headline: navigation
+       that precedes the finding is dashboard chrome. It replaces the tab bar,
+       and because the stages are now all in the document it is a set of
+       in-page links rather than a mode switch. -->
+  <nav class="mininav" id="mininav" aria-label="Jump to a stage">
+    <a href="#stage-proof">The state of it</a>
+    <a href="#stage-breadth">Which region</a>
+    <a href="#stage-depth">Inside the regions</a>
+    <a href="#stage-lookup">Look up a reservoir</a>
+    <a href="#stage-working">How this is built</a>
+  </nav>
+
+  <section class="stage" id="stage-breadth" aria-labelledby="regTitle">
+    <p class="eyebrow">Which region</p>
+    <h2><span id="regTitle">Which region is having the worst season</span>
       <span class="q">All five regions on one chart, current season only, each
         measured against <em>its own</em> prior four-year mean. Levels alone
         would conflate a structurally dry region with one having a bad
@@ -535,51 +602,69 @@ code{overflow-wrap:anywhere;word-break:break-word}
     <div class="cross" id="regNote"></div>
   </section>
 
-  <section id="viewSchemes" hidden>
-    <h2 style="margin-top:14px">All 206 schemes — one point each
+  <section class="stage" id="stage-depth" aria-labelledby="depthTitle">
+    <p class="eyebrow">Inside the regions</p>
+    <h2><span id="depthTitle">Every region's season, and the reservoirs
+      furthest below their own average</span>
+      <span class="q">Each region's five seasons on an aligned day-of-season
+        axis, with daily rainfall beneath, then the individual reservoirs
+        ranked two ways.</span></h2>
+    <div class="legend" id="legend"></div>
+    <div class="grid" id="grid"></div>
+
+    <h3 class="sub-h">Largest negative deviations — percentage points
+      <span class="q">Today's % filling against the mean % filling on the same calendar
+        date in prior years, for the years whose published capacity matches today's.
+        Answers: where is the drop deepest relative to this reservoir's own record?</span></h3>
+    <div id="tblPP"></div>
+
+    <h3 class="sub-h">The same comparison weighted by volume
+      <span class="q">Implied shortfall in MCM against the prior same-date mean.
+        Answers: where is the largest quantity of water missing? A different
+        question, and a different list.</span></h3>
+    <div id="tblVol"></div>
+  </section>
+
+  <section class="stage" id="stage-lookup" aria-labelledby="lookupTitle">
+    <p class="eyebrow">Look up a reservoir</p>
+    <h2><span id="lookupTitle">Find one of the 206 by name, or pick it off the
+      chart</span>
       <span class="q">Sized by design capacity, coloured by deviation from the
         same-date mean of prior years. Points only; no filled areas.</span></h2>
+    <!-- The search moved here out of the header. It is a tool for answering
+         your own question, which is this stage's job, not an entry point. -->
+    <div class="srch">
+      <label for="q">Find a scheme</label>
+      <input id="q" type="text" placeholder="Name or district — e.g. Dholidhaja, Kachchh"
+             autocomplete="off" spellcheck="false">
+      <div class="results" id="res"></div>
+    </div>
     <details class="placement" id="placement"></details>
     <div class="filters" id="filters"></div>
     <div class="scat"><div id="scatPlot"></div><div class="dotleg" id="scatLeg"></div></div>
+    <!-- Default home for the scheme detail. It used to be the first child of
+         <main>, above everything, so clicking a point down here scrolled the
+         reader UP to a panel above the chart they had just clicked. It now
+         opens next to whatever opened it. -->
+    <div class="detail" id="detail"></div>
   </section>
 
-  <section id="viewSeason">
-  <section class="headline">
-    <div class="hero">
-      <div class="n" id="heroN"></div>
-      <div class="u" id="heroU"></div>
-      <div class="sub" id="heroS"></div>
+  <section class="stage" id="stage-working">
+    <p class="eyebrow">How this is built</p>
+    <!-- The CSV lived in the header beside the tab bar. Downloading the data
+         is the last thing a reader does, not the first, so it sits with the
+         method and the provenance. -->
+    <div class="hdrow">
+      <button id="dlCsv" class="dlbtn" type="button"
+              title="Download all 206 schemes for this report date as CSV">
+        &darr; CSV
+      </button>
     </div>
-    <div class="statechart">
-      <div class="fh"><span class="nm" id="stTitle">Gujarat — all 206 schemes</span>
-        <span class="meta" id="stMeta"></span></div>
-      <div class="plot" id="statePlot"></div>
-      <div class="cross" id="stCross"></div>
-    </div>
+    <details class="meth">
+      <summary>How these figures are built — parameters, exclusions and limits</summary>
+      <div id="meth"></div>
+    </details>
   </section>
-
-  <div class="legend" id="legend"></div>
-
-  <div class="grid" id="grid"></div>
-
-  <h2>Largest negative deviations — percentage points
-    <span class="q">Today's % filling against the mean % filling on the same calendar
-      date in prior years, for the years whose published capacity matches today's.
-      Answers: where is the drop deepest relative to this reservoir's own record?</span></h2>
-  <div id="tblPP"></div>
-
-  <h2>The same comparison weighted by volume
-    <span class="q">Implied shortfall in MCM against the prior same-date mean.
-      Answers: where is the largest quantity of water missing? A different
-      question, and a different list.</span></h2>
-  <div id="tblVol"></div>
-  </section><!-- /viewSeason -->
-
-  <details class="meth">
-    <summary>How these figures are built — parameters, exclusions and limits</summary>
-    <div id="meth"></div>
-  </details>
 
   </main>
 
@@ -776,6 +861,39 @@ function deckText(d, inSeason){
         + `for this date. <b>${esc(worst.name)}</b> ${is} furthest behind at `
         + `${Math.abs(worst.dev).toFixed(1)} points, while `
         + `<b>${esc(best.name)}</b> ${is} ${best.dev.toFixed(1)} above.`};
+}
+
+/* ---- Stage 4's heading: where the worst reservoirs actually are ----
+   Stage 3 gives regional averages. What is new at stage 4 is the CONCENTRATION
+   of individual reservoirs: today all twenty of the furthest-below are in
+   Saurashtra and Kutch, and none in the other three regions. An average can
+   be dragged down by a few; this says whether it was.
+
+   Reads deviation_pp, which is already the ranked worst-N list. */
+function depthTitle(d, inSeason){
+  const rows = d.deviation_pp || [];
+  if(!rows.length) return {branch: "Z",
+    text: "Every region's season, and the reservoirs furthest below their own "
+        + "average"};
+  const byReg = new Map();
+  for(const r of rows){
+    const n = regName(r.region);
+    byReg.set(n, (byReg.get(n) || 0) + 1);
+  }
+  const ranked = [...byReg.entries()].sort((a, b) => b[1] - a[1]);
+  const n = rows.length;
+  const are = inSeason ? "are" : "were";
+  if(ranked.length === 1) return {branch: "A",
+    text: `All ${numWord(n)} of the reservoirs furthest below their own `
+        + `average ${are} in <b>${esc(ranked[0][0])}</b>`};
+  if(ranked.length === 2) return {branch: "B",
+    text: `The ${numWord(n)} reservoirs furthest below their own average `
+        + `${are} all in <b>${esc(ranked[0][0])}</b> and `
+        + `<b>${esc(ranked[1][0])}</b>`};
+  return {branch: "C",
+    text: `The ${numWord(n)} reservoirs furthest below their own average `
+        + `${are} spread across ${numWord(ranked.length)} regions, led by `
+        + `<b>${esc(ranked[0][0])}</b> with ${ranked[0][1]}`};
 }
 
 /* ---- Title 2: the state chart ----
@@ -1882,7 +2000,10 @@ let GEO = {state:null, districts:null};
 let REG = {};
 const regName = c => REG[c] || c;
 
-let CURRENT_VIEW = "Season";
+/* Was CURRENT_VIEW, restored after a breakpoint re-render so a phone rotation
+   did not throw you back to the default tab. With the tabs gone there is no
+   view to restore: every stage is always in the document, and the scroll
+   position survives a re-render by itself. */
 let RENDERED_AT = null;
 
 function render(d){
@@ -1937,6 +2058,7 @@ function render(d){
   }
   setTitle("stTitle", stateChartTitle(d, inSeason));
   setTitle("regTitle", regionsTitle(d, inSeason));
+  setTitle("depthTitle", depthTitle(d, inSeason));
   document.getElementById("kicker").textContent =
     `Gujarat Reservoir Watch · ${m.report_date}`;
 
@@ -1997,18 +2119,28 @@ function render(d){
      <div class="tv" id="tv-state">${tableView(stSeries, s.day_of_season,"state")}</div>`;
 
   /* legend */
-  document.getElementById("legend").innerHTML =
+  /* ---- the legend, split between the two stages it serves ----
+     It was one band sitting under the state chart while five of its seven
+     items described the FACETS, which after the reorder are two stages away.
+     The year swatches and the crossing marker belong to both charts, so they
+     stay with the state chart in stage 2; the rain items, the shared rain
+     scale and the facet-ordering note go to stage 4 with the charts they
+     describe. Not a duplicated legend — two legends for two figures. */
+  const yearSwatches =
     `<span class="it"><span class="sw thick" style="border-color:var(--now)"></span>
-       <b style="color:var(--text-primary)">2026</b> — current season</span>
+       <b style="color:var(--text-primary)">${m.season_current}</b> — current season</span>
      <span class="sep">|</span>
      ` + YRS.map(y =>
       `<span class="it"><span class="sw thin" style="border-color:${COL[y]}"></span>${y}</span>`
      ).join("") +
     `<span class="sep">|</span>
      <span class="it"><span class="sw dash" style="border-color:var(--text-secondary)"></span>
-       crossed below all prior years</span>
+       crossed below all prior years</span>`;
+  document.getElementById("legendYears").innerHTML = yearSwatches;
+  document.getElementById("legend").innerHTML = yearSwatches +
+    `<span class="sep">|</span>
      <span class="it"><span class="sw bar" style="background:var(--now);opacity:.6"></span>
-       2026 rain, mm/day</span>
+       ${m.season_current} rain, mm/day</span>
      <span class="it"><span class="sw thin" style="border-color:var(--muted)"></span>
        prior-year mean rain</span>
      <span class="sep">|</span>
@@ -2292,7 +2424,10 @@ function renderSchemesView(){
 function wirePoints(){
   document.querySelectorAll("#scatPlot .pt").forEach(c => c.onclick = () => {
     const s = DATA.schemes.find(x => x.scheme_id === +c.dataset.id);
-    if(window.__showDetail) window.__showDetail(s);
+    /* Anchored to the scatter's own container, so the panel appears directly
+       beneath the chart the point was clicked on. */
+    if(window.__showDetail)
+      window.__showDetail(s, document.querySelector("#stage-lookup .scat"));
   });
 }
 
@@ -2383,7 +2518,10 @@ function wire(){
         ${f1(s.pct_filling)}%</span></button>`).join("");
     res.classList.add("on");
     res.querySelectorAll("button").forEach(b => b.onclick = () => {
-      detail(DATA.schemes.find(x => x.scheme_id === +b.dataset.id));
+      /* Anchored to the search block: a result picked from the box should
+         appear under the box, not somewhere else on the page. */
+      detail(DATA.schemes.find(x => x.scheme_id === +b.dataset.id),
+             document.querySelector(".srch"));
       res.classList.remove("on"); q.value = "";
     });
   };
@@ -2398,8 +2536,17 @@ function wire(){
     if(!e.target.closest(".srch")) res.classList.remove("on");
   });
 
-  function detail(s){
+  /* ---- the detail panel opens where it was asked for ----
+     #detail used to be the first child of <main>, above every view. Clicking
+     a point in the scatter — which is near the bottom of the page — called
+     scrollIntoView on a panel above the chart you had just clicked, so the
+     reader was thrown upward past everything. The panel now moves in the DOM
+     to sit after whatever opened it: under the search box when the search
+     opened it, under the scatter when a point did. Its home is stage 5. */
+  function detail(s, anchor){
     if(!s) return;
+    if(anchor && anchor.parentNode && det.previousElementSibling !== anchor)
+      anchor.insertAdjacentElement("afterend", det);
     const rel = s.outflow_canal_cusecs > 0;
     /* Precision has to match the magnitude. Ukai at 800 cusecs against 5,043
        MCM live computes to 2,576.8 days; quoting a seven-year figure to a
@@ -2467,48 +2614,65 @@ function wire(){
   }
   window.__showDetail = detail;
 
-  /* view switching — Season stays the default; Schemes is a destination */
-  const vs = {Season: document.getElementById("viewSeason"),
-              Regions: document.getElementById("viewRegions"),
-              Schemes: document.getElementById("viewSchemes")};
-  const bs = {Season: document.getElementById("vSeason"),
-              Regions: document.getElementById("vRegions"),
-              Schemes: document.getElementById("vSchemes")};
-  const go = k => {
-    for(const [name, el] of Object.entries(vs)){
-      el.hidden = name !== k;
-      bs[name].setAttribute("aria-current", String(name === k));
-    }
-    document.getElementById("detail").classList.remove("on");
-    scrollTo({top:0, behavior:"smooth"});
-  };
-  // Restore the view across a breakpoint re-render, so rotating a phone does
-  // not silently throw you back to the default view.
-  if(CURRENT_VIEW !== "Season"){
-    for(const [name, el] of Object.entries(vs)){
-      el.hidden = name !== CURRENT_VIEW;
-      bs[name].setAttribute("aria-current", String(name === CURRENT_VIEW));
+  /* ---- mini-nav: mark the stage the reader is actually in ----
+     A sticky nav with no current state is a list of links; with one it tells
+     you where you are.
+
+     This was an IntersectionObserver, which is the cheaper tool and the one
+     reached for by habit. It is not used here because its callback could not
+     be made to fire in the environment this was built in — a fresh observer
+     watching a section that demonstrably intersected its root margin never
+     called back. That is very likely a harness artefact rather than a browser
+     one, but shipping behaviour whose only defence is "it works elsewhere" is
+     not a defence. A rAF-throttled scroll listener does the same job, costs
+     one rect read per frame at most, and can be tested by scrolling.
+
+     currentStage() is pure and separately testable: given the scroll position
+     it returns the stage whose top has passed the reading line. */
+  const navLinks = [...document.querySelectorAll("#mininav a")];
+  const navStages = navLinks
+    .map(a => ({a, el: document.querySelector(a.getAttribute("href"))}))
+    .filter(o => o.el);
+
+  /* The reading line sits below the sticky bar, a third of the way down the
+     viewport: the stage a reader is reading is the last one to have started
+     above that line, not whichever happens to be tallest on screen. */
+  function currentStage(){
+    /* At the bottom of the document the last stage is current by definition —
+       the reader cannot scroll further. Without this the final stage can never
+       be marked: it is the shortest section on the page, so even at maximum
+       scroll its top stays 545px down, well below the reading line, and its
+       nav link would be dead. Found by walking every stage and checking the
+       mark, not by reading the loop. */
+    const atEnd = scrollY + innerHeight >=
+      document.documentElement.scrollHeight - 2;
+    if(atEnd && navStages.length) return navStages[navStages.length - 1];
+    const line = 56 + innerHeight * 0.28;
+    let active = null;
+    for(const o of navStages)
+      if(o.el.getBoundingClientRect().top <= line) active = o;
+    return active || navStages[0] || null;
+  }
+  function markStage(){
+    const active = currentStage();
+    for(const o of navStages){
+      if(o === active) o.a.setAttribute("aria-current", "true");
+      else o.a.removeAttribute("aria-current");
     }
   }
-  /* Switching view swaps the whole content area while focus stays on the
-     button, so without this a screen-reader user hears nothing and has no way
-     to know the page changed under them. Announced from __go rather than from
-     go(), because go() also runs on the breakpoint re-render — announcing
-     there would report a view change every time a phone was rotated. */
-  const VIEW_SAID = {
-    Season: "Season view: state headline, the all-schemes chart, five regional "
-          + "facets and both deviation tables",
-    Regions: "Regions view: all five regions on one chart, current season only",
-    Schemes: "Schemes view: all 206 schemes as one point each",
-  };
-  window.__go = k => {
-    CURRENT_VIEW = k;
-    go(k);
-    announce(VIEW_SAID[k] || `${k} view`);
-  };
-  bs.Season.onclick = () => window.__go("Season");
-  bs.Regions.onclick = () => window.__go("Regions");
-  bs.Schemes.onclick = () => window.__go("Schemes");
+  window.__markStage = markStage;
+  window.__currentStage = () => { const c = currentStage(); return c && c.el.id; };
+  if(navStages.length){
+    let queued = false;
+    const onScroll = () => {
+      if(queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; markStage(); });
+    };
+    addEventListener("scroll", onScroll, {passive:true});
+    addEventListener("resize", onScroll);
+    markStage();
+  }
 
   const dl = document.getElementById("dlCsv");
   if(dl) dl.onclick = () => downloadCsv(dl);
