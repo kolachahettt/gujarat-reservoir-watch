@@ -569,6 +569,45 @@ h2,h2 .q{max-width:52ch}
    three tables, and it would jank. One textContent write lets the style system
    do the work it is for. */
 .fx{transition:opacity .12s linear}
+
+/* ---------- motion, and the two places it is allowed ----------
+   Motion earns its place only when it encodes something.
+
+   1. THE STATE CHART'S 2026 LINE DRAWS LEFT TO RIGHT. The x axis is time, so
+      drawing a time series IN time is the one animation that is about the data
+      rather than about itself.
+   2. THE GAP ANNOTATION AND THE CROSSOVER MARKER ARRIVE AFTER IT SETTLES, so
+      the eye is led: the shape first, then "18.0 points below". That is the
+      annotation choreography, and it is why the delay is a delay and not a
+      second animation.
+
+   Nothing else moves. No parallax, no fade-in-on-scroll for prose — the tell
+   of a template — and no counters. The hero number deliberately does NOT
+   count up: on something checked daily, a number that moves unasked reads as a
+   glitch rather than a finding.
+
+   ONLY THE STATE CHART. The five facet panels use the same drawing code and
+   are left alone: one reveal per graphic, and five lines racing each other is
+   noise, not choreography.
+
+   KEYFRAMES, NOT requestAnimationFrame. rAF does not fire in a hidden tab, and
+   an animation whose first frame never runs would leave the line permanently
+   invisible. Keyframes are driven by the compositor and need no frame
+   callback, which also means this is observable in an environment where rAF is
+   not.
+
+   THE INITIAL STATE IS SET BY JS, NEVER BY THIS STYLESHEET. If the CSS hid the
+   line by default, then with scripting off — or with any JS error before the
+   arming step — the page would render a chart with no 2026 series at all. The
+   final state is the document's state and the animation is an enhancement
+   layered on top, so the worst case is that nothing moves. */
+@keyframes fx-draw{from{stroke-dashoffset:var(--fx-len)}to{stroke-dashoffset:0}}
+@keyframes fx-arrive{from{opacity:0}to{opacity:1}}
+/* Belt and braces alongside the JS guard: asked to reduce, nothing moves even
+   if something else arms it later. */
+@media (prefers-reduced-motion:reduce){
+  [style*="fx-draw"],[style*="fx-arrive"]{animation:none !important}
+}
 .facet[tabindex]:focus-visible,
 #tblRegions tbody tr[tabindex]:focus-visible{
   outline:2px solid var(--text-primary);outline-offset:2px}
@@ -1755,7 +1794,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
   /* Wider than it was. With the reference ramp pushed above the contrast
      floor, lightness can no longer make 2026 the loudest line, so width and
      hue carry it: 3.0 against the ramp's 1.4. */
-  const cur = `<path d="${cp}" fill="none" stroke="var(--now)"
+  const cur = `<path class="cur" d="${cp}" fill="none" stroke="var(--now)"
     stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
   /* direct label on the one series that matters.
      It sits above the endpoint by default. When the series ends high that puts
@@ -1850,7 +1889,8 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
         showRain ? ", with daily rainfall below" : ""}${gapSaid}"
       data-id="${idPrefix}"
       data-vbw="${GG.W}" data-padl="${GG.PADL}" data-padr="${GG.PADR}">
-    ${g}${ax}${lrRule}${pri}${cur}${mk}${lab}${lrLab}${rr}${gapAnn}
+    ${g}${ax}${lrRule}${pri}${cur}<g class="arrive">${mk}</g><g
+      class="arrive">${lab}</g>${lrLab}${rr}<g class="arrive">${gapAnn}</g>
     <line class="xh" x1="0" x2="0" y1="4" y2="${hitH}" stroke="var(--text-secondary)"
       stroke-width="1" opacity="0" pointer-events="none"/>
     <rect class="hit" x="${GG.PADL}" y="0" width="${GG.W-GG.PADL-GG.PADR}" height="${hitH}"
@@ -2692,6 +2732,13 @@ function render(d){
     chartSVG(stSeries, null, s.crossover, s.day_of_season, "state", false,
       {gap: {pctNow: s.pct_now, meanPrior: s.mean_prior_at_now,
              nPrior: Object.keys(s.prior_at_now || {}).length}});
+  /* Armed immediately after the chart is in the document, in the same task, so
+     the first painted frame is already the from-state. Deferring it would show
+     the finished line for a frame and then hide it to animate — a flash, which
+     is worse than no animation. No scroll trigger and no IntersectionObserver:
+     this chart is the first figure on the page, so its arrival IS page load,
+     and the observer could not be made to fire in this environment anyway. */
+  animateStateChart();
   document.getElementById("stCross").innerHTML =
     crossText(s.crossover, "Gujarat") +
     `<button class="tblbtn" data-tv="state">Show as table</button>
@@ -3108,6 +3155,77 @@ function wirePoints(){
       window.__showDetail(s, document.querySelector("#stage-lookup .scat"));
   });
 }
+
+/* ---------------- motion ----------------
+   Two animations, on the state chart only, and both ARMED FROM HERE rather
+   than from the stylesheet. The document's own state is the finished chart;
+   this layers a reveal on top of it. If this function never runs — scripting
+   off, an exception above it, a browser that does not like something here —
+   the reader gets the final frame, which is the whole chart. The failure mode
+   of motion should be stillness, never a missing series.
+
+   Plays ONCE. render() runs again when the breakpoint is crossed, and a line
+   that redraws itself every time a window is resized past 560px is a fault,
+   not a flourish. */
+let FX_PLAYED = false;
+const fxReduced = () =>
+  matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function animateStateChart(){
+  if(FX_PLAYED || fxReduced()) return;
+  const svg = document.querySelector("#statePlot svg");
+  if(!svg) return;
+  FX_PLAYED = true;
+  const line = svg.querySelector("path.cur");
+  if(line){
+    let L = 0;
+    /* getTotalLength throws on a malformed or empty path in some engines, and
+       a thrown exception here would abort the arming of the annotations too. */
+    try { L = line.getTotalLength(); } catch(e) { L = 0; }
+    if(L > 0){
+      /* The dash IS the reveal: one dash as long as the path, offset by its
+         own length, walked back to zero.
+         CLEARED WHEN IT FINISHES, and that is not tidiness. A dash exactly as
+         long as the path is NOT the same picture as no dash: comparing the
+         settled render against the reduced-motion one showed 1,426 pixels
+         differing, all inside x 1062-1259 / y 415-513 — the end of the line,
+         clipped by the last fraction of the dash. Removing the properties
+         returns the element to the state the page would have had if nothing
+         had ever animated. */
+      line.style.setProperty("--fx-len", L);
+      line.style.strokeDasharray = L;
+      line.style.animation = "fx-draw .7s ease-out both";
+      line.addEventListener("animationend", () => {
+        line.style.animation = "";
+        line.style.strokeDasharray = "";
+        line.style.removeProperty("--fx-len");
+      }, {once: true});
+    }
+  }
+  /* .68s, just inside the line's .7s, so the annotation lands as the line
+     settles rather than after a visible pause. `both` matters: without the
+     backwards fill these would be painted at full opacity for the first frame
+     and then blink out when the delay began. */
+  for(const g of svg.querySelectorAll("g.arrive")){
+    g.style.animation = "fx-arrive .32s ease-out .68s both";
+    /* Same reason as the line: the end state is opacity 1, which is the
+       default, so dropping the animation leaves nothing behind at all. */
+    g.addEventListener("animationend", () => { g.style.animation = ""; },
+                       {once: true});
+  }
+}
+window.__fx = () => {
+  const svg = document.querySelector("#statePlot svg");
+  const line = svg && svg.querySelector("path.cur");
+  return {
+    played: FX_PLAYED, reduced: fxReduced(),
+    lineAnim: line ? line.style.animation : null,
+    lineLen: line ? line.style.getPropertyValue("--fx-len") : null,
+    dash: line ? line.style.strokeDasharray : null,
+    arriveGroups: svg ? [...svg.querySelectorAll("g.arrive")]
+      .map(g => ({children: g.children.length, anim: g.style.animation})) : [],
+  };
+};
 
 /* ---------------- cross-view focus ----------------
    One region at a time, shared by every figure. Hover or focus sets it
