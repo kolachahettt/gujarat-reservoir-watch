@@ -29,6 +29,35 @@
      these sizes and where #eb6834 fails at 3.12:1 — the deviation figures,
      the tooltip's current-season row, the direct "2026" chart labels, and the
      white-on-orange active view button (3.20:1, the worst of them). */
+  /* What sits BEHIND a chart, so an annotation label can halo itself against
+     it. The state chart is drawn straight onto the page; every other chart is
+     inside a card. The page value is the default; the card containers override
+     it together, immediately below, so the list of them is one line and adding
+     a fourth is an obvious edit. Three separate declarations is how .scat and
+     .detail came to be missing it while .facet had it — a #f9f9f7 halo on a
+     #fcfcfb panel, near-invisible and still wrong. */
+  --chart-bg:var(--page);
+  /* ---------- type scale ----------
+     Six steps, ratios 1.18 / 1.23 / 1.25 / 1.25 / 1.60. Replaces seventeen
+     rendered sizes, eleven of which sat between 7.5px and 13.5px — steps of
+     4-7%, far below the ~12% at which a size difference reads as hierarchy
+     rather than as inconsistency.
+
+     Body is 16px. It was 11.5px, which is a reference-instrument size, not a
+     reading size; the FT, Reuters and Our World in Data all set body between
+     16 and 18.
+
+     --t-xs is for eyebrows and table headers, which are uppercase and tracked
+     and so read larger than their nominal size. Nothing below 11px. */
+  --t-xs:11px; --t-sm:13px; --t-md:16px;
+  --t-lg:20px; --t-xl:25px; --t-display:40px;
+  /* Three line-heights, from eight. 1 is kept for the display numeral, where
+     a ratio above 1 just adds slack under a single line of digits. */
+  --lh-body:1.55; --lh-data:1.4; --lh-tight:1.2;
+  /* Measure. 68ch lands near 80 rendered characters for this face — prose was
+     running to 266 characters at the 1480px max-width. */
+  --measure:68ch;
+
   --now:#eb6834; --now-text:#c2410c;
   /* The label that sits ON the accent fill. It cannot be a fixed white: in
      dark mode --now-text is a LIGHT orange (it has to be, to read against a
@@ -95,18 +124,95 @@ body{margin:0;background:var(--page,#f9f9f7);
 .viz-root{background:var(--page);color:var(--text-primary);
   padding:20px 22px 40px;max-width:1480px;margin:0 auto}
 
+/* The card containers, together. A chart drawn on a --surface-1 panel must
+   halo its labels against that and not against the page. Keep this list and
+   the backgrounds in step: a container that sets background:var(--surface-1)
+   belongs here, and one that stops setting it must leave. .facet left when the
+   strip lost its card chrome and went back to being drawn on the page. */
+.scat, .detail{--chart-bg:var(--surface-1)}
+
+/* ================= TWO WIDTHS, ONE LEFT EDGE =================
+   Every block was full-width, with prose capped individually by max-width.
+   That put the reading column wherever each element happened to start and let
+   figures and prose share an edge, which is the "undesigned stack" reading.
+
+   One grid, used by the root, by <main> and by each stage. TWO widths for
+   content, and the full width for chrome only:
+
+     text   the reading column, --col wide, where all prose and headings live
+     fig    the same left edge, running --fig-w to the RIGHT of it
+     full   the stage rules and the sticky bar's background — not content
+
+   There was a third content tier, .bleed, and exactly one element used it: the
+   facet strip, at 1381px against 1080px for every other figure at 1440. That
+   301px step is what made the page look like it widened as you scrolled, and a
+   card grid is not a full-bleed figure — the reference class reserves that for
+   a photograph or a map, not five panels of small print. The strip is in the
+   figure band now and the class is gone rather than left unused. The named
+   lines are still here, so a genuine full-bleed element later needs
+   `grid-column:full-start / full-end` and no new machinery.
+
+   FIGURES EXTEND RIGHT FROM THE TEXT EDGE; THEY DO NOT CENTRE AROUND IT.
+   The first version split the overhang in two and hung half off each side of
+   the measure, so fig-start sat --fig-side LEFT of text-start. Prose was then
+   centred inside the figure band while the figures themselves sat flush to the
+   page, and the two disagreed by half the overhang: 108px at an 800px viewport,
+   292px at 1440. Every heading and every section label was inset from the chart
+   it belonged to, which is why the masthead read as shoved right and the
+   eyebrows read as attached to nothing. It measured exactly as designed.
+   One line fixes it: fig-start IS text-start, and the whole overhang goes right.
+
+   Placement instead of max-width, deliberately: a grid column does not fight
+   with an element's own max-width, so h2 keeps its 52ch and the deck its 62ch
+   INSIDE the text column rather than being overridden by it.
+
+   The overhang and the margins are minmax(0, …) so they collapse in that order
+   as the viewport narrows: the figure band gives up its overhang first and the
+   text column takes the full width — one layout, no breakpoint. Below ~1125px
+   the margins are gone and text and figures share the page gutter. */
+.viz-root{
+  --col:65ch;
+  --fig-w:1080px;
+  --fig-over:calc(var(--fig-w) - var(--col));
+}
+.viz-root, #main, .stage, .mininav{
+  display:grid;
+  grid-template-columns:
+    [full-start]           minmax(0, 1fr)
+    [fig-start text-start] min(var(--col), 100%)
+    [text-end]             minmax(0, var(--fig-over))
+    [fig-end]              minmax(0, 1fr)
+    [full-end];
+}
+.viz-root > *, #main > *, .stage > *{grid-column:text-start / text-end}
+/* <main> and the stages re-grid inside, so they span and their rules run the
+   full width while their contents stay in the measure. */
+.viz-root > #main, #main > .stage, #main > .mininav{
+  grid-column:full-start / full-end}
+.fig{grid-column:fig-start / fig-end}
+/* The sticky bar spans, so nothing shows through at the edges as content
+   scrolls under it, but its links align with the figure band rather than the
+   page edge. */
+.mininav > .mininav-in{grid-column:fig-start / fig-end}
+
 /* ---------- header ---------- */
 header.hd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
   justify-content:space-between;border-bottom:1px solid var(--border);
   padding-bottom:12px}
-h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
-.prov{font-size:11.5px;color:var(--text-secondary);line-height:1.55}
-.prov code{font-size:10.5px;color:var(--muted);word-break:break-all}
+h1{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.01em}
+.prov{font-size:var(--t-sm);color:var(--text-secondary);line-height:var(--lh-body)}
+.prov code{font-size:var(--t-xs);color:var(--muted);word-break:break-all}
+/* A timestamp is one token even though it contains hyphens. Line breaking is
+   allowed AFTER a hyphen, so `2026-09-12T18:08:59+00:00` was splitting as
+   "built 2026-09-" / "12T18:08:59+00:00" — a date cut in half reads as two
+   different numbers. It is 160px at the phone measure, so it always fits on a
+   line of its own and nothing is lost by refusing to break it. */
+.nb{white-space:nowrap}
 .srch{position:relative;min-width:270px}
-.srch input{width:100%;padding:7px 9px;font-size:12.5px;font-family:inherit;
+.srch input{width:100%;padding:7px 9px;font-size:var(--t-md);font-family:inherit;
   border:1px solid var(--border);border-radius:6px;background:var(--surface-1);
   color:var(--text-primary)}
-.srch label{display:block;font-size:10.5px;text-transform:uppercase;
+.srch label{display:block;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.07em;color:var(--muted);margin-bottom:4px}
 .results{position:absolute;z-index:40;top:100%;left:0;right:0;max-height:280px;
   overflow:auto;background:var(--surface-1);border:1px solid var(--border);
@@ -114,10 +220,10 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
   box-shadow:0 6px 22px rgba(0,0,0,.13)}
 .results.on{display:block}
 .results button{display:block;width:100%;text-align:left;padding:6px 9px;
-  font-size:12px;font-family:inherit;background:none;border:0;cursor:pointer;
+  font-size:var(--t-sm);font-family:inherit;background:none;border:0;cursor:pointer;
   color:var(--text-primary)}
 .results button:hover,.results button:focus{background:var(--page)}
-.results .rg{font-size:10.5px;color:var(--muted)}
+.results .rg{font-size:var(--t-xs);color:var(--muted)}
 
 /* ---------- headline ---------- */
 .headline{margin:18px 0 6px;display:flex;flex-wrap:wrap;gap:26px;
@@ -127,21 +233,148 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
    compliant, but a 1% margin on the single most important number on the page.
    It uses the text orange for the headroom; the chart line beside it keeps the
    brighter --now, so the two are close rather than identical. Worth it. */
-.hero .n{font-size:42px;line-height:1;letter-spacing:-.02em;color:var(--now-text)}
-.hero .u{font-size:13px;color:var(--text-secondary);margin-top:5px}
-.hero .sub{font-size:12px;color:var(--text-secondary);margin-top:9px;
-  max-width:270px;line-height:1.5}
-.statechart{flex:1;min-width:330px}
+.hero .n{font-size:var(--t-display);line-height:1;letter-spacing:-.02em;color:var(--now-text)}
+.hero .u{font-size:var(--t-md);color:var(--text-secondary);margin-top:5px}
+.hero .sub{font-size:var(--t-md);color:var(--text-secondary);margin-top:9px;
+  max-width:270px;line-height:var(--lh-body)}
+/* BOUNDING THE CHART'S TEXT, NOT JUST ITS WIDTH.
+   SVG font-size is in viewBox units, so it scales with the container. With
+   flex:1 and no cap this chart reached 806px for a 470-unit viewBox — scale
+   1.72 — which rendered its 11-unit axis labels at 18.9px, LARGER than the
+   16px body text. The hierarchy inverted: axis furniture outranked prose.
+
+   560px holds the scale at or under 1.19, so in-chart text lands between 11
+   and 13.1px — below body, above the 10px floor, at every viewport.
+
+   The cost is a smaller headline chart on a wide screen, and the honest fix
+   is a viewBox sized to its container so one unit is always one pixel. That
+   needs per-chart geometry, because the state chart and a facet have very
+   different container widths and currently share one G. Logged, not done. */
+.statechart{flex:1;min-width:330px;max-width:560px}
 .kv{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
-.kv div{font-size:11.5px;color:var(--text-secondary)}
+.kv div{font-size:var(--t-sm);color:var(--text-secondary)}
 .kv b{font-variant-numeric:tabular-nums;color:var(--text-primary);
   font-weight:600}
 
 /* ---------- legend ---------- */
 .legend{display:flex;flex-wrap:wrap;gap:15px;align-items:center;
   margin:16px 0 4px;padding:9px 12px;background:var(--surface-1);
-  border:1px solid var(--border);border-radius:7px;font-size:11.5px;
+  border:1px solid var(--border);border-radius:7px;font-size:var(--t-sm);
   color:var(--text-secondary)}
+
+/* ---------- measure ----------
+   Prose ran to 266 characters per line in the footer and 246 in the
+   methodology list at the 1480px max-width, against an optimum of 45-75 and a
+   tolerable ceiling near 90. Nothing had a max-width; every block simply filled
+   the container. These caps are on the text blocks only — tables, charts and
+   the facet grid still use the full width, because their job is comparison
+   across the row, not reading along it. */
+.prov,.hero .sub,.agebanner,.cross,.dnote,.capnote,.sparkcap,.nofc,
+details.meth div,details.meth li,.placement .pbody,footer.ft{
+  max-width:var(--measure)}
+/* A headline wants two or three lines, not four. 34ch put the widest line at
+   23 characters and wrapped an 82-character headline four times; 50ch gives
+   about 35 and is still inside the header column, which binds first anyway. */
+h1{max-width:50ch}
+h2,h2 .q{max-width:52ch}
+
+/* ---------- the six stages ----------
+   The page was fourteen full-width siblings in one flow, separated by gaps of
+   9 to 30px with no common unit and no section boundaries — nothing told a
+   reader where one idea ended and the next began. Stages give it joints. */
+.stage{padding:34px 0 8px;border-top:1px solid var(--border)}
+.stage:first-of-type{padding-top:14px;border-top:0}
+/* The eyebrow labels the stage and is the same string as its mini-nav link, so
+   arriving from the nav lands on a matching label rather than on a guess. */
+.eyebrow{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.08em;
+  color:var(--muted);margin:0 0 6px;font-weight:600}
+/* Sub-headings inside a stage: the two deviation tables are subordinate to the
+   stage heading, not siblings of it, so they step down rather than repeat h2. */
+.sub-h{font-size:var(--t-lg);font-weight:600;margin:26px 0 3px;max-width:52ch;
+  letter-spacing:-.01em}
+
+/* ---------- sticky mini-nav ----------
+   Replaces the tab bar, and sits after stage 2 rather than before the
+   headline: navigation ahead of the finding is dashboard chrome. Because the
+   stages are all in the document now, these are in-page links, not a mode
+   switch — so a reader who scrolls past them loses nothing. */
+.mininav{position:sticky;top:0;z-index:30;
+  margin:18px 0 0;padding:7px 0;background:var(--page);
+  border-bottom:1px solid var(--border)}
+/* ONE LINE AT EVERY WIDTH, BECAUSE A BAR THAT OVERLAYS CONTENT MUST NOT GROW.
+   The five labels are 81 characters; at 11px uppercase with .06em tracking
+   that is about 610px, so against a 331px measure they wrapped to three lines
+   and a 66px sticky bar bisected the text scrolling underneath it mid-glyph.
+   Wrapping is the wrong response for an overlay: it takes more of the viewport
+   exactly when there is least of it, and it moves the anchor offset with it.
+   The strip scrolls sideways instead, which keeps every label identical to the
+   stage eyebrow it lands on — shortening them for the phone would have broken
+   that match, which is the whole reason arriving from the nav makes sense. */
+.mininav-in{--fade:38px;
+  display:flex;flex-wrap:nowrap;gap:2px;
+  min-width:0;overflow-x:auto;overscroll-behavior-x:contain;
+  scrollbar-width:none;-ms-overflow-style:none}
+/* A scrollbar inside a sticky bar would add height to the thing whose height
+   is the problem. Hidden, but the strip stays keyboard and touch scrollable,
+   and focusing an off-screen link still brings it into view natively. */
+.mininav-in::-webkit-scrollbar{display:none}
+/* The fade is the only signal that the strip runs past the edge, so it is set
+   from the actual overflow and dropped at each end of the run rather than
+   being painted permanently over the last label. */
+/* --fade is 38px, not 24: a label clipped by the edge has to read as faded
+   rather than as a typo, and at 24 the cut label kept enough contrast to look
+   like "ATE OF IT" was the text. It is one value because the script insets the
+   current label from it — see revealInStrip. With the fade at 38 and the inset
+   left at its original 28, the ACTIVE label's first 10px sat inside the fade,
+   so the one label that must stay legible was the one being dimmed. */
+.mininav-in[data-overflow="right"]{
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - var(--fade)),transparent);
+          mask-image:linear-gradient(to right,#000 calc(100% - var(--fade)),transparent)}
+.mininav-in[data-overflow="both"]{
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--fade),#000 calc(100% - var(--fade)),transparent);
+          mask-image:linear-gradient(to right,transparent,#000 var(--fade),#000 calc(100% - var(--fade)),transparent)}
+.mininav-in[data-overflow="left"]{
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--fade));
+          mask-image:linear-gradient(to right,transparent,#000 var(--fade))}
+.mininav a{flex:0 0 auto;
+  font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;
+  color:var(--text-secondary);text-decoration:none;padding:5px 9px;
+  border-radius:5px;white-space:nowrap}
+.mininav a:hover{background:var(--surface-1);color:var(--text-primary)}
+.mininav a:focus-visible{outline:2px solid var(--now-text);outline-offset:1px}
+.mininav a[aria-current="true"]{background:var(--surface-1);
+  color:var(--text-primary);font-weight:600}
+/* Anchored sections must clear the sticky bar when jumped to. Measured from
+   the bar at runtime, not a literal: 52px was right for a one-line bar and
+   14px short of the three-line one it actually became, so every jump landed
+   under it. The fallback is only for the frame before the first measurement. */
+.stage{scroll-margin-top:var(--nav-h,52px)}
+
+/* ---------- masthead as kicker, h1 as the finding ---------- */
+/* The site name and date, above a headline that now asserts something. Small
+   and uppercase so it reads as identification rather than competing with the
+   finding underneath it. */
+.kicker{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);margin-bottom:3px;font-variant-numeric:tabular-nums}
+/* The deck. One step under the h1 and at regular weight, so it reads as the
+   sentence after the headline rather than competing with it: 20px/400 against
+   25px/700. Its own measure, wider than body, because it is a single
+   paragraph meant to be read in two or three lines. */
+.deck{font-size:var(--t-lg);line-height:var(--lh-body);font-weight:400;
+  color:var(--text-secondary);margin:6px 0 0;max-width:62ch}
+.deck b{color:var(--text-primary);font-weight:700}
+/* On a phone the display sizes cost too much vertical room: at 25px the
+   headline ran to four lines and the 20px deck to another four, 324px of
+   header before the provenance, which pushed the state chart off an 812px
+   screen entirely. The verdict is worth the space; burying the evidence that
+   supports it is not. Both drop one step — still scale values, so this
+   introduces no new size. Breakpoint matches NARROW_MAX in the chart
+   geometry, so type and charts change register together. */
+@media (max-width:560px){
+  h1{font-size:var(--t-lg)}
+  .deck{font-size:var(--t-md)}
+}
+
 /* ---------- keyboard and screen-reader plumbing ---------- */
 /* Visually hidden but still announced. NOT display:none and NOT
    visibility:hidden, either of which removes it from the accessibility tree —
@@ -155,7 +388,7 @@ h1{font-size:19px;margin:0 0 3px;letter-spacing:-.01em}
 .skip{position:absolute;left:8px;top:-40px;z-index:20;
   background:var(--surface-1);color:var(--text-primary);
   border:1px solid var(--border);border-radius:6px;padding:7px 12px;
-  font-size:12.5px;text-decoration:none;transition:top .12s}
+  font-size:var(--t-md);text-decoration:none;transition:top .12s}
 .skip:focus{top:8px;outline:2px solid var(--now-text);outline-offset:1px}
 /* The skip target takes focus programmatically, so it must not draw a ring as
    though it were an interactive control. */
@@ -168,7 +401,7 @@ main:focus{outline:none}
    rather than a live one — it becomes a banner above everything, since a
    reader who does not know how old the numbers are is reading them wrong. */
 .agebanner{display:none;margin:10px 0 0;padding:9px 12px;border-radius:7px;
-  font-size:12.5px;line-height:1.5;border:1px solid}
+  font-size:var(--t-md);line-height:var(--lh-body);border:1px solid}
 .agebanner.on{display:block}
 .agebanner.stale{color:var(--warn-fg);background:var(--warn-bg);
   border-color:var(--warn-bd)}
@@ -189,43 +422,87 @@ main:focus{outline:none}
 .sw.thin{border-top-width:2px}
 .sw.bar{height:10px;border:0;width:9px;border-radius:2px}
 .sw.dash{border-top-width:2px;border-top-style:dashed}
-.legend .sep{color:var(--border)}
+/* A VERTICAL rule needs a vertical swatch. The other swatches are border-top
+   on a wide, zero-height box; this is border-left on a tall, zero-width one. */
+.sw.vrule{width:0;height:11px;border-top:0;border-left-width:1px;
+  border-left-style:solid;align-self:center}
+/* A GROUP SEPARATOR IS A BORDER, NOT AN ELEMENT. It used to be
+   `<span class="sep">|</span>` between groups, which made it a flex item in its
+   own right — so when the band wrapped, a lone "|" could land at the start or
+   the end of a line, or on a line by itself at 375px. That reads as a
+   rendering fault rather than as punctuation. A border cannot be orphaned:
+   it is part of a box that always has content beside it. */
+.legend .br{border-left:1px solid var(--border);padding-left:14px}
+/* A rule belongs BETWEEN two items on one line. When the band wraps, a
+   group-starting item can land first on its row, and a leading hairline is the
+   same stray mark as the "|" it replaced, only quieter. Set by trimLegendRules()
+   on whichever items begin a row — which line they begin cannot be known in
+   CSS, only measured.
 
-/* ---------- facets ---------- */
-/* minmax(min(100%, 380px), 1fr), not minmax(410px, 1fr).
-   auto-fit CANNOT go below its own minimum, so a fixed 410px made every facet
-   35px wider than a 375px phone and pushed the page into horizontal scroll.
-   But simply lowering it to 300px was a desktop regression: at 1425px it gave
-   four columns instead of three, shrinking each facet and its text with it.
-   `min(100%, 380px)` resolves to the container width on a phone — so one
-   column always fits — and to 380px on a desktop, which keeps three. */
-.grid{display:grid;gap:13px;margin-top:11px;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
-.facet{background:var(--surface-1);border:1px solid var(--border);
-  border-radius:8px;padding:11px 12px 9px}
+   COLOUR ONLY, NOT THE BOX. Removing the border and its padding reflowed the
+   band, which changed which item began a row, which changed which rules should
+   be hidden — the measurement invalidated itself and never settled. Making the
+   rule transparent leaves every box exactly the size it was, so one pass is
+   correct and there is no second reflow to chase. */
+.legend .br.br-off{border-left-color:transparent}
+
+/* ---------- the small-multiple strip ---------- */
+/* FIVE ACROSS IS THE ONLY ARRANGEMENT WITHOUT AN ORPHAN ROW. There are five
+   regions, so the column count has to be 5 or 1; four across gives 4+1 and
+   three gives 3+2, and the odd last row reads as a rendering accident rather
+   than as the end of a set.
+
+   min 190px, so auto-fit resolves to exactly five in the 1080 figure band:
+   floor((1080 + 13) / (190 + 13)) = 5, each 205.6px. It steps to three at a
+   763px band and one at a 331px phone, because a fifth of those is 142px and
+   62px and neither is a chart. The orphan therefore returns between about 620
+   and 1045px of viewport; five items cannot be dealt into a grid that holds
+   two, three or four columns without one.
+
+   The card chrome is gone — no background, no border, no padding. Five bordered
+   boxes read as five separate figures, which is what "five cards" meant; the
+   point of a small multiple is that it reads as ONE comparison. It also gives
+   the chart the whole 205px instead of 181px, which is what makes the viewBox
+   land on a 1.0 scale. */
+.grid{display:grid;gap:13px 15px;margin-top:11px;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.facet{min-width:0}
+/* --t-lg at a 205px panel put "Central Gujarat" and its deviation on separate
+   lines. One step down fits both on one, which is the whole header. */
+.facet .fh{gap:6px}
+.facet .fh .nm{font-size:var(--t-md)}
+.facet .dv{font-size:var(--t-sm);color:var(--now-text);font-weight:600;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
 .fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
-.fh .nm{font-size:13.5px;font-weight:600}
-.fh .meta{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
-.fnums{display:flex;gap:13px;margin:3px 0 5px;font-size:11.5px;
-  color:var(--text-secondary);flex-wrap:wrap}
-.fnums b{font-variant-numeric:tabular-nums;color:var(--text-primary)}
-.fnums .dv{color:var(--now-text);font-weight:600;font-variant-numeric:tabular-nums}
+.fh .nm{font-size:var(--t-lg);font-weight:600}
+.fh .meta{font-size:var(--t-xs);color:var(--muted);font-variant-numeric:tabular-nums}
+/* THE STATE CHART'S CAPTION SITS UNDER ITS TITLE, NOT BESIDE IT. Both are flex
+   siblings with space-between, which is right when the title is a short label
+   like "Kutch" and wrong now that it is a generated sentence: the title took
+   the room and left the caption an 80px column that set "day 104 of the season
+   · % of design capacity" over three lines at 1440 and four at 375 — a third
+   column of axis furniture beside a headline. Stacked, the caption is one line
+   at both widths. Only the state chart: a facet's header IS a short label and
+   a deviation, which belong on one row. */
+.statechart .fh{flex-direction:column;align-items:flex-start;gap:3px}
+/* .fnums is gone with the card: its four figures are columns in the region
+   table now, where they can be read down instead of across. */
 .plot{position:relative}
 .plot svg{display:block;width:100%;height:auto;touch-action:none}
-.cross{font-size:11.5px;line-height:1.5;margin-top:6px;
+.cross{font-size:var(--t-md);line-height:var(--lh-body);margin-top:6px;
   color:var(--text-secondary);border-top:1px solid var(--border);
   padding-top:6px}
 .cross b{color:var(--text-primary)}
 .cross .none{color:var(--muted)}
-.capnote{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+.capnote{font-size:var(--t-xs);color:var(--muted);margin-top:4px;line-height:var(--lh-data)}
 
 /* ---------- tooltip ---------- */
 .tip{position:fixed;z-index:60;pointer-events:none;display:none;
   background:var(--tip-bg);border:1px solid var(--border);border-radius:7px;
-  padding:8px 10px;font-size:11.5px;color:var(--text-primary);min-width:172px;
+  padding:8px 10px;font-size:var(--t-sm);color:var(--text-primary);min-width:172px;
   box-shadow:0 8px 26px rgba(0,0,0,.17)}
 .tip.on{display:block}
-.tip .d{font-size:11px;color:var(--text-secondary);margin-bottom:5px;
+.tip .d{font-size:var(--t-sm);color:var(--text-secondary);margin-bottom:5px;
   padding-bottom:4px;border-bottom:1px solid var(--border)}
 .tip table{border-collapse:collapse;width:100%}
 .tip td{padding:1.5px 0;font-variant-numeric:tabular-nums}
@@ -236,8 +513,8 @@ main:focus{outline:none}
   color:var(--text-secondary);font-variant-numeric:tabular-nums}
 
 /* ---------- tables ---------- */
-h2{font-size:15px;margin:30px 0 3px;letter-spacing:-.01em}
-h2 .q{font-weight:400;font-size:12px;color:var(--text-secondary);
+h2{font-size:var(--t-lg);margin:30px 0 3px;letter-spacing:-.01em}
+h2 .q{font-weight:400;font-size:var(--t-sm);color:var(--text-secondary);
   display:block;margin-top:3px;letter-spacing:0}
 /* The tables carry nine columns and cannot compress below about 660px.
    Without this wrapper `width:100%` could not shrink past the content minimum,
@@ -247,13 +524,13 @@ h2 .q{font-weight:400;font-size:12px;color:var(--text-secondary);
   border:1px solid var(--border);border-radius:7px;background:var(--surface-1);
   margin-top:9px}
 .tablewrap table.dt{margin-top:0;border:0;border-radius:0;min-width:660px}
-.scrollhint{display:none;font-size:10.5px;color:var(--muted);margin-top:5px}
+.scrollhint{display:none;font-size:var(--t-xs);color:var(--muted);margin-top:5px}
 @media (max-width:700px){.scrollhint{display:block}}
 
-table.dt{width:100%;border-collapse:collapse;font-size:12px;margin-top:9px;
+table.dt{width:100%;border-collapse:collapse;font-size:var(--t-sm);margin-top:9px;
   background:var(--surface-1);border:1px solid var(--border);
   border-radius:7px;overflow:hidden}
-table.dt th{text-align:left;font-size:10.5px;text-transform:uppercase;
+table.dt th{text-align:left;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.055em;color:var(--muted);font-weight:600;
   padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
 table.dt td{padding:5.5px 9px;border-bottom:1px solid var(--border);
@@ -264,7 +541,7 @@ table.dt td.n{text-align:right;font-variant-numeric:tabular-nums;
 table.dt td.nm{color:var(--text-primary);font-weight:600}
 table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
   color:var(--now-text);font-weight:600}
-.flag{display:inline-block;font-size:9.5px;text-transform:uppercase;
+.flag{display:inline-block;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.05em;border:1px solid var(--border);border-radius:3px;
   padding:0 4px;color:var(--muted);margin-left:5px;vertical-align:1px}
 
@@ -273,60 +550,66 @@ table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
   border:1px solid var(--border);border-radius:8px;padding:13px 14px;
   display:none}
 .detail.on{display:block}
-.detail h3{margin:0 0 2px;font-size:15px}
-.detail .sub{font-size:11.5px;color:var(--muted)}
+.detail h3{margin:0 0 2px;font-size:var(--t-lg)}
+.detail .sub{font-size:var(--t-sm);color:var(--muted)}
 .dgrid{display:grid;gap:11px;margin-top:11px;
   grid-template-columns:repeat(auto-fit,minmax(136px,1fr))}
 .dgrid .c{border-left:2px solid var(--border);padding-left:9px}
-.dgrid .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.055em;
+.dgrid .k{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.055em;
   color:var(--muted)}
-.dgrid .v{font-size:16px;margin-top:2px;font-variant-numeric:tabular-nums}
-.dgrid .v.sm{font-size:12.5px;line-height:1.35}
-.dgrid .v.none{color:var(--muted);font-size:12.5px}
+.dgrid .v{font-size:var(--t-lg);margin-top:2px;font-variant-numeric:tabular-nums}
+.dgrid .v.sm{font-size:var(--t-md);line-height:var(--lh-data)}
+.dgrid .v.none{color:var(--muted);font-size:var(--t-md)}
 /* Names the two figures a tile is derived from, so the reader can check it
    against the tiles beside it rather than taking it on trust. */
-.dgrid .vsub{font-size:11px;color:var(--muted);margin-top:2px}
-.dnote{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5;
+.dgrid .vsub{font-size:var(--t-sm);color:var(--muted);margin-top:2px}
+.dnote{font-size:var(--t-sm);color:var(--muted);margin-top:10px;line-height:var(--lh-body);
   border-top:1px solid var(--border);padding-top:8px}
 .spark{margin:11px 0 2px;max-width:520px}
 .spark svg{display:block;width:100%;height:auto}
-.sparkcap{font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.sparkcap{font-size:var(--t-xs);color:var(--muted);line-height:var(--lh-data);margin-top:3px}
 .sparkcap b{color:var(--now-text)}
 .close{float:right;background:none;border:1px solid var(--border);
-  border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:11px;
+  border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:var(--t-sm);
   padding:2px 7px;font-family:inherit}
 
 /* ---------- methodology / footer ---------- */
 details.meth{margin:20px 0 0;background:var(--surface-1);
   border:1px solid var(--border);border-radius:8px;padding:10px 13px}
-details.meth summary{cursor:pointer;font-size:12.5px;font-weight:600}
-details.meth div{font-size:11.5px;color:var(--text-secondary);
-  line-height:1.62;margin-top:9px}
+details.meth summary{cursor:pointer;font-size:var(--t-md);font-weight:600}
+details.meth div{font-size:var(--t-md);color:var(--text-secondary);
+  line-height:var(--lh-body);margin-top:9px}
 details.meth ul{margin:6px 0;padding-left:19px}
-details.meth code{font-size:11px;color:var(--text-primary)}
+details.meth code{font-size:var(--t-sm);color:var(--text-primary)}
 .tblbtn{background:none;border:1px solid var(--border);border-radius:5px;
-  color:var(--text-secondary);cursor:pointer;font-size:10.5px;padding:2px 7px;
+  color:var(--text-secondary);cursor:pointer;font-size:var(--t-xs);padding:2px 7px;
   font-family:inherit;margin-top:6px}
 .tv{display:none;margin-top:7px}
 .tv.on{display:block}
-.tv table{width:100%;border-collapse:collapse;font-size:10.5px}
+/* The region table expands a ROW, so it needs table-row and not block, or the
+   cell collapses and the day table renders 0px wide. */
+tr.tv{margin-top:0}
+tr.tv.on{display:table-row}
+.rprose{font-size:var(--t-sm);line-height:var(--lh-body);
+  color:var(--text-secondary);margin-bottom:6px}
+.tv table{width:100%;border-collapse:collapse;font-size:var(--t-xs)}
 .tv th,.tv td{padding:2.5px 4px;text-align:right;
   font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border)}
 .tv th:first-child,.tv td:first-child{text-align:left}
 .tv th{color:var(--muted);font-weight:600}
 footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--border);
-  font-size:11px;color:var(--muted);line-height:1.65}
+  font-size:var(--t-sm);color:var(--muted);line-height:var(--lh-body)}
 /* The SHA-256 and the source URL are long unbroken strings. Without this they
    set a minimum width on the footer and pushed the page 36px wider than a
    375px phone — the last of the horizontal overflow. */
 code{overflow-wrap:anywhere;word-break:break-word}
-.nofc{margin-top:9px;font-size:11px;color:var(--text-secondary)}
+.nofc{margin-top:9px;font-size:var(--t-sm);color:var(--text-secondary)}
 
 /* ---------- view switcher & second view ---------- */
 .views{display:flex;gap:0;margin-top:9px;border:1px solid var(--border);
   border-radius:6px;overflow:hidden;width:max-content}
 .views button{background:var(--surface-1);border:0;cursor:pointer;
-  font-family:inherit;font-size:11.5px;padding:5px 13px;
+  font-family:inherit;font-size:var(--t-sm);padding:5px 13px;
   color:var(--text-secondary);border-right:1px solid var(--border)}
 .views button:last-child{border-right:0}
 /* White on --now was 3.20:1, the worst failure on the page and on a primary
@@ -339,51 +622,51 @@ code{overflow-wrap:anywhere;word-break:break-word}
   color:var(--on-accent);font-weight:600}
 .hdrow{display:flex;gap:7px;align-items:stretch;margin-top:9px;flex-wrap:wrap}
 .dlbtn{background:var(--surface-1);border:1px solid var(--border);
-  border-radius:6px;cursor:pointer;font-family:inherit;font-size:11.5px;
+  border-radius:6px;cursor:pointer;font-family:inherit;font-size:var(--t-sm);
   padding:5px 11px;color:var(--text-secondary);white-space:nowrap}
 .dlbtn:hover{color:var(--text-primary);border-color:var(--muted)}
 .dlbtn:disabled{opacity:.6;cursor:default}
 .filters{display:flex;gap:7px;align-items:center;margin:13px 0 5px;
   flex-wrap:wrap}
-.filters span.lb{font-size:10.5px;text-transform:uppercase;
+.filters span.lb{font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.06em;color:var(--muted)}
 .filters button{background:var(--surface-1);border:1px solid var(--border);
-  border-radius:5px;cursor:pointer;font-family:inherit;font-size:11.5px;
+  border-radius:5px;cursor:pointer;font-family:inherit;font-size:var(--t-sm);
   padding:3px 9px;color:var(--text-secondary)}
 .filters button[aria-pressed="true"]{border-color:var(--now);
   color:var(--text-primary);font-weight:600}
 .placement{background:var(--surface-1);border:1px solid var(--border);
   border-left:2px solid var(--muted);border-radius:7px;padding:11px 13px;
-  margin:11px 0;font-size:11.5px;color:var(--text-secondary);line-height:1.6}
+  margin:11px 0;font-size:var(--t-md);color:var(--text-secondary);line-height:var(--lh-body)}
 .placement b{color:var(--text-primary)}
-.placement code{font-size:11px;color:var(--text-primary)}
+.placement code{font-size:var(--t-sm);color:var(--text-primary)}
 /* Collapsible, because on a phone three paragraphs of caveat pushed the chart
    entirely below the fold. The claim itself stays in the always-visible
    summary — the reasoning is one tap away, not hidden. */
 .placement summary{cursor:pointer;color:var(--text-primary);font-weight:600;
-  font-size:12px;line-height:1.45}
+  font-size:var(--t-sm);line-height:var(--lh-data)}
 .placement summary::marker{color:var(--muted)}
 .placement .pbody{margin-top:9px}
 .scat{background:var(--surface-1);border:1px solid var(--border);
   border-radius:8px;padding:11px 12px;margin-top:10px}
 .scat svg{display:block;width:100%;height:auto}
 .dotleg{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
-  margin-top:10px;font-size:11px;color:var(--text-secondary)}
+  margin-top:10px;font-size:var(--t-sm);color:var(--text-secondary)}
 .dotleg .grp{display:flex;gap:8px;align-items:flex-end}
-.dotleg .t{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+.dotleg .t{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;
   color:var(--muted);margin-bottom:3px}
 .ramp{display:flex;gap:0;align-items:center}
 .ramp i{width:26px;height:11px;display:inline-block}
 .ramp i:first-child{border-radius:2px 0 0 2px}
 .ramp i:last-child{border-radius:0 2px 2px 0}
-.rampx{display:flex;justify-content:space-between;font-size:10px;
+.rampx{display:flex;justify-content:space-between;font-size:var(--t-xs);
   color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
 .szleg{display:flex;gap:11px;align-items:flex-end}
-.szleg div{text-align:center;font-size:10px;color:var(--muted);
+.szleg div{text-align:center;font-size:var(--t-xs);color:var(--muted);
   font-variant-numeric:tabular-nums}
 .szleg svg{display:block;margin:0 auto 2px}
 .reglegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;
-  font-size:11.5px;color:var(--text-secondary)}
+  font-size:var(--t-sm);color:var(--text-secondary)}
 .reglegend .ri{display:flex;align-items:center;gap:6px}
 .reglegend b{color:var(--text-primary)}
 .reglegend .rv{font-variant-numeric:tabular-nums;font-weight:600;
@@ -393,7 +676,9 @@ code{overflow-wrap:anywhere;word-break:break-word}
 </head>
 <body>
 <div class="viz-root" id="root">
-  <a class="skip" href="#main">Skip to the data</a>
+  <!-- Targets the first stage rather than <main>, so it lands on the chart
+       and not on the top of a container. -->
+  <a class="skip" href="#stage-proof">Skip to the data</a>
 
   <!-- One polite live region for the whole page. Announcements that are
        transient events rather than content — a CSV saved, a view changed —
@@ -403,25 +688,14 @@ code{overflow-wrap:anywhere;word-break:break-word}
 
   <header class="hd">
     <div>
-      <h1>Gujarat Reservoir Watch — season to date</h1>
+      <!-- The masthead is now a kicker and the h1 carries the finding. The h1
+           ships with the old label as its content, so a failed fetch still
+           renders a page that says what it is rather than an empty heading. -->
+      <div class="kicker" id="kicker">Gujarat Reservoir Watch</div>
+      <h1 id="headline">Gujarat Reservoir Watch — season to date</h1>
+      <!-- Hidden until filled, so a failed fetch shows no empty deck. -->
+      <p class="deck" id="deck" hidden></p>
       <div class="prov" id="prov"></div>
-    </div>
-    <div class="srch">
-      <label for="q">Find a scheme</label>
-      <input id="q" type="text" placeholder="Name or district — e.g. Dholidhaja, Kachchh"
-             autocomplete="off" spellcheck="false">
-      <div class="results" id="res"></div>
-      <div class="hdrow">
-        <div class="views" role="group" aria-label="View">
-          <button id="vSeason" aria-current="true">Season</button>
-          <button id="vRegions" aria-current="false">Regions</button>
-          <button id="vSchemes" aria-current="false">Schemes</button>
-        </div>
-        <button id="dlCsv" class="dlbtn" type="button"
-                title="Download all 206 schemes for this report date as CSV">
-          &darr; CSV
-        </button>
-      </div>
     </div>
   </header>
 
@@ -434,64 +708,138 @@ code{overflow-wrap:anywhere;word-break:break-word}
        moved here programmatically without putting it in the tab order. -->
   <main id="main" tabindex="-1">
 
-  <div class="detail" id="detail"></div>
+  <!-- ================= SIX STAGES, ONE READING ORDER =================
+       This was three mutually exclusive tab views plus an undifferentiated
+       stack inside the default one. Tabs make three parallel stories and no
+       reading order; a single finding wants one path. So the former Regions
+       and Schemes views become stages 3 and 5 of a sequence, and the tab bar
+       is gone.
 
-  <section id="viewRegions" hidden>
-    <h2 style="margin-top:14px">Which region is having the worst season
+       Stage 1 is the header above: kicker, headline, deck.
+         2  the proof        the state series with the gap drawn
+         3  the breadth      which region is worst
+         4  the depth        every region's season, then the worst reservoirs
+         5  look it up       search, the scatter, a scheme's detail
+         6  the working      method, definitions, provenance
+
+       Each stage carries an eyebrow that doubles as its mini-nav label, and a
+       heading that asserts what the stage shows rather than naming its
+       contents. Where a generated chart title already asserts it (stages 2 and
+       3) there is no second heading competing with it. -->
+
+  <section class="stage" id="stage-proof" aria-labelledby="stTitle">
+    <p class="eyebrow">The state of it</p>
+    <section class="headline fig">
+      <div class="hero">
+        <div class="n" id="heroN"></div>
+        <div class="u" id="heroU"></div>
+        <div class="sub" id="heroS"></div>
+      </div>
+      <div class="statechart">
+        <div class="fh"><span class="nm" id="stTitle">Gujarat — all 206 schemes</span>
+          <span class="meta" id="stMeta"></span></div>
+        <div class="plot" id="statePlot"></div>
+        <div class="cross" id="stCross"></div>
+        <!-- Year swatches only. The rain and facet-ordering items moved to
+             stage 4 with the charts they describe. -->
+        <div class="legend" id="legendYears"></div>
+      </div>
+    </section>
+  </section>
+
+  <!-- Sticky, and AFTER stage 2 rather than before the headline: navigation
+       that precedes the finding is dashboard chrome. It replaces the tab bar,
+       and because the stages are now all in the document it is a set of
+       in-page links rather than a mode switch. -->
+  <nav class="mininav" id="mininav" aria-label="Jump to a stage">
+    <div class="mininav-in">
+      <a href="#stage-proof">The state of it</a>
+      <a href="#stage-breadth">Which region</a>
+      <a href="#stage-depth">Inside the regions</a>
+      <a href="#stage-lookup">Look up a reservoir</a>
+      <a href="#stage-working">How this is built</a>
+    </div>
+  </nav>
+
+  <section class="stage" id="stage-breadth" aria-labelledby="regTitle">
+    <p class="eyebrow">Which region</p>
+    <h2><span id="regTitle">Which region is having the worst season</span>
       <span class="q">All five regions on one chart, current season only, each
         measured against <em>its own</em> prior four-year mean. Levels alone
         would conflate a structurally dry region with one having a bad
         year.</span></h2>
-    <div class="scat"><div id="regPlot"></div>
+    <div class="scat fig"><div id="regPlot"></div>
       <div class="reglegend" id="regLegend"></div></div>
     <div class="cross" id="regNote"></div>
   </section>
 
-  <section id="viewSchemes" hidden>
-    <h2 style="margin-top:14px">All 206 schemes — one point each
+  <section class="stage" id="stage-depth" aria-labelledby="depthTitle">
+    <p class="eyebrow">Inside the regions</p>
+    <h2><span id="depthTitle">Every region's season, and the reservoirs
+      furthest below their own average</span>
+      <span class="q">Each region's five seasons on an aligned day-of-season
+        axis, with daily rainfall beneath, then the individual reservoirs
+        ranked two ways.</span></h2>
+    <div class="legend fig" id="legend"></div>
+    <div class="grid fig" id="grid"></div>
+    <!-- What the panels shed. Five across leaves 205px a panel, which holds a
+         name, a deviation and a shape; every other number reads better down a
+         column here than repeated five times across five cards. -->
+    <div id="tblRegions" class="fig"></div>
+
+    <h3 class="sub-h">Largest negative deviations — percentage points
+      <span class="q">Today's % filling against the mean % filling on the same calendar
+        date in prior years, for the years whose published capacity matches today's.
+        Answers: where is the drop deepest relative to this reservoir's own record?</span></h3>
+    <div id="tblPP" class="fig"></div>
+
+    <h3 class="sub-h">The same comparison weighted by volume
+      <span class="q">Implied shortfall in MCM against the prior same-date mean.
+        Answers: where is the largest quantity of water missing? A different
+        question, and a different list.</span></h3>
+    <div id="tblVol" class="fig"></div>
+  </section>
+
+  <section class="stage" id="stage-lookup" aria-labelledby="lookupTitle">
+    <p class="eyebrow">Look up a reservoir</p>
+    <h2><span id="lookupTitle">Find one of the 206 by name, or pick it off the
+      chart</span>
       <span class="q">Sized by design capacity, coloured by deviation from the
         same-date mean of prior years. Points only; no filled areas.</span></h2>
+    <!-- The search moved here out of the header. It is a tool for answering
+         your own question, which is this stage's job, not an entry point. -->
+    <div class="srch">
+      <label for="q">Find a scheme</label>
+      <input id="q" type="text" placeholder="Name or district — e.g. Dholidhaja, Kachchh"
+             autocomplete="off" spellcheck="false">
+      <div class="results" id="res"></div>
+    </div>
     <details class="placement" id="placement"></details>
-    <div class="filters" id="filters"></div>
-    <div class="scat"><div id="scatPlot"></div><div class="dotleg" id="scatLeg"></div></div>
+    <div class="filters fig" id="filters"></div>
+    <div class="scat fig"><div id="scatPlot"></div><div class="dotleg" id="scatLeg"></div></div>
+    <!-- Default home for the scheme detail. It used to be the first child of
+         <main>, above everything, so clicking a point down here scrolled the
+         reader UP to a panel above the chart they had just clicked. It now
+         opens next to whatever opened it. -->
+    <div class="detail fig" id="detail"></div>
   </section>
 
-  <section id="viewSeason">
-  <section class="headline">
-    <div class="hero">
-      <div class="n" id="heroN"></div>
-      <div class="u" id="heroU"></div>
-      <div class="sub" id="heroS"></div>
+  <section class="stage" id="stage-working">
+    <p class="eyebrow">How this is built</p>
+    <!-- The CSV lived in the header beside the tab bar. Downloading the data
+         is the last thing a reader does, not the first, so it sits with the
+         method and the provenance. -->
+    <div class="hdrow">
+      <button id="dlCsv" class="dlbtn" type="button"
+              title="Download all 206 schemes for this report date as CSV">
+        &darr; CSV
+      </button>
     </div>
-    <div class="statechart">
-      <div class="fh"><span class="nm">Gujarat — all 206 schemes</span>
-        <span class="meta" id="stMeta"></span></div>
-      <div class="plot" id="statePlot"></div>
-      <div class="cross" id="stCross"></div>
-    </div>
+    <details class="meth">
+      <summary>How these figures are built — parameters, exclusions and limits</summary>
+      <div id="meth"></div>
+    </details>
   </section>
-
-  <div class="legend" id="legend"></div>
-
-  <div class="grid" id="grid"></div>
-
-  <h2>Largest negative deviations — percentage points
-    <span class="q">Today's % filling against the mean % filling on the same calendar
-      date in prior years, for the years whose published capacity matches today's.
-      Answers: where is the drop deepest relative to this reservoir's own record?</span></h2>
-  <div id="tblPP"></div>
-
-  <h2>The same comparison weighted by volume
-    <span class="q">Implied shortfall in MCM against the prior same-date mean.
-      Answers: where is the largest quantity of water missing? A different
-      question, and a different list.</span></h2>
-  <div id="tblVol"></div>
-  </section><!-- /viewSeason -->
-
-  <details class="meth">
-    <summary>How these figures are built — parameters, exclusions and limits</summary>
-    <div id="meth"></div>
-  </details>
 
   </main>
 
@@ -540,6 +888,288 @@ function announce(msg){
 }
 const f1 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(1);
 const f2 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(2);
+
+/* ================= NARRATIVE TITLES =================
+   Every title on this page used to be a label — "Gujarat — all 206 schemes",
+   "Which region is having the worst season". The finding was always computed,
+   and always rendered underneath as caption text. These functions invert that:
+   the title asserts what the data says today, the mechanics move beneath it.
+
+   WHY TEMPLATES AND NOT PROSE
+   The page rebuilds daily. A written headline would go stale overnight, and on
+   the day the season turned wet it would be false. So each title is a set of
+   branches over the JSON, one of which is true by construction, with a label
+   fallback for when no comparison can be made at all.
+
+   EVERY FUNCTION IS PURE and returns {branch, text}. The branch id is written
+   to the DOM as data-title-branch, so a test can assert which one fired rather
+   than matching on wording.
+
+   RULES CARRIED FROM THE BRIEF
+     * No forecast language (§8). Every branch states an observed reading or a
+       comparison of observed readings.
+     * Precision capped at source (§8.7): percentages 2dp, gaps 1dp.
+     * No causal claim. Rainfall-to-storage is not established, so no title
+       says rain caused anything.
+     * Counts are generated, never written in: "four-year average" comes from
+       seasons_prior.length, so adding a season does not make the text lie.
+
+   OFF SEASON IS THE MAJORITY STATE, NOT AN EDGE CASE
+   The view is only rebuilt in season, so from 1 November to 31 May the page
+   shows a closed season — seven months of the year. Every title therefore has
+   a past-tense voicing rather than a present-tense one with the tense left to
+   luck. `atClose` carries it. */
+
+const TITLE_WINDOW_DAYS = 21;
+
+/* Each branch is written as a CLAUSE that can follow an off-season prefix
+   ("The 2026 season ended at 65.10% — over the last three weeks, …"). In
+   season there is no prefix, so the clause has to be capitalised. Skips any
+   leading tag, so "<b>Kutch</b> is…" capitalises the word and not the markup. */
+function capFirst(s){
+  const i = s.search(/[A-Za-z0-9]/);
+  return i < 0 ? s : s.slice(0, i) + s[i].toUpperCase() + s.slice(i + 1);
+}
+const assemble = (pre, clause) => pre ? pre + clause : capFirst(clause);
+
+/* Small counts spelled out, as prose rather than as data — "the four-year
+   average", not "the 4-year average". Only 2-9, because the figures that
+   matter stay numerals. */
+const NUM_WORD = ["zero", "one", "two", "three", "four", "five", "six",
+                  "seven", "eight", "nine"];
+const numWord = n => (n >= 2 && n <= 9) ? NUM_WORD[n] : String(n);
+
+/* The window phrase is derived from the constant, so changing the constant
+   cannot leave the prose claiming a period it no longer measures. */
+function windowPhrase(days){
+  if(days % 7 === 0 && days / 7 <= 9)
+    return `the last ${numWord(days / 7)} week${days === 7 ? "" : "s"}`;
+  return `the last ${days} days`;
+}
+
+/* Shared comparison of the current reading against the prior-year set. */
+function priorStanding(pctNow, meanPrior, priorAtNow){
+  const priors = Object.values(priorAtNow || {}).filter(v => v != null);
+  if(meanPrior == null || priors.length < 2 || pctNow == null) return null;
+  const gap = pctNow - meanPrior;
+  return {
+    gap,
+    gap1: Math.abs(gap).toFixed(1),
+    n: priors.length,
+    belowAll: pctNow < Math.min(...priors),
+    aboveAll: pctNow > Math.max(...priors),
+    level: Math.abs(gap) < 0.05,          // rounds to 0.0 at the shown precision
+  };
+}
+
+/* ---- Title 1: the page headline ---- */
+function headlineTitle(d, inSeason){
+  const m = d.meta, s = d.state;
+  const pct = f2(s.pct_now);
+  const first = Math.min(...m.seasons_prior);
+  const st = priorStanding(s.pct_now, s.mean_prior_at_now, s.prior_at_now);
+  /* Off season the page is a closed record, so the verb is past and the date
+     is "that date" rather than "this date" — the reader is not looking at
+     today. */
+  const was = inSeason ? "are" : "were";
+  const when = inSeason ? "this date" : "that date";
+  const lead = inSeason
+    ? `Gujarat's reservoirs are <b>${pct}%</b> full`
+    : `At the close of the ${m.season_current} season, Gujarat's reservoirs `
+      + `were <b>${pct}%</b> full`;
+
+  if(!st) return {branch: "Z",
+    text: `${lead} on ${esc(m.report_date)}`};
+  if(st.belowAll) return {branch: "A",
+    text: `${lead} — lower than any year since <b>${first}</b> on ${when}`};
+  if(st.level) return {branch: "C",
+    text: `${lead} — level with the ${numWord(st.n)}-year average for ${when}`};
+  if(st.gap < 0) return {branch: "B",
+    text: `${lead}, <b>${st.gap1}</b> points below the `
+        + `${numWord(st.n)}-year average for ${when}`};
+  if(st.aboveAll) return {branch: "E",
+    text: `${lead} — higher than any year since <b>${first}</b> on ${when}`};
+  return {branch: "D",
+    text: `${lead}, <b>${st.gap1}</b> points above the `
+        + `${numWord(st.n)}-year average for ${when}`};
+}
+
+/* ---- The deck (standfirst) ----
+   The headline says the state is at a five-year low for the date. What it
+   cannot also say, without becoming a paragraph, is how WIDESPREAD that is —
+   and breadth is the judgement a cold reader was missing. Five regions all
+   short is a different story from one dry corner dragging an average down, and
+   the page had that number computed and never said it above the fold.
+
+   Same discipline as the titles: branches over the JSON, a past-tense voicing
+   for the seven off-season months, and a null return rather than a hedged
+   sentence when no baseline exists. */
+function deckText(d, inSeason){
+  const withBase = (d.schemes || []).filter(s => s.mean_prior != null);
+  const regs = (d.regions || [])
+    .filter(r => r.pct_now != null && r.mean_prior_at_now != null)
+    .map(r => ({name: r.name, dev: r.pct_now - r.mean_prior_at_now,
+                cap: r.design_mcm || 0}));
+  if(!withBase.length || regs.length < 2) return null;
+
+  const below = withBase.filter(s => s.dev_pp < 0).length;
+  const above = withBase.length - below;
+  const n = withBase.length;
+  const by = [...regs].sort((a, b) => a.dev - b.dev || b.cap - a.cap);
+  const worst = by[0], best = by[by.length - 1];
+  const nReg = regs.length;
+  const hold = inSeason ? "hold" : "held";
+  const are = inSeason ? "are" : "were";
+  const is = inSeason ? "is" : "was";
+
+  if(regs.every(r => r.dev > 0)) return {branch: "C",
+    text: `<b>${above}</b> of ${n} reservoirs ${hold} more water than their `
+        + `own average for this date, and every region ${is} above its own — `
+        + `<b>${esc(best.name)}</b> by ${best.dev.toFixed(1)} points.`};
+  if(regs.every(r => r.dev < 0)) return {branch: "A",
+    text: `<b>${below}</b> of ${n} reservoirs ${hold} less water than their `
+        + `own average for this date, and all ${numWord(nReg)} regions `
+        + `${are} short — <b>${esc(worst.name)}</b> by `
+        + `${Math.abs(worst.dev).toFixed(1)} points.`};
+  return {branch: "B",
+    text: `<b>${below}</b> of ${n} reservoirs ${are} below their own average `
+        + `for this date. <b>${esc(worst.name)}</b> ${is} furthest behind at `
+        + `${Math.abs(worst.dev).toFixed(1)} points, while `
+        + `<b>${esc(best.name)}</b> ${is} ${best.dev.toFixed(1)} above.`};
+}
+
+/* ---- Stage 4's heading: where the worst reservoirs actually are ----
+   Stage 3 gives regional averages. What is new at stage 4 is the CONCENTRATION
+   of individual reservoirs: today all twenty of the furthest-below are in
+   Saurashtra and Kutch, and none in the other three regions. An average can
+   be dragged down by a few; this says whether it was.
+
+   Reads deviation_pp, which is already the ranked worst-N list. */
+function depthTitle(d, inSeason){
+  const rows = d.deviation_pp || [];
+  if(!rows.length) return {branch: "Z",
+    text: "Every region's season, and the reservoirs furthest below their own "
+        + "average"};
+  const byReg = new Map();
+  for(const r of rows){
+    const n = regName(r.region);
+    byReg.set(n, (byReg.get(n) || 0) + 1);
+  }
+  const ranked = [...byReg.entries()].sort((a, b) => b[1] - a[1]);
+  const n = rows.length;
+  const are = inSeason ? "are" : "were";
+  if(ranked.length === 1) return {branch: "A",
+    text: `All ${numWord(n)} of the reservoirs furthest below their own `
+        + `average ${are} in <b>${esc(ranked[0][0])}</b>`};
+  if(ranked.length === 2) return {branch: "B",
+    text: `The ${numWord(n)} reservoirs furthest below their own average `
+        + `${are} all in <b>${esc(ranked[0][0])}</b> and `
+        + `<b>${esc(ranked[1][0])}</b>`};
+  return {branch: "C",
+    text: `The ${numWord(n)} reservoirs furthest below their own average `
+        + `${are} spread across ${numWord(ranked.length)} regions, led by `
+        + `<b>${esc(ranked[0][0])}</b> with ${ranked[0][1]}`};
+}
+
+/* ---- Title 2: the state chart ----
+   Branch A claims "every prior year kept rising", so it is gated on every
+   prior year actually having risen — not on their mean having risen. Measured
+   over 21 days those two differ: at 14 days 2023 fell 0.06 points while the
+   mean rose 5.95, which would have made the stronger wording false. A2 is the
+   honest weaker claim for that case. */
+function stateChartTitle(d, inSeason){
+  const m = d.meta, s = d.state;
+  const CURk = String(m.season_current);
+  const yrs = m.seasons_prior.map(String);
+  const ser = s.series || {};
+  const latest = s.day_of_season;
+  const st = priorStanding(s.pct_now, s.mean_prior_at_now, s.prior_at_now);
+  const label = {branch: "Z", text: `Gujarat — all ${m.n_schemes} schemes`};
+
+  const cross = s.crossover || {};
+  const run = cross.current_run || {};
+  const atClose = inSeason ? "" : `The ${m.season_current} season ended at `
+                                + `<b>${f2(s.pct_now)}%</b> — `;
+
+  /* Slope over a stated window. Stated in the title precisely so the claim is
+     checkable: a reader can read both endpoints off the chart. */
+  const from = latest - TITLE_WINDOW_DAYS;
+  const have = ser[CURk] && ser[CURk][from] != null && ser[CURk][latest] != null
+    && yrs.every(y => ser[y] && ser[y][from] != null && ser[y][latest] != null);
+  let dCur = null, everyPriorRose = false, dPriorMean = null;
+  if(have){
+    dCur = ser[CURk][latest] - ser[CURk][from];
+    const deltas = yrs.map(y => ser[y][latest] - ser[y][from]);
+    everyPriorRose = deltas.every(v => v > 0);
+    dPriorMean = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+  }
+
+  if(cross.case === "crossed" && cross.currently_below && run.qualifies){
+    if(have && dCur <= 0 && everyPriorRose) return {branch: "A",
+      text: assemble(atClose, `over ${windowPhrase(TITLE_WINDOW_DAYS)}, ${CURk} `
+          + `${inSeason ? "stopped" : "had stopped"} filling while every prior `
+          + `year kept rising`)};
+    if(have && dCur <= 0 && dPriorMean > 0) return {branch: "A2",
+      text: assemble(atClose, `over ${windowPhrase(TITLE_WINDOW_DAYS)}, ${CURk} `
+          + `${inSeason ? "stopped" : "had stopped"} filling while the `
+          + `prior-year average rose <b>${dPriorMean.toFixed(1)}</b> points`)};
+    return {branch: "B",
+      text: assemble(atClose, `${CURk} ${inSeason ? "has been" : "was"} below `
+          + `every prior year for <b>${run.length}</b> days`)};
+  }
+  if(cross.case === "crossed") return {branch: "C",
+    text: assemble(atClose, `${CURk} fell below every prior year earlier in `
+        + `the season, then recovered`)};
+  if(!st) return label;
+  if(st.gap > 0) return {branch: "E",
+    text: assemble(atClose, `${CURk} ${inSeason ? "is running" : "ran"} above `
+        + `the ${numWord(st.n)}-year average for `
+        + `${inSeason ? "this" : "that"} date`)};
+  return {branch: "D",
+    text: assemble(atClose, `${CURk} ${inSeason ? "is" : "was"} below the `
+        + `${numWord(st.n)}-year average, but stayed inside the range of `
+        + `those years`)};
+}
+
+/* ---- Title 3: the Regions view ----
+   Was the question "Which region is having the worst season". The answer was
+   already computed and printed below the chart. */
+function regionsTitle(d, inSeason){
+  const rs = (d.regions || [])
+    .filter(r => r.pct_now != null && r.mean_prior_at_now != null)
+    .map(r => ({name: r.name, dev: r.pct_now - r.mean_prior_at_now,
+                cap: r.design_mcm || 0}));
+  if(rs.length < 2) return {branch: "Z",
+    text: "Deviation from each region's own prior-year average"};
+  /* Stable tiebreak on capacity, so two regions at an identical deviation do
+     not reorder between builds. */
+  const by = [...rs].sort((a, b) => a.dev - b.dev || b.cap - a.cap);
+  const worst = by[0], best = by[by.length - 1];
+  const n = rs.length;
+  const is = inSeason ? "is" : "was";
+  const were = inSeason ? "are" : "were";
+
+  if(rs.every(r => r.dev > 0)) return {branch: "C",
+    text: `Every region ${is} above its own average — <b>${esc(best.name)}</b> `
+        + `by the most, at <b>${best.dev.toFixed(1)}</b> points`};
+  if(rs.every(r => r.dev < 0)) return {branch: "A",
+    text: `<b>${esc(worst.name)}</b> ${is} <b>${Math.abs(worst.dev).toFixed(1)}`
+        + `</b> points below its own average — the worst of ${numWord(n)} `
+        + `regions, and all ${numWord(n)} ${were} short`};
+  return {branch: "B",
+    text: `<b>${esc(worst.name)}</b> ${is} `
+        + `<b>${Math.abs(worst.dev).toFixed(1)}</b> points below its own `
+        + `average, while <b>${esc(best.name)}</b> ${is} `
+        + `<b>${best.dev.toFixed(1)}</b> above`};
+}
+
+/* Write a title and record which branch produced it. */
+function setTitle(id, t){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = t.text;
+  el.setAttribute("data-title-branch", t.branch);
+}
 
 /* ---------------- how old is this data ----------------
    The page is a static file. It can be opened an hour after it was built or
@@ -623,6 +1253,30 @@ const isNarrow = () => window.innerWidth <= NARROW_MAX;
 
    The floor of 6 mm/day guards a dry season: without it a trace-rain year
    would scale a 0.2 mm day to full panel height. */
+/* ---------------- which day the crossover marker points at ----------------
+   The chart used to mark cross.marker_day — the FIRST qualifying crossing of
+   the season. The caption leads with the CURRENT one. For the state those are
+   different events: marker_day is day 57 (27 July, a run that recovered on
+   2 August) while the caption says "Below every prior year since 26 Aug —
+   18 days", which is day 87. So the chart pointed at a six-day dip while the
+   text beside it discussed an eighteen-day one, and the reader had no way to
+   know they were different.
+
+   The rule is not "always use the current run", because South Gujarat is the
+   counter-case: its current run is 3 days and FAILS the five-consecutive-day
+   rule, so its caption explicitly claims no crossing and points back at
+   25 July. Marking day 102 there would assert a crossing the caption denies.
+
+   So: mark the current run when it qualifies, otherwise mark the first
+   qualifying run. Across the six charts on this page that moves exactly one
+   marker (the state, 57 -> 87) and leaves the other five where they were. */
+function markerDay(cross){
+  if(!cross || cross.case !== "crossed") return null;
+  const run = cross.current_run;
+  if(cross.currently_below && run && run.qualifies) return run.start_day;
+  return cross.marker_day == null ? null : cross.marker_day;
+}
+
 let RAIN_MAX = 6;
 function rainCeiling(regions){
   let mx = 6;
@@ -644,12 +1298,59 @@ function rainCeiling(regions){
 let G = {};
 function setGeometry(){
   G = isNarrow()
-    ? {W: 308, PADL: 25, PADR: 7,  SH: 104, GAP: 8, RH: 26, AX: 14,
-       SW: 308, SHH: 470}               // scatter: portrait
-    : {W: 470, PADL: 30, PADR: 12, SH: 112, GAP: 9, RH: 30, AX: 15,
-       SW: 940, SHH: 430};              // scatter: landscape
+    ? {W: 308, PADL: 27, PADR: 7,  SH: 104, GAP: 10, RH: 26, AX: 18,
+       SW: 308, SHH: 470,              // scatter: portrait
+       YT: [0,25,50,75,100], MSTRIDE: 1}
+    : {W: 470, PADL: 34, PADR: 12, SH: 112, GAP: 11, RH: 30, AX: 19,
+       SW: 940, SHH: 430,              // scatter: landscape
+       YT: [0,25,50,75,100], MSTRIDE: 1};
   G.TOTH = G.SH + G.GAP + G.RH + G.AX;
 }
+
+/* ---------------- the small-multiple panel's own geometry ----------------
+   A viewBox is a scale factor in disguise: the rendered font size is the
+   attribute times (container width / viewBox width). The desktop geometry is
+   470 units because the state chart gets the whole 1080px figure band. A facet
+   panel gets a fifth of it, and it was being drawn with the SAME 470 units —
+   0.692 scale at a 325px panel, so its 11-unit axis labels rendered at 7.6px.
+   The phone breakpoint exists for exactly this reason and was never extended
+   to the desktop facet, where the container is a third of the state chart's.
+
+   205 units, because five panels across the 1080 band are 205.6px each, so the
+   scale is 1.0 and 11 units renders at 11px. Where auto-fit gives three across
+   instead (a 763px band) the panels are 237px and the scale is 1.16 — 12.7px,
+   the wrong side of the intent but legible, which 7.6px was not.
+
+   FEWER TICKS, NOT SMALLER ONES. 173 units of plot cannot hold five y labels
+   at 11 units without them touching, nor five month labels. Three of each:
+   0/50/100 and Jun/Aug/Oct. That is what a small multiple is — the panel keeps
+   the shape and sheds the furniture, and the shared scale is stated once.
+
+   COMPACT also drops the three per-panel strings that the region table under
+   the strip now carries: "latest report", the crossover date, and the rainfall
+   peak. Dropped because they are relocated, not because they did not fit. */
+/* AX is 19, not the 15 it started as. The x-label band has to clear the rain
+   baseline by more than the label's own descent, and an SVG text box is about
+   1.3em tall, so at 15 the month labels' boxes started 0.1 units below the
+   baseline — touching it. 19 is AXIS_FS + 8, the same rule as X_TICK_DY and
+   the same number the desktop tier uses. It cannot be written as AXIS_FS + 8
+   here because AXIS_FS is declared further down and this initialiser runs at
+   load; the over-ink probe is what enforces the relation. */
+const FACET_GEOM = {W: 205, PADL: 27, PADR: 5, SH: 86, GAP: 7, RH: 18, AX: 19,
+                    YT: [0,50,100], MSTRIDE: 2, COMPACT: true};
+FACET_GEOM.TOTH = FACET_GEOM.SH + FACET_GEOM.GAP + FACET_GEOM.RH + FACET_GEOM.AX;
+
+/* Facets use it only when the strip is actually multi-column. On a phone one
+   panel spans the measure, where the narrow geometry already resolves to ~1.0
+   and is the more readable of the two. */
+const facetGeom = () => isNarrow() ? G : FACET_GEOM;
+
+/* Geometry-aware axes. xOf/yOf stay bound to the global G — they must read it
+   per call, because setGeometry REASSIGNS G rather than mutating it, so a
+   closure over its value would capture the empty object it starts as. */
+const xForG = g => d =>
+  g.PADL + (d - 1) / (SEASON_DAYS - 1) * (g.W - g.PADL - g.PADR);
+const yForG = g => p => g.SH - 6 - (p / 100) * (g.SH - 16);
 setGeometry();
 const xOf = d => G.PADL + (d - 1) / (SEASON_DAYS - 1) * (G.W - G.PADL - G.PADR);
 const yOf = p => G.SH - 6 - (p / 100) * (G.SH - 16);
@@ -672,35 +1373,157 @@ function linePath(map, xf, yf, step){
   return out.trim();
 }
 
-function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
+/* ---------------- the gap, drawn ----------------
+   The whole finding is that 2026 sits 18 points under the prior-year average,
+   and until now that number existed only as body text beside the chart. This
+   draws it: a dimension line between the two levels at the latest reported
+   day, captioned.
+
+   WHY NOT A HORIZONTAL REFERENCE LINE ACROSS THE CHART
+   That was the obvious first idea and it would be a lie. mean_prior_at_now is
+   the average of the four prior years ON THIS DAY OF THE SEASON — 83.09% on
+   day 104. The prior-year average on day 1 is about 38%. A horizontal line at
+   83.09 spanning June to October would assert a flat "normal" that the data
+   contradicts, and would sit far above every prior line in June. So the
+   reference is a short cap at the level, at the day where that level is
+   defined, and nowhere else.
+
+   WHY ONLY THE STATE CHART
+   Same viewBox, different rendered widths: the state chart draws 580px for
+   470 units (scale 1.234) while a facet draws 451px (scale 0.959). An 8-unit
+   label is 9.9px on the state chart and 7.7px on a facet — below the rain
+   caption that is already the smallest text on the page. The facets state
+   their own gap as a figure in the numbers row instead.
+
+   Placement is chosen from the data, not guessed: right of the latest-report
+   line, 2026 has no line at all and the prior years sit above y=25, so the
+   band below that is empty and the label cannot collide with a series. */
+function gapAnnotation(g, xOf, yOf, latestDay, G){
+  if(!g || g.pctNow == null || g.meanPrior == null) return "";
+  const diff = g.meanPrior - g.pctNow;
+  if(Math.abs(diff) < 0.05) return "";        // rounds to 0.0: nothing to draw
+  const x = xOf(latestDay);
+  const yNow = yOf(g.pctNow), yRef = yOf(g.meanPrior);
+  const dx = x + 9;                            // clear of the latest-report rule
+  const cap = 4;
+  const mid = (yNow + yRef) / 2;
+  const above = diff < 0;                      // 2026 is ABOVE the average
+
+  /* Labels are anchored to the PLOT'S RIGHT EDGE, not offset rightward from
+     the dimension line. Offsetting overflowed: the narrow breakpoint drops the
+     viewBox from 470 units to 308, and "the four-year average for this date"
+     ran to x=341.9 in a 308-wide box — clipped off the chart entirely, with
+     nothing to indicate it had been. Anchoring at the edge makes rightward
+     overflow impossible at any breakpoint. */
+  /* ONE SOURCE FOR THE FONT SIZES, used by both the fit test and the emitted
+     attributes. They were separate constants and diverged: the type retune
+     moved the emitted font-size from 7.5/8.5 units to 11, but the fit test
+     still measured against 7.5, so it was under-estimating widths by a factor
+     of 1.47 and admitted a sub-label that then overlapped the 2026 series
+     label. A width test that does not use the size it is testing is worse than
+     no test, because it looks like one. */
+  const FS_BIG = 11, FS_SUB = 11;
+  const lx = G.W - G.PADR;
+  const avail = lx - (dx + cap);
+  /* Width estimated rather than measured, because the string has to be chosen
+     before it is in the DOM. 0.46em per character over-estimates the observed
+     0.434em, so the test errs toward the shorter wording. */
+  const fits = (txt, fs) => txt.length * fs * 0.46 <= avail;
+  const big = `${Math.abs(diff).toFixed(1)} points ${above ? "above" : "below"}`;
+  const bigTxt = fits(big, FS_BIG) ? big
+               : `${Math.abs(diff).toFixed(1)} pp ${above ? "above" : "below"}`;
+  const longSub = `the ${numWord(g.nPrior)}-year average for this date`;
+  const shortSub = `the ${numWord(g.nPrior)}-year average`;
+  const sub = fits(longSub, FS_SUB) ? longSub
+            : fits(shortSub, FS_SUB) ? shortSub : "";
+  /* Leading derived from the font size rather than fixed at 8.5 units, which
+     was set when the text was 7.5 units and left the two lines overlapping
+     each other once they grew to 11. Anchored just under the upper cap rather
+     than centred on the dimension, so the block clears the direct "2026"
+     label that sits at the lower end of the gap. */
+  /* 1.35, not 1.2. An SVG text getBBox is about 1.3em tall — ascent plus
+     descent, not the visual glyph height — so 1.2 leading leaves the two
+     boxes overlapping by a unit even though the letters do not touch. Setting
+     it above the em box means the geometric overlap assertion needs no
+     exceptions, which keeps the assertion worth running. */
+  const lead = FS_SUB * 1.35;
+  const l1y = sub ? yRef + FS_BIG : mid + FS_BIG * 0.35;
+  const l2y = l1y + lead;
+  return `
+    <line x1="${dx}" x2="${dx}" y1="${yRef.toFixed(1)}" y2="${yNow.toFixed(1)}"
+      stroke="var(--text-secondary)" stroke-width="1"/>
+    <line x1="${dx - cap}" x2="${dx + cap}" y1="${yRef.toFixed(1)}"
+      y2="${yRef.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
+    <line x1="${dx - cap}" x2="${dx + cap}" y1="${yNow.toFixed(1)}"
+      y2="${yNow.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
+    <text x="${lx}" y="${l1y.toFixed(1)}" text-anchor="end" font-size="${FS_BIG}"
+      font-weight="700" fill="var(--text-primary)"
+      ${halo(FS_BIG)}>${bigTxt}</text>
+    ${!sub ? "" : `<text x="${lx}" y="${l2y.toFixed(1)}" text-anchor="end"
+      font-size="${FS_SUB}" fill="var(--muted)"
+      ${halo(FS_SUB)}>${sub}</text>`}`;
+}
+
+function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
+  /* Geometry comes in rather than off the global, so a facet panel can be
+     drawn at its own scale instead of the state chart's. Defaults to G, which
+     is every caller that is not a facet. */
+  const GG = (opts && opts.geom) || G;
+  const xOf = xForG(GG), yOf = yForG(GG);
+  const compact = !!GG.COMPACT;
   /* The state headline carries no rainfall strip: a regional mean of regional
      means is not a quantity worth showing, and an empty panel reads as "no
      rain" rather than "not shown". */
-  const rTop = G.SH + G.GAP;
-  const totH = showRain ? G.TOTH : G.SH + G.AX;
+  const rTop = GG.SH + GG.GAP;
+  const totH = showRain ? GG.TOTH : GG.SH + GG.AX;
   const axY = totH - 3;
   let g = "";
   /* gridlines: solid hairlines, one shade off the surface (never dashed) */
-  for(const p of [0,25,50,75,100]){
-    g += `<line x1="${G.PADL}" x2="${G.W-G.PADR}" y1="${yOf(p)}" y2="${yOf(p)}"
+  for(const p of GG.YT){
+    g += `<line x1="${GG.PADL}" x2="${GG.W-GG.PADR}" y1="${yOf(p)}" y2="${yOf(p)}"
       stroke="var(--grid)" stroke-width="1"/>`;
-    g += `<text x="${G.PADL-5}" y="${yOf(p)+3.2}" text-anchor="end"
-      font-size="8.5" fill="var(--muted)"
+    g += `<text x="${GG.PADL-5}" y="${yOf(p)+3.2}" text-anchor="end"
+      font-size="${AXIS_FS}" fill="var(--muted)"
       style="font-variant-numeric:tabular-nums">${p}</text>`;
   }
-  /* month ticks */
+  /* month ticks. Every month on a full-width chart; every other one on a
+     panel, where five labels at 11 units do not fit 173 units of plot. */
   let ax = "";
-  for(const [d,nm] of MONTHS){
-    ax += `<line x1="${xOf(d)}" x2="${xOf(d)}" y1="${G.SH-6}" y2="${G.SH-2}"
+  MONTHS.forEach(([d,nm], i) => {
+    ax += `<line x1="${xOf(d)}" x2="${xOf(d)}" y1="${GG.SH-6}" y2="${GG.SH-2}"
       stroke="var(--baseline)" stroke-width="1"/>`;
+    if(i % GG.MSTRIDE) return;               // tick stays, label is dropped
     ax += `<text x="${xOf(d)}" y="${axY}" text-anchor="middle"
-      font-size="9" fill="var(--muted)">${nm}</text>`;
-  }
+      font-size="${AXIS_FS}" fill="var(--muted)">${nm}</text>`;
+  });
   /* latest-report rule: prior years run to 31 Oct, 2026 stops here. Saying so
      stops the shorter line reading as a collapse. */
-  const lr = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
-      y2="${G.SH-6}" stroke="var(--baseline)" stroke-width="1"/>
-    <text x="${xOf(latestDay)-3}" y="10" text-anchor="end" font-size="8"
+  /* Baseline derived from the font size. It was a literal 10, set when this
+     text was 8px; at 11px that put 1.8px of ink above the viewBox on every
+     chart on the page. LR_BAND is the bottom of this label's box, and the
+     2026 direct label below uses it to decide whether it has room to sit
+     above its endpoint — so the two cannot disagree about where the top band
+     ends. */
+  const LR_Y = AXIS_FS + 2;
+  const LR_BAND = LR_Y + 3;
+  /* SPLIT, because the rule and its label want opposite paint orders. The rule
+     belongs UNDER the series — a baseline drawn over the data competes with it.
+     The label belongs OVER them, or the lines run through the words, which they
+     did: a gridline and the dashed crossover rule both crossed it.
+
+     Worth being explicit, because a halo alone does not fix this. paint-order
+     only orders stroke against fill WITHIN one element; it cannot lift that
+     element above a path drawn later in the document. Haloing this while it
+     was still emitted before the series changed the rendered output not at all
+     — the frames were pixel-identical. */
+  const lrRule = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
+      y2="${GG.SH-6}" stroke="var(--baseline)" stroke-width="1"/>`;
+  /* The rule stays on a panel; only its label goes. Five panels each captioned
+     "latest report" is the same sentence five times, and the region table below
+     the strip states the report date once. */
+  const lrLab = compact ? "" :
+    `<text x="${xOf(latestDay)-3}" y="${LR_Y}" text-anchor="end"
+      font-size="${AXIS_FS}" ${halo(AXIS_FS)}
       fill="var(--muted)">latest report</text>`;
 
   /* prior years: thin, ordered blue ramp, drawn first so 2026 sits on top */
@@ -712,27 +1535,50 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
   }
   /* crossover marker: dashed because it marks a threshold event, not a grid */
   let mk = "";
-  const md = cross.case === "crossed" ? cross.marker_day : null;
+  const md = markerDay(cross);
   if(md){
     /* Dashed because it marks a threshold event — the one place dashing is
        meaningful rather than noise. Kept recessive: the marker locates the
        event, the orange line is still the figure. */
-    mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${G.SH-6}"
+    const y = series[CUR][md];
+    /* The marker and its dot stay; the date text goes on a panel. The region
+       table's "below since" column is the same value with room to be read. */
+    mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${GG.SH-6}"
       stroke="var(--muted)" stroke-width="1" stroke-dasharray="2.5 3.5"/>
-      <circle cx="${xOf(md)}" cy="${yOf(series[CUR][md])}" r="3.4"
-        fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
-      <text x="${xOf(md)+4}" y="${G.SH-9}" font-size="8"
-        fill="var(--muted)">${dosLabel(md, CUR)}</text>`;
+      ${y == null ? "" : `<circle cx="${xOf(md)}" cy="${yOf(y)}" r="3.4"
+        fill="var(--now)" stroke="var(--chart-bg)" stroke-width="1.8"/>`}
+      ${compact ? "" : `<text x="${xOf(md)+4}" y="${GG.SH-9}"
+        font-size="${AXIS_FS}" ${halo(AXIS_FS)}
+        fill="var(--muted)">${dosLabel(md, CUR)}</text>`}`;
   }
   const cp = linePath(series[CUR]);
   const cur = `<path d="${cp}" fill="none" stroke="var(--now)"
     stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-  /* direct label on the one series that matters */
+  /* direct label on the one series that matters.
+     It sits above the endpoint by default. When the series ends high that puts
+     it in the "latest report" label's band at the top of the plot, which is
+     what collided in the South Gujarat facet at 375px — that region ends at
+     77%, high enough to reach it. Flipped below the point when the space above
+     is not there. Both labels are anchored at nearly the same x, so a vertical
+     test is sufficient; no horizontal case exists. */
   const ld = series[CUR][latestDay];
+  const LAB_FS = 13;
+  const above = yOf(ld) - 6;
+  const flip = above - LAB_FS < LR_BAND;
+  const labY = flip ? yOf(ld) + LAB_FS + 3 : above;
+  /* HALOED, because this label sits ON the series rather than beside it. All
+     four prior-year lines crossed it at every width — the lines converge on
+     the top of the plot in September and the 2026 endpoint sits under them,
+     so there is no position for this label that is clear of data. The gap
+     annotation two blocks up had the halo and this did not, which is why the
+     bracket's text read cleanly and the "2026" it points at did not.
+     The marker's ring is --chart-bg for the same reason it is on the text: at
+     --surface-1 it was ringed in the card colour while drawn on the page. */
   const lab = `<circle cx="${xOf(latestDay)}" cy="${yOf(ld)}" r="3.6"
-      fill="var(--now)" stroke="var(--surface-1)" stroke-width="2"/>
-    <text x="${xOf(latestDay)-6}" y="${yOf(ld)-6}" text-anchor="end"
-      font-size="10" font-weight="700" fill="var(--now-text)">2026</text>`;
+      fill="var(--now)" stroke="var(--chart-bg)" stroke-width="2"/>
+    <text x="${xOf(latestDay)-6}" y="${labY.toFixed(1)}" text-anchor="end"
+      font-size="${LAB_FS}" font-weight="700" ${halo(LAB_FS)}
+      fill="var(--now-text)">2026</text>`;
 
   /* ---- rainfall: a SEPARATE panel, on the ONE scale every strip shares,
      sharing the x-axis. Never a second y-axis on the storage plot. ---- */
@@ -745,8 +1591,8 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
      finding and not a rendering fault — and the number keeps a compressed
      strip readable without hovering. */
   const rmax = RAIN_MAX;
-  const ry = v => rTop + G.RH - (v / rmax) * (G.RH - 4);
-  rr = `<line x1="${G.PADL}" x2="${G.W-G.PADR}" y1="${rTop+G.RH}" y2="${rTop+G.RH}"
+  const ry = v => rTop + GG.RH - (v / rmax) * (GG.RH - 4);
+  rr = `<line x1="${GG.PADL}" x2="${GG.W-GG.PADR}" y1="${rTop+GG.RH}" y2="${rTop+GG.RH}"
       stroke="var(--baseline)" stroke-width="1"/>`;
   /* prior-year mean rainfall, as a reference line */
   const pm = {};
@@ -760,27 +1606,51 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
   if(pmPath) rr += `<path d="${pmPath}" fill="none" stroke="var(--muted)"
     stroke-width="1.2" opacity="0.9"/>`;
   /* 2026 daily rain: thin bars, 2px surface gap, 1px rounded ends */
-  const bw = Math.max(1.1, (G.W-G.PADL-G.PADR)/SEASON_DAYS - 0.7);
+  const bw = Math.max(1.1, (GG.W-GG.PADL-GG.PADR)/SEASON_DAYS - 0.7);
   for(const [k,v] of Object.entries(rain[CUR] || {})){
     if(v <= 0) continue;
-    const h = Math.max(0.8, rTop + G.RH - ry(v));
+    const h = Math.max(0.8, rTop + GG.RH - ry(v));
     rr += `<rect x="${(xOf(+k)-bw/2).toFixed(1)}" y="${ry(v).toFixed(1)}"
       width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="0.7"
       fill="var(--now)" opacity="0.6"/>`;
   }
-  const pk = Math.max(0, ...Object.values(rain[CUR] || {}).filter(v => v != null));
-  rr += `<text x="${G.W-G.PADR}" y="${rTop-1}" text-anchor="end" font-size="7.5"
-    fill="var(--muted)">rain mm/day, regional mean · peak ${f1(pk)}</text>`;
+  /* The peak moves to the region table on a panel: this caption is 38 units of
+     text and the panel's plot is 173, so it would cover a fifth of the strip
+     it is describing. */
+  if(!compact){
+    const pk = Math.max(0, ...Object.values(rain[CUR] || {}).filter(v => v != null));
+    rr += `<text x="${GG.W-GG.PADR}" y="${rTop-1}" text-anchor="end"
+      font-size="${AXIS_FS}" ${halo(AXIS_FS)}
+      fill="var(--muted)">rain mm/day, regional mean · peak ${f1(pk)}</text>`;
+  }
   }
 
-  const hitH = showRain ? rTop + G.RH : G.SH - 6;
-  return `<svg viewBox="0 0 ${G.W} ${totH}" role="img" tabindex="0"
+  /* Drawn after the series so the dimension line and its label sit on top of
+     anything they cross, and described in the aria-label so the annotation is
+     not sighted-only. */
+  const gapAnn = gapAnnotation((opts || {}).gap, xOf, yOf, latestDay, GG);
+  const gapSaid = gapAnn && opts.gap
+    ? `. ${Math.abs(opts.gap.meanPrior - opts.gap.pctNow).toFixed(1)} points ${
+        opts.gap.meanPrior > opts.gap.pctNow ? "below" : "above"} the `
+      + `${numWord(opts.gap.nPrior)}-year average for this date`
+    : "";
+
+  const hitH = showRain ? rTop + GG.RH : GG.SH - 6;
+  /* The chart PUBLISHES its own geometry. The tooltip converted a cursor
+     position to a day using the global G.W and G.PADL, which silently assumed
+     every chart on the page shared one viewBox — true until a panel had its
+     own, and then the state chart's numbers would have been used to read a
+     205-unit facet, putting the crosshair on the wrong day with nothing to
+     show it was wrong. Read from the element it is pointing at instead. */
+  return `<svg viewBox="0 0 ${GG.W} ${totH}" role="img" tabindex="0"
       aria-label="Percent filling by day of season, 2026 against 2022 to 2025${
-        showRain ? ", with daily rainfall below" : ""}" data-id="${idPrefix}">
-    ${g}${ax}${lr}${pri}${cur}${mk}${lab}${rr}
+        showRain ? ", with daily rainfall below" : ""}${gapSaid}"
+      data-id="${idPrefix}"
+      data-vbw="${GG.W}" data-padl="${GG.PADL}" data-padr="${GG.PADR}">
+    ${g}${ax}${lrRule}${pri}${cur}${mk}${lab}${lrLab}${rr}${gapAnn}
     <line class="xh" x1="0" x2="0" y1="4" y2="${hitH}" stroke="var(--text-secondary)"
       stroke-width="1" opacity="0" pointer-events="none"/>
-    <rect class="hit" x="${G.PADL}" y="0" width="${G.W-G.PADL-G.PADR}" height="${hitH}"
+    <rect class="hit" x="${GG.PADL}" y="0" width="${GG.W-GG.PADL-GG.PADR}" height="${hitH}"
       fill="transparent" style="cursor:crosshair"/>
   </svg>`;
 }
@@ -799,6 +1669,59 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain){
    region order, never by rank, so nothing repaints when the ranking moves.
    Identity does not rest on colour: every line is direct-labelled on a wide
    screen, and the legend carries the same values on a narrow one. */
+/* ================= AXIS FURNITURE: ONE CONVENTION, BOTH CHARTS =================
+   Four of the six overlaps the layout audit found were the same two mistakes,
+   each made twice — once in the regions chart and once in the scatter:
+
+     THE ORIGIN CORNER WAS CLAIMED BY BOTH AXES. The y axis's extreme tick
+     label and the x axis's first tick label were placed a few pixels apart at
+     the corner where the axes meet, so "-60" sat on "Jun" and "1" sat on
+     "-100".
+
+     AN AXIS TITLE SAT IN THE OTHER AXIS'S TICK BAND. The scatter's x-axis
+     title was 13px below an 11px tick row while itself being 13px, so its box
+     ran back up into the ticks; its y-axis title began left of the y tick
+     column on a phone and ran into "8k".
+
+   Rather than nudge four labels, two rules, both derived from the font sizes
+   so that a future type change cannot quietly reintroduce them:
+
+     1. The x-axis tick band starts far enough below the plot floor to clear
+        the descender box of a y-axis label sitting ON the floor. That is what
+        separates the origin corner, and it keeps every label — dropping the
+        extreme tick would have been cheaper and would have cost the reader the
+        axis minimum.
+     2. An axis title clears the tick band by its own size plus a gap. The
+        y-axis title sits above the plot, clear of the topmost y tick.
+
+   Every offset below is a function of AXIS_FS / AXIS_TITLE_FS. The one thing
+   not to do here is write more magic numbers: the collisions existed because
+   14, 27 and 34 were set against a 7.5-10.5px type scale and outlived it. */
+const AXIS_FS = 11;          // tick labels in both charts
+const AXIS_TITLE_FS = 13;    // axis titles in both charts
+/* ONE HALO, for every label that sits over the series rather than beside it.
+   paint-order="stroke" paints the stroke BEFORE the fill, so it reads as a
+   backing plate behind the glyphs instead of an outline on top of them, and
+   --chart-bg is whatever the chart is drawn on, so a chart moved between the
+   page and a card keeps a correct halo.
+
+   The width tracks the font size. 0.24em reproduces the 2.6 the gap annotation
+   was already using at 11px, so this generalises the value that was there
+   rather than inventing one; the sub-label's 2.4 becomes 2.64, which is the
+   only rendered change to anything that already had a halo. */
+const halo = fs =>
+  `stroke="var(--chart-bg)" stroke-width="${(fs * 0.24).toFixed(2)}" ` +
+  `paint-order="stroke" stroke-linejoin="round"`;
+/* Plot floor to x-axis tick baseline. An 11px label on the floor has a box
+   reaching ~3px below its baseline, so the x band must start below that. */
+const X_TICK_DY = AXIS_FS + 8;
+/* Plot floor to x-axis title baseline: past the tick band, plus the title's
+   own ascent, plus a gap. */
+const X_TITLE_DY = X_TICK_DY + AXIS_TITLE_FS + 3;
+/* Plot top to y-axis title baseline, measured upward — clear of the topmost
+   y tick label, which sits just below the plot top. */
+const Y_TITLE_UP = AXIS_FS + 3;
+
 const REGION_ORDER = ["NG", "CG", "SG", "Sau", "Kutch"];
 const REGION_COL = {
   NG:    "var(--cat1)", CG: "var(--cat2)", SG: "var(--cat3)",
@@ -825,7 +1748,10 @@ function regionsSVG(){
   const W = narrow ? 308 : 940, H = narrow ? 360 : 400;
   const L = narrow ? 34 : 46;
   const R = narrow ? 10 : 132;        // wide: a gutter for direct labels
-  const T = 16, B = 34;
+  /* T holds the y-axis title above the topmost tick, by the same rule as the
+     scatter. At 16 the title's ink ran 1px off the top of the viewBox and sat
+     level with the "+20" tick. */
+  const T = 30, B = 34;
 
   const devs = REGION_ORDER
     .map(code => ({r: DATA.regions.find(x => x.code === code)}))
@@ -846,24 +1772,32 @@ function regionsSVG(){
     g += `<line x1="${L}" x2="${W-R}" y1="${yp(v)}" y2="${yp(v)}"
       stroke="${zero ? "var(--baseline)" : "var(--grid)"}"
       stroke-width="${zero ? 1.4 : 1}"/>
-      <text x="${L-5}" y="${yp(v)+3}" text-anchor="end" font-size="9"
+      <text x="${L-5}" y="${yp(v)+3}" text-anchor="end" font-size="11"
         fill="var(--muted)" style="font-variant-numeric:tabular-nums">${
         v > 0 ? "+" + v : v}</text>`;
   }
   for(const [d, nm] of MONTHS){
-    g += `<text x="${xp(d)}" y="${H-B+14}" text-anchor="middle" font-size="9"
-      fill="var(--muted)">${nm}</text>`;
+    g += `<text x="${xp(d)}" y="${H-B+X_TICK_DY}" text-anchor="middle"
+      font-size="${AXIS_FS}" fill="var(--muted)">${nm}</text>`;
   }
   // The zero line needs saying in words, or it reads as a plain axis. Not on
   // a narrow screen though: there it lands on top of the lines, and the
   // subtitle and the note below already say it.
+  /* Its own variable, emitted AFTER the series rather than appended to the
+     grid group. It labels the zero line by sitting on it, so it is over the
+     busiest part of the chart, and a halo on an element painted before the
+     five series does nothing — see the same split in chartSVG. */
+  let zeroLab = "";
   if(!narrow){
-    g += `<text x="${L+4}" y="${yp(0)-5}" font-size="8.5" fill="var(--muted)">
+    zeroLab = `<text x="${L+4}" y="${yp(0)-5}" font-size="${AXIS_FS}"
+        ${halo(AXIS_FS)} fill="var(--muted)">
         at its own prior four-year mean</text>`.replace(/\s+/g, " ");
   }
-  g += `<text x="${L-5}" y="${T-5}" text-anchor="start" font-size="9"
-      fill="var(--text-secondary)">percentage points from each region's own
-      prior-year mean</text>`.replace(/\s+/g, " ");
+  /* x=2, not 0: a glyph's left side bearing can sit a pixel or two left of the
+     anchor, which clipped this title against the viewBox edge. */
+  g += `<text x="2" y="${T-Y_TITLE_UP}" text-anchor="start"
+      font-size="${AXIS_FS}" fill="var(--text-secondary)">percentage points
+      from each region's own prior-year mean</text>`.replace(/\s+/g, " ");
 
   let lines = "", labels = "";
   const ends = [];
@@ -886,7 +1820,16 @@ function regionsSVG(){
        clipped/overlapping-label anti-pattern. Where a label has been moved,
        a hairline connects it back to its endpoint so the association is not
        lost. */
-    const MIN = 13;
+    /* MIN was a literal 13, chosen when this label was 10.5px. The type retune
+       made it 13px, whose rendered box is about 19px tall — so the minimum
+       separation became SMALLER than the labels, and Saurashtra (-34.3) and
+       North Gujarat (-35.9), 1.6 pp apart, went back to sitting on top of each
+       other: a 137 x 6 px overlap at 1440px, the worst finding in the audit.
+       Derived from the font size now, at 1.55x to clear the em box rather than
+       the visual glyphs, so the stack cannot silently re-collide the next time
+       the scale moves. */
+    const FS_REGLABEL = 13;
+    const MIN = Math.ceil(FS_REGLABEL * 1.55);
     const placed = [...ends].sort((a, b) => a.y - b.y);
     for(let i = 1; i < placed.length; i++){
       if(placed[i].y - placed[i - 1].y < MIN)
@@ -907,15 +1850,18 @@ function regionsSVG(){
           y2="${e.y - 3.4}" stroke="${REGION_COL[e.d.code]}"
           stroke-width="1" opacity="0.6"/>`;
       }
-      labels += `<text x="${e.x + 9}" y="${e.y}" font-size="10.5"
-        fill="var(--text-primary)">${esc(e.d.name)}
+      /* Haloed too: the push-apart loop moves a label off its own line end,
+         which can land it on a neighbouring series or its own leader. The
+         stroke inherits to the tspan, so the name and the number both get it. */
+      labels += `<text x="${e.x + 9}" y="${e.y}" font-size="${FS_REGLABEL}"
+        ${halo(FS_REGLABEL)} fill="var(--text-primary)">${esc(e.d.name)}
         <tspan fill="${REGION_COL[e.d.code]}" font-weight="700"
           style="font-variant-numeric:tabular-nums">${f1(e.v)}</tspan></text>`;
     }
   }
   return `<svg viewBox="0 0 ${W} ${H}" role="img"
     aria-label="Deviation from each region's own prior four-year mean, by day
-    of season, for all five regions in ${CUR}">${g}${lines}${labels}</svg>`;
+    of season, for all five regions in ${CUR}">${g}${lines}${zeroLab}${labels}</svg>`;
 }
 
 /* ---------------- CSV download ----------------
@@ -1045,7 +1991,7 @@ function schemeSpark(s, thin){
   const ser = s.series || {};
   const cur = ser[CUR] || {};
   if(!Object.keys(cur).length) return "";
-  const PH = 76, AXH = 16, H = PH + AXH;
+  const PH = 76, AXH = 19, H = PH + AXH;
   const xf = d => G.PADL + (d - 1) / (SEASON_DAYS - 1) * (G.W - G.PADL - G.PADR);
 
   /* The y domain follows the data above 100, it does not clamp to it.
@@ -1063,11 +2009,11 @@ function schemeSpark(s, thin){
   for(const p of (yMax > 100 ? [0, 50, 100, yMax] : [0, 50, 100])){
     g += `<line x1="${G.PADL}" x2="${G.W - G.PADR}" y1="${yf(p)}" y2="${yf(p)}"
       stroke="var(--grid)" stroke-width="1"/>
-      <text x="${G.PADL - 4}" y="${yf(p) + 3}" text-anchor="end" font-size="8"
+      <text x="${G.PADL - 4}" y="${yf(p) + 3}" text-anchor="end" font-size="11"
         fill="var(--muted)" style="font-variant-numeric:tabular-nums">${p}</text>`;
   }
   for(const [d, nm] of MONTHS){
-    g += `<text x="${xf(d)}" y="${H - 4}" text-anchor="middle" font-size="8.5"
+    g += `<text x="${xf(d)}" y="${H - 4}" text-anchor="middle" font-size="11"
       fill="var(--muted)">${nm}</text>`;
   }
   const days = Object.keys(cur).map(Number);
@@ -1084,10 +2030,14 @@ function schemeSpark(s, thin){
   lines += `<path d="${linePath(cur, xf, yf, thin)}" fill="none"
     stroke="var(--now)" stroke-width="2.2" stroke-linejoin="round"
     stroke-linecap="round"/>`;
+  /* Same halo as the state chart's direct label, for the same reason: the
+     prior years run above the 2026 endpoint here too. */
+  const SPK_FS = 11;
   lines += `<circle cx="${xf(latest)}" cy="${yf(cur[latest])}" r="3.2"
-      fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
+      fill="var(--now)" stroke="var(--chart-bg)" stroke-width="1.8"/>
     <text x="${xf(latest) - 5}" y="${yf(cur[latest]) - 6}" text-anchor="end"
-      font-size="9" font-weight="700" fill="var(--now-text)">${CUR}</text>`;
+      font-size="${SPK_FS}" font-weight="700" ${halo(SPK_FS)}
+      fill="var(--now-text)">${CUR}</text>`;
 
   return `<div class="spark">
     <svg viewBox="0 0 ${G.W} ${H}" role="img"
@@ -1104,6 +2054,26 @@ function schemeSpark(s, thin){
    Three cases rendered distinctly, plus where the series stands now — the
    marker is the FIRST qualifying run, which may sit in a season that later
    recovered and fell below again. */
+/* The cell form of crossText, off the SAME fields and the same branches, so
+   the table and the sentence beneath it cannot disagree. Deliberately does not
+   re-derive the day count from the report date: crossText prints
+   current_run.length, so this prints current_run.length. The sentence remains
+   the authority — this is a summary, and the row expands to the full text. */
+function crossCell(c){
+  if(!c || c.case === "not_evaluable")
+    return {since: "—", days: null, note: "no prior-year coverage"};
+  if(c.case === "never_below")  return {since: "not this season", days: null};
+  if(c.case === "below_from_start")
+    return {since: "from the season's start", days: null};
+  const r = c.current_run;
+  if(c.currently_below && r && r.qualifies)
+    return {since: dosLabel(r.start_day, CUR), days: r.length};
+  if(c.currently_below && r)
+    return {since: "—", days: null,
+            note: `${r.length} day${r.length > 1 ? "s" : ""}, short of ${c.min_run}`};
+  return {since: "—", days: null};
+}
+
 function crossText(c, label){
   const N = c.min_run;
   const rule = `<span class="none">(${N}+ consecutive days rule)</span>`;
@@ -1200,7 +2170,12 @@ function scatterSVG(list){
   const narrow = isNarrow();
   const W2 = G.SW, H2 = G.SHH;
   const L = narrow ? 40 : 52, R = narrow ? 12 : 18;
-  const T = narrow ? 20 : 16, B = narrow ? 46 : 42;
+  /* T grew to make room for the y-axis title ABOVE the topmost y tick. It used
+     to share that line, which is why "8k" and "capacity, MCM (log)" collided
+     on a phone. B holds the tick band plus the x-axis title, both now derived
+     from the font sizes. */
+  const T = narrow ? 34 : 30;
+  const B = Math.max(narrow ? 46 : 42, X_TITLE_DY + 6);
   const xs = [-100, 50];
   const xp = v => L + (v - xs[0]) / (xs[1] - xs[0]) * (W2 - L - R);
   const lg = v => Math.log10(Math.max(1, v));
@@ -1212,29 +2187,35 @@ function scatterSVG(list){
   for(const v of (narrow ? [-100,-50,0,50] : [-100,-75,-50,-25,0,25,50])){
     g += `<line x1="${xp(v)}" x2="${xp(v)}" y1="${T}" y2="${H2-B}"
       stroke="${v===0?"var(--baseline)":"var(--grid)"}" stroke-width="1"/>`;
-    g += `<text x="${xp(v)}" y="${H2-B+14}" text-anchor="middle" font-size="9.5"
-      fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
+    g += `<text x="${xp(v)}" y="${H2-B+X_TICK_DY}" text-anchor="middle"
+      font-size="${AXIS_FS}" fill="var(--muted)"
+      style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
   }
   for(const v of (narrow ? [1,100,8000] : [1,10,100,1000,8000])){
     g += `<line x1="${L}" x2="${W2-R}" y1="${yp(v)}" y2="${yp(v)}"
       stroke="var(--grid)" stroke-width="1"/>`;
-    g += `<text x="${L-6}" y="${yp(v)+3.2}" text-anchor="end" font-size="9.5"
+    g += `<text x="${L-6}" y="${yp(v)+3.2}" text-anchor="end" font-size="11"
       fill="var(--muted)" style="font-variant-numeric:tabular-nums">${v>=1000?(v/1000)+"k":v}</text>`;
   }
-  g += `<text x="${xp(0)}" y="${H2-B+27}" text-anchor="middle" font-size="10"
-      fill="var(--text-secondary)">${narrow
+  g += `<text x="${xp(0)}" y="${H2-B+X_TITLE_DY}" text-anchor="middle"
+      font-size="${AXIS_TITLE_FS}" fill="var(--text-secondary)">${narrow
         ? "deviation, percentage points"
         : "deviation from the prior same-date mean, percentage points"}</text>`;
-  g += `<text x="${L - (narrow ? 34 : 0)}" y="${T-5}" text-anchor="start"
-      font-size="9" fill="var(--text-secondary)">${narrow
+  /* Above the plot and hard left, on its own line. It used to sit at T-5,
+     level with the topmost y tick, and on a phone it was also pushed 34px left
+     into the tick column — two reasons to collide with "8k", which it did. */
+  /* x=2, not 0: a glyph's left side bearing can sit a pixel or two left of the
+     anchor, which clipped this title against the viewBox edge. */
+  g += `<text x="2" y="${T-Y_TITLE_UP}" text-anchor="start"
+      font-size="${AXIS_FS}" fill="var(--text-secondary)">${narrow
         ? "capacity, MCM (log)" : "design capacity, MCM (log)"}</text>`;
   /* Two anchored labels rather than one string with arrows in the middle —
      the combined version read as a single ambiguous arrow. Abbreviated on a
      phone: the full wording does not fit and a clipped label is worse than a
      short one. */
-  g += `<text x="${xp(xs[0])+4}" y="${H2-B-7}" font-size="9.5"
+  g += `<text x="${xp(xs[0])+4}" y="${H2-B-7}" font-size="11"
       fill="var(--muted)">${narrow ? "← below" : "← further below prior years"}</text>`;
-  g += `<text x="${xp(xs[1])-4}" y="${H2-B-7}" text-anchor="end" font-size="9.5"
+  g += `<text x="${xp(xs[1])-4}" y="${H2-B-7}" text-anchor="end" font-size="11"
       fill="var(--muted)">${narrow ? "above →" : "above prior years →"}</text>`;
 
   /* Largest first so small dots land on top and stay clickable; a 1.5px
@@ -1278,7 +2259,7 @@ function scatterLegend(){
            stroke="var(--surface-1)" stroke-width="1.5"/></svg>${b.lb}</div>`
         ).join("")}</div>
     </div>
-    <div class="grp" style="color:var(--muted);max-width:260px;line-height:1.5">
+    <div class="grp" style="color:var(--muted);max-width:34ch;line-height:var(--lh-body)">
       Click a point for that scheme's detail, including days of water at
       today's release rate.
     </div>`;
@@ -1287,6 +2268,27 @@ function scatterLegend(){
 /* The real map. Unreachable until coordinates exist; kept here so supplying
    them is the only remaining step. Admin geometry is drawn as STROKES ONLY —
    no filled areas — so nothing implies a value for a district. */
+/* Drop the group rule from any legend item that begins a row.
+   Grouped by the item's vertical CENTRE, not its top: the band is
+   align-items:center and the items are different heights, so two items on one
+   line have different tops and comparing tops would call half of them
+   row-leaders. Exposed for testing. */
+function trimLegendRules(){
+  for(const leg of document.querySelectorAll(".legend")){
+    const kids = [...leg.children];
+    let row = null;
+    for(const k of kids){
+      const r = k.getBoundingClientRect();
+      if(!r.height){ k.classList.remove("br-off"); continue; }
+      const cy = r.top + r.height / 2;
+      const starts = row === null || cy > row + 6;
+      if(starts) row = cy;
+      k.classList.toggle("br-off", starts);
+    }
+  }
+}
+window.__trimLegendRules = trimLegendRules;
+
 function mapSVG(list, coords, geo){
   const pts = list.filter(s => coords[s.scheme_id]);
   if(!pts.length) return "";
@@ -1295,10 +2297,41 @@ function mapSVG(list, coords, geo){
   const pad = 0.35;
   const b = [Math.min(...lons)-pad, Math.min(...lats)-pad,
              Math.max(...lons)+pad, Math.max(...lats)+pad];
-  const W2 = G.SW, H2 = isNarrow() ? 520 : 640;
-  const sx = (W2 - 20) / (b[2] - b[0]), sy = (H2 - 20) / (b[3] - b[1]);
-  const k = Math.min(sx, sy);
-  const px = lon => 10 + (lon - b[0]) * k;
+  /* The OUTLINES have to fit too, not just the dots. Bounds taken from the dam
+     points alone left the state edge 2 units inside the viewBox — it happened
+     not to clip, by 2 units, which is not a margin anyone chose. Kutch reaches
+     further west than any dam on it, so the geometry decides the west edge. */
+  for(const fc of [geo.state, geo.districts]){
+    if(!fc) continue;
+    for(const f of fc.features){
+      const gm = f.geometry;
+      const ps = gm.type === "Polygon" ? [gm.coordinates]
+        : gm.type === "MultiPolygon" ? gm.coordinates : [];
+      for(const poly of ps) for(const ring of poly) for(const c of ring){
+        if(c[0] < b[0]) b[0] = c[0];
+        if(c[1] < b[1]) b[1] = c[1];
+        if(c[0] > b[2]) b[2] = c[0];
+        if(c[1] > b[3]) b[3] = c[1];
+      }
+    }
+  }
+  /* HEIGHT FOLLOWS THE GROUND, it is not a constant. Gujarat's extent here is
+     about 7.6° of longitude by 5.6° of latitude — WIDER than tall. A fixed
+     520-unit portrait box on a phone therefore used 226 of its 520 units and
+     left 294 units of empty space, with the map anchored to the bottom of it
+     because py() measures up from H2. The same constant was merely generous at
+     640 on a desktop, so the defect only showed on a phone.
+
+     Derived from the bounding box and the scale instead, so the viewBox is the
+     size of the thing being drawn at every width. Longitude is cosine-corrected
+     at Gujarat's mid-latitude: a degree of longitude here is about 0.92 of a
+     degree of latitude, and ignoring that stretches the state east-west. */
+  const W2 = G.SW;
+  const midLat = (b[1] + b[3]) / 2;
+  const lonScale = Math.cos(midLat * Math.PI / 180);
+  const k = (W2 - 20) / ((b[2] - b[0]) * lonScale);
+  const H2 = Math.round((b[3] - b[1]) * k) + 20;
+  const px = lon => 10 + (lon - b[0]) * lonScale * k;
   const py = lat => H2 - 10 - (lat - b[1]) * k;
   const ring = r => r.map((c,i) => (i?"L":"M") + px(c[0]).toFixed(1) + " "
     + py(c[1]).toFixed(1)).join(" ") + "Z";
@@ -1332,7 +2365,10 @@ let GEO = {state:null, districts:null};
 let REG = {};
 const regName = c => REG[c] || c;
 
-let CURRENT_VIEW = "Season";
+/* Was CURRENT_VIEW, restored after a breakpoint re-render so a phone rotation
+   did not throw you back to the default tab. With the tabs gone there is no
+   view to restore: every stage is always in the document, and the scroll
+   position survives a re-render by itself. */
 let RENDERED_AT = null;
 
 function render(d){
@@ -1362,10 +2398,34 @@ function render(d){
     `Report date <b>${m.report_date}</b>
      <span class="age${stale ? " stale" : ""}">— data from
      ${ageWord(age)}</span> &nbsp;·&nbsp; source: ${esc(m.source)}
-     &nbsp;·&nbsp; built ${esc(m.built_utc)}<br>
+     &nbsp;·&nbsp; built <span class="nb">${esc(m.built_utc)}</span><br>
      ${m.dates_loaded} daily reports loaded, ${esc(m.season_window)} for
-     ${m.seasons_prior.join(", ")} and ${m.season_current}
-     &nbsp;·&nbsp; <code>SHA-256 ${esc(m.report_sha256||"—")}</code>`;
+     ${m.seasons_prior.join(", ")} and ${m.season_current}`;
+  /* The SHA-256 used to sit here, above the fold: a 64-character monospace
+     string that was one of the most visually distinctive things on first
+     paint, and of near-zero interest to a general reader. It is unchanged in
+     the footer and in every CSV export, so nothing about provenance is lost —
+     §8.3 asks that it be captured and shown, not that it outrank the finding. */
+
+  /* ---- narrative titles, generated from this build's data ----
+     Set after inSeason is known, because every one of them has a past-tense
+     voicing for the seven months the page shows a closed season. */
+  setTitle("headline", headlineTitle(d, inSeason));
+  const deck = deckText(d, inSeason);
+  const deckEl = document.getElementById("deck");
+  deckEl.hidden = !deck;
+  if(deck){
+    deckEl.innerHTML = deck.text;
+    deckEl.setAttribute("data-title-branch", deck.branch);
+  } else {
+    deckEl.innerHTML = "";
+    deckEl.removeAttribute("data-title-branch");
+  }
+  setTitle("stTitle", stateChartTitle(d, inSeason));
+  setTitle("regTitle", regionsTitle(d, inSeason));
+  setTitle("depthTitle", depthTitle(d, inSeason));
+  document.getElementById("kicker").textContent =
+    `Gujarat Reservoir Watch · ${m.report_date}`;
 
   const banner = document.getElementById("ageBanner");
   banner.className = "agebanner";
@@ -1415,61 +2475,129 @@ function render(d){
     `day ${s.day_of_season} of the season · % of design capacity`;
   const stSeries = s.series;
   document.getElementById("statePlot").innerHTML =
-    chartSVG(stSeries, null, s.crossover, s.day_of_season, "state", false);
+    chartSVG(stSeries, null, s.crossover, s.day_of_season, "state", false,
+      {gap: {pctNow: s.pct_now, meanPrior: s.mean_prior_at_now,
+             nPrior: Object.keys(s.prior_at_now || {}).length}});
   document.getElementById("stCross").innerHTML =
     crossText(s.crossover, "Gujarat") +
     `<button class="tblbtn" data-tv="state">Show as table</button>
      <div class="tv" id="tv-state">${tableView(stSeries, s.day_of_season,"state")}</div>`;
 
   /* legend */
-  document.getElementById("legend").innerHTML =
+  /* ---- the legend, split between the two stages it serves ----
+     It was one band sitting under the state chart while five of its seven
+     items described the FACETS, which after the reorder are two stages away.
+     The year swatches and the crossing marker belong to both charts, so they
+     stay with the state chart in stage 2; the rain items, the shared rain
+     scale and the facet-ordering note go to stage 4 with the charts they
+     describe. Not a duplicated legend — two legends for two figures. */
+  /* `br` marks the item that STARTS a group; the rule is drawn on its left
+     edge. See .legend .br — the separator used to be its own element and could
+     be orphaned onto a line by itself. */
+  const yearSwatches =
     `<span class="it"><span class="sw thick" style="border-color:var(--now)"></span>
-       <b style="color:var(--text-primary)">2026</b> — current season</span>
-     <span class="sep">|</span>
-     ` + YRS.map(y =>
-      `<span class="it"><span class="sw thin" style="border-color:${COL[y]}"></span>${y}</span>`
+       <b style="color:var(--text-primary)">${m.season_current}</b> — current season</span>
+     ` + YRS.map((y, i) =>
+      `<span class="it${i ? "" : " br"}"><span class="sw thin"
+         style="border-color:${COL[y]}"></span>${y}</span>`
      ).join("") +
-    `<span class="sep">|</span>
-     <span class="it"><span class="sw dash" style="border-color:var(--text-secondary)"></span>
-       crossed below all prior years</span>
-     <span class="it"><span class="sw bar" style="background:var(--now);opacity:.6"></span>
-       2026 rain, mm/day</span>
+    `<span class="it br"><span class="sw dash" style="border-color:var(--text-secondary)"></span>
+       crossed below all prior years</span>`;
+  document.getElementById("legendYears").innerHTML = yearSwatches;
+  document.getElementById("legend").innerHTML = yearSwatches +
+    /* The panels dropped their "latest report" text, so the solid rule they
+       still draw had nothing naming it — the legend covered the dashed marker
+       and not this one. Only on this legend: the state chart in stage 2 still
+       labels its own rule inline, and repeating it there would be the second
+       explanation of one line. */
+    `<span class="it br"><span class="sw vrule"
+         style="border-left-color:var(--baseline)"></span>
+       latest report — ${m.season_current} stops here, prior years run on</span>
+     <span class="it br"><span class="sw bar" style="background:var(--now);opacity:.6"></span>
+       ${m.season_current} rain, mm/day</span>
      <span class="it"><span class="sw thin" style="border-color:var(--muted)"></span>
        prior-year mean rain</span>
-     <span class="sep">|</span>
-     <span class="txt" style="color:var(--muted)">all five rain strips on one
+     <span class="txt br" style="color:var(--muted)">all five rain strips on one
        <b style="color:var(--text-secondary)">0–${RAIN_MAX} mm/day</b> scale,
        so bar heights compare across regions</span>
-     <span class="sep">|</span>
-     <span class="txt" style="color:var(--muted)">facets ordered worst
+     <span class="txt br" style="color:var(--muted)">facets ordered worst
        deviation first, in <b style="color:var(--text-secondary)">pp</b> —
        percentage points, the plain difference between two percentages</span>`;
+  /* SYNCHRONOUS, not requestAnimationFrame. rAF was the reflex and it is the
+     wrong tool: it does not fire in a hidden tab, so the legend would have
+     shipped with rules at line starts until something painted — and I could
+     not observe that here at all, because the preview pane does not run rAF
+     while hidden. getBoundingClientRect forces layout on demand, so nothing
+     needs deferring; the DOM above is already set. */
+  trimLegendRules();
 
-  /* facets */
+  /* ---- the facets as a small-multiple strip ----
+     Five bare panels, each a region name, its deviation and the shape. The
+     cards carried seven numbers and two sentences each, which at a fifth of
+     the figure band is not a comparison but five compressed articles. What a
+     small multiple is for is the shape: five of them side by side answer "is
+     this one region or all of them?" in a glance, and the numbers answer a
+     different question, which the table below does better. */
   document.getElementById("grid").innerHTML = d.regions.map(r => {
     const dev = r.pct_now - r.mean_prior_at_now;
-    const capn = r.n_capacity_substituted
-      ? `<div class="capnote">Denominator: ${r.n_capacity_substituted} scheme-season${r.n_capacity_substituted>1?"s":""}
-         in this region published two capacities mid-season; the 2026 capacity is
-         used for those, which is the value every other season agrees on.</div>` : "";
     return `<div class="facet">
       <div class="fh"><span class="nm">${esc(r.name)}</span>
-        <span class="meta">${r.n_schemes} schemes · ${f1(r.design_mcm)} MCM design</span></div>
-      <div class="fnums">
-        <span>now <b>${f2(r.pct_now)}%</b></span>
-        <span>prior mean <b>${f2(r.mean_prior_at_now)}%</b></span>
-        <span class="dv" title="percentage points below the prior four-year mean for this date">${dev>0?"+":""}${f1(dev)} pp</span>
-        <span style="color:var(--muted)">${f1(r.mcm_now)} MCM</span>
-      </div>
+        <span class="dv" title="percentage points below this region's own prior four-year mean for this date">${dev>0?"+":""}${f1(dev)} pp</span></div>
       <div class="plot" data-region="${r.code}">
-        ${chartSVG(r.series, r.rain, r.crossover, DATA.state.day_of_season, r.code, true)}
+        ${chartSVG(r.series, r.rain, r.crossover, DATA.state.day_of_season,
+                   r.code, true, {geom: facetGeom()})}
       </div>
-      <div class="cross">${crossText(r.crossover, esc(r.name))}
-        <button class="tblbtn" data-tv="${r.code}">Show as table</button>
-        <div class="tv" id="tv-${r.code}">${tableView(r.series, DATA.state.day_of_season, r.code)}</div>
-      </div>${capn}
     </div>`;
   }).join("");
+
+  /* ---- and the numbers they shed, in one place ----
+     Nothing is dropped: every figure that was on a card is a column here, and
+     the crossover sentence and the denominator note are in the row each region
+     expands. Down a column they are also comparable, which across five cards
+     they were not. */
+  document.getElementById("tblRegions").innerHTML =
+    `<div class="tablewrap"><table class="dt"><thead><tr>
+      <th>Region</th>
+      <th style="text-align:right">Schemes</th>
+      <th style="text-align:right">% now</th>
+      <th style="text-align:right">Prior mean</th>
+      <th style="text-align:right">Deviation, pp</th>
+      <th style="text-align:right">Live MCM</th>
+      <th style="text-align:right">Design MCM</th>
+      <th style="text-align:right">Rain peak, mm/day</th>
+      <th>Below every prior year since</th>
+      <th></th></tr></thead><tbody>` +
+    d.regions.map(r => {
+      const dev = r.pct_now - r.mean_prior_at_now;
+      const pk = Math.max(0, ...Object.values((r.rain || {})[CUR] || {})
+        .filter(v => v != null));
+      const cc = crossCell(r.crossover);
+      const capn = r.n_capacity_substituted
+        ? `<div class="capnote">Denominator: ${r.n_capacity_substituted} scheme-season${r.n_capacity_substituted>1?"s":""}
+           in this region published two capacities mid-season; the 2026 capacity is
+           used for those, which is the value every other season agrees on.</div>` : "";
+      return `<tr>
+        <td class="nm">${esc(r.name)}</td>
+        <td class="n">${r.n_schemes}</td>
+        <td class="n">${f2(r.pct_now)}</td>
+        <td class="n">${f2(r.mean_prior_at_now)}</td>
+        <td class="dev">${dev>0?"+":""}${f1(dev)}</td>
+        <td class="n">${f1(r.mcm_now)}</td>
+        <td class="n">${f1(r.design_mcm)}</td>
+        <td class="n">${f1(pk)}</td>
+        <td>${cc.note
+          ? `<span class="none">${cc.note}</span>`
+          : cc.since + (cc.days != null
+              ? ` <span class="none">${cc.days} days</span>` : "")}</td>
+        <td><button class="tblbtn" data-tv="${r.code}"
+          data-show="Days" data-hide="Hide days">Days</button></td>
+      </tr>
+      <tr class="tv" id="tv-${r.code}"><td colspan="10">
+        <div class="rprose">${crossText(r.crossover, esc(r.name))}</div>${capn}
+        ${tableView(r.series, DATA.state.day_of_season, r.code)}
+      </td></tr>`;
+    }).join("") + `</tbody></table></div>
+    <p class="scrollhint">Table scrolls sideways.</p>`;
 
   /* deviation table 1 — no days-of-water here; that lives on scheme detail */
   document.getElementById("tblPP").innerHTML =
@@ -1657,16 +2785,54 @@ function renderSchemesView(){
   // Open on a wide screen, collapsed on a phone. The summary carries the
   // claim either way.
   pel.open = !isNarrow();
+  /* The map states its own coverage. Partial coverage is fine; partial
+     coverage that looks complete is not, so the count, the share of storage
+     it represents, what verified each point and why the rest are missing are
+     all on the page rather than in a commit message. */
+  const tiers = cm.tiers || {};
+  const tierN = k => tiers[k] || 0;
+  const verified = tierN("A") + tierN("A-bdy");
+  const pel_ex = (cm.excluded || []);
   pel.innerHTML = (mapped
-    ? `<summary>${cm.n_placed} of ${cm.n_schemes} schemes placed on the map</summary>
-       <div class="pbody"><b>${cm.n_placed} of ${cm.n_schemes} schemes placed</b> from
-       ${esc(cm.source || "supplied coordinates")}. District and state
-       boundaries are drawn as outlines only — no area is filled, so no colour
-       on this map stands for a district.
+    ? `<summary>${cm.n_placed} of ${cm.n_schemes} dams placed${
+         cm.pct_capacity_placed
+           ? ` — ${cm.pct_capacity_placed}% of design capacity` : ""}</summary>
+       <div class="pbody"><b>${cm.n_placed} of ${cm.n_schemes} dams placed</b>
+       from ${esc(cm.source || "supplied coordinates")}${
+         cm.pct_capacity_placed
+           ? `, which is <b>${cm.pct_capacity_placed}%</b> of the state's design
+              capacity — the unplaced are nearly all small schemes` : ""}.
+       District and state boundaries are drawn as outlines only — no area is
+       filled, so no colour on this map stands for a district.
+       <br><br>
+       <b>No point here is a guess.</b> The register gives a latitude and
+       longitude for each dam; matching those rows to the WRD schemes is the
+       hard part, and a name resembling another name never places a dam. Every
+       point is corroborated by something that is not the name:
+       ${verified} agree with WRD's published design capacity to within 10% and
+       fall inside the district WRD assigns them${
+         tierN("B") ? `, ${tierN("B")} fall in the right district and match its
+         taluka` : ""}${
+         tierN("C") ? `, and ${tierN("C")} fall in the right district on an
+         exact name match` : ""}.
        ${cm.n_placed < cm.n_schemes
-         ? `The ${cm.n_schemes - cm.n_placed} without coordinates are not
-            plotted and are not implied to be anywhere; they remain in the
-            tables.` : ""}</div>`
+         ? `<br><br><b>The ${cm.n_schemes - cm.n_placed} not placed are not
+            drawn and are not implied to be anywhere</b>; they remain in the
+            tables and in the strip above.
+            ${pel_ex.length ? pel_ex.map(e =>
+              `${e.n} ${esc(e.reason)}`).join("; ") + "." : ""}
+            The register's own coordinate is wrong for a handful of dams — it
+            puts them 41 to 170&nbsp;km outside their district, contradicting
+            the nearest town the register itself prints — and those are left
+            off rather than drawn where the file says.` : ""}
+       ${cm.n_outside_state
+         ? `<br><br>One dam is drawn just <b>outside</b> the state outline, and
+            that is correct rather than a slip: the Damanganga dam sits on the
+            river at the Gujarat border and was built jointly with Dadra &amp;
+            Nagar Haveli, so the register's coordinate for it falls about a
+            kilometre beyond the boundary drawn here. Its water is Gujarat's
+            and the report carries it, so it is plotted where it is.` : ""}
+       </div>`
     : `<summary>Not a map &mdash; the source publishes no coordinates. Why, and what would fix it.</summary>
        <div class="pbody"><b>This is not a map, and it cannot be one from this source.</b>
        The WRD daily report gives each dam a <b>district and taluka but never a
@@ -1717,16 +2883,23 @@ function renderSchemesView(){
 function wirePoints(){
   document.querySelectorAll("#scatPlot .pt").forEach(c => c.onclick = () => {
     const s = DATA.schemes.find(x => x.scheme_id === +c.dataset.id);
-    if(window.__showDetail) window.__showDetail(s);
+    /* Anchored to the scatter's own container, so the panel appears directly
+       beneath the chart the point was clicked on. */
+    if(window.__showDetail)
+      window.__showDetail(s, document.querySelector("#stage-lookup .scat"));
   });
 }
 
 /* ---------------- interaction ---------------- */
 function wire(){
+  /* The labels are the button's own, not the handler's. Hardcoding "Show as
+     table" meant a button that opened as "Days" renamed itself on first close,
+     so the same control had two names depending on whether it had been used. */
   document.querySelectorAll(".tblbtn").forEach(b => b.onclick = () => {
     const el = document.getElementById("tv-" + b.dataset.tv);
-    el.classList.toggle("on");
-    b.textContent = el.classList.contains("on") ? "Hide table" : "Show as table";
+    const on = el.classList.toggle("on");
+    b.textContent = on ? (b.dataset.hide || "Hide table")
+                       : (b.dataset.show || "Show as table");
   });
 
   const tip = document.getElementById("tip");
@@ -1777,10 +2950,12 @@ function wire(){
       tip.style.top = Math.min(Math.max(8, T), innerHeight - r.height - 8) + "px";
     };
     const hide = () => { tip.classList.remove("on"); xh.setAttribute("opacity","0"); };
+    /* From the element, not the global: a facet panel has its own viewBox. */
+    const VBW = +svg.dataset.vbw, VPL = +svg.dataset.padl, VPR = +svg.dataset.padr;
     const dayAt = ev => {
       const b = svg.getBoundingClientRect();
-      const px = (ev.clientX - b.left) / b.width * G.W;
-      return Math.round((px - G.PADL) / (G.W - G.PADL - G.PADR) * (SEASON_DAYS - 1) + 1);
+      const px = (ev.clientX - b.left) / b.width * VBW;
+      return Math.round((px - VPL) / (VBW - VPL - VPR) * (SEASON_DAYS - 1) + 1);
     };
     const hit = svg.querySelector(".hit");
     hit.addEventListener("mousemove", ev => show(dayAt(ev), ev.clientX, ev.clientY));
@@ -1792,7 +2967,8 @@ function wire(){
       ev.preventDefault();
       kd = Math.max(1, Math.min(latest, kd + (ev.key === "ArrowRight" ? 1 : -1)));
       const b = svg.getBoundingClientRect();
-      show(kd, b.left + xOf(kd)/G.W*b.width, b.top + b.height/2);
+      const kx = VPL + (kd - 1)/(SEASON_DAYS - 1)*(VBW - VPL - VPR);
+      show(kd, b.left + kx/VBW*b.width, b.top + b.height/2);
     });
     svg.addEventListener("blur", hide);
   });
@@ -1808,7 +2984,10 @@ function wire(){
         ${f1(s.pct_filling)}%</span></button>`).join("");
     res.classList.add("on");
     res.querySelectorAll("button").forEach(b => b.onclick = () => {
-      detail(DATA.schemes.find(x => x.scheme_id === +b.dataset.id));
+      /* Anchored to the search block: a result picked from the box should
+         appear under the box, not somewhere else on the page. */
+      detail(DATA.schemes.find(x => x.scheme_id === +b.dataset.id),
+             document.querySelector(".srch"));
       res.classList.remove("on"); q.value = "";
     });
   };
@@ -1823,8 +3002,17 @@ function wire(){
     if(!e.target.closest(".srch")) res.classList.remove("on");
   });
 
-  function detail(s){
+  /* ---- the detail panel opens where it was asked for ----
+     #detail used to be the first child of <main>, above every view. Clicking
+     a point in the scatter — which is near the bottom of the page — called
+     scrollIntoView on a panel above the chart you had just clicked, so the
+     reader was thrown upward past everything. The panel now moves in the DOM
+     to sit after whatever opened it: under the search box when the search
+     opened it, under the scatter when a point did. Its home is stage 5. */
+  function detail(s, anchor){
     if(!s) return;
+    if(anchor && anchor.parentNode && det.previousElementSibling !== anchor)
+      anchor.insertAdjacentElement("afterend", det);
     const rel = s.outflow_canal_cusecs > 0;
     /* Precision has to match the magnitude. Ukai at 800 cusecs against 5,043
        MCM live computes to 2,576.8 days; quoting a seven-year figure to a
@@ -1836,11 +3024,11 @@ function wire(){
       v < 100 ? `${f1(v)} days`
       : v <= 365 ? `${Math.round(v).toLocaleString()} days`
       : `${Math.round(v).toLocaleString()} days
-         <span style="font-size:11px;color:var(--muted)">(about
+         <span style="font-size:var(--t-sm);color:var(--muted)">(about
          ${(v / 365).toFixed(1)} years)</span>`;
     const dw = (s.days_water_at_release == null || !rel)
       ? `<div class="v none">no current release</div>`
-      : `<div class="v sm" style="font-size:16px">${dayFmt(s.days_water_at_release)}</div>`;
+      : `<div class="v sm" style="font-size:var(--t-lg)">${dayFmt(s.days_water_at_release)}</div>`;
     /* Storage in this panel is printed to the source's own two decimals, not
        the one decimal used in the tables, so that dividing the two tiles
        reproduces the percentage above them exactly. One decimal closes at
@@ -1858,18 +3046,18 @@ function wire(){
           <div class="v">${f2(s.pct_filling)}%</div>
           <div class="vsub">gross storage ÷ design gross</div></div>
         <div class="c"><div class="k">Gross storage</div>
-          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
           <div class="vsub">all the water in the reservoir</div></div>
         <div class="c"><div class="k">Design gross</div>
-          <div class="v">${f2(s.design_gross_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="v">${f2(s.design_gross_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
           <div class="vsub">capacity when full</div></div>
         <div class="c"><div class="k">Live storage</div>
-          <div class="v">${f2(s.present_live_mcm)} <span style="font-size:11px;color:var(--muted)">MCM</span></div>
+          <div class="v">${f2(s.present_live_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
           <div class="vsub">the part that can be released</div></div>
         <div class="c"><div class="k">Canal release</div>
           <div class="v">${rel ? f1(s.outflow_canal_cusecs)+
-            ' <span style="font-size:11px;color:var(--muted)">cusecs</span>' :
-            '<span style="font-size:12.5px;color:var(--muted)">none</span>'}</div></div>
+            ' <span style="font-size:var(--t-sm);color:var(--muted)">cusecs</span>' :
+            '<span style="font-size:var(--t-md);color:var(--muted)">none</span>'}</div></div>
         <div class="c"><div class="k">Days of water <span style="text-transform:none;letter-spacing:0">at today's release rate</span></div>
           ${dw}</div>
         <div class="c"><div class="k">Same date, prior years</div>
@@ -1892,48 +3080,118 @@ function wire(){
   }
   window.__showDetail = detail;
 
-  /* view switching — Season stays the default; Schemes is a destination */
-  const vs = {Season: document.getElementById("viewSeason"),
-              Regions: document.getElementById("viewRegions"),
-              Schemes: document.getElementById("viewSchemes")};
-  const bs = {Season: document.getElementById("vSeason"),
-              Regions: document.getElementById("vRegions"),
-              Schemes: document.getElementById("vSchemes")};
-  const go = k => {
-    for(const [name, el] of Object.entries(vs)){
-      el.hidden = name !== k;
-      bs[name].setAttribute("aria-current", String(name === k));
+  /* ---- mini-nav: mark the stage the reader is actually in ----
+     A sticky nav with no current state is a list of links; with one it tells
+     you where you are.
+
+     This was an IntersectionObserver, which is the cheaper tool and the one
+     reached for by habit. It is not used here because its callback could not
+     be made to fire in the environment this was built in — a fresh observer
+     watching a section that demonstrably intersected its root margin never
+     called back. That is very likely a harness artefact rather than a browser
+     one, but shipping behaviour whose only defence is "it works elsewhere" is
+     not a defence. A rAF-throttled scroll listener does the same job, costs
+     one rect read per frame at most, and can be tested by scrolling.
+
+     currentStage() is pure and separately testable: given the scroll position
+     it returns the stage whose top has passed the reading line. */
+  const navLinks = [...document.querySelectorAll("#mininav a")];
+  const navStages = navLinks
+    .map(a => ({a, el: document.querySelector(a.getAttribute("href"))}))
+    .filter(o => o.el);
+
+  /* The reading line sits below the sticky bar, a third of the way down the
+     viewport: the stage a reader is reading is the last one to have started
+     above that line, not whichever happens to be tallest on screen. */
+  function currentStage(){
+    /* At the bottom of the document the last stage is current by definition —
+       the reader cannot scroll further. Without this the final stage can never
+       be marked: it is the shortest section on the page, so even at maximum
+       scroll its top stays 545px down, well below the reading line, and its
+       nav link would be dead. Found by walking every stage and checking the
+       mark, not by reading the loop. */
+    const atEnd = scrollY + innerHeight >=
+      document.documentElement.scrollHeight - 2;
+    if(atEnd && navStages.length) return navStages[navStages.length - 1];
+    const line = 56 + innerHeight * 0.28;
+    let active = null;
+    for(const o of navStages)
+      if(o.el.getBoundingClientRect().top <= line) active = o;
+    return active || navStages[0] || null;
+  }
+  /* The bar's own height is the source for the anchor offset. It was a literal
+     52, correct for one line and wrong the moment the labels wrapped to three.
+     Publishing the measurement means the offset cannot drift from the bar
+     again, whatever the label set or the font size does later. */
+  const navBar = document.getElementById("mininav");
+  const navStrip = navBar && navBar.querySelector(".mininav-in");
+  function navMetrics(){
+    if(navBar) document.documentElement.style.setProperty("--nav-h",
+      Math.ceil(navBar.getBoundingClientRect().height) + 8 + "px");
+    if(!navStrip) return;
+    const over = navStrip.scrollWidth - navStrip.clientWidth;
+    if(over <= 1){ navStrip.removeAttribute("data-overflow"); return; }
+    const atStart = navStrip.scrollLeft <= 1;
+    const atEnd = navStrip.scrollLeft >= over - 1;
+    navStrip.dataset.overflow = atEnd ? "left" : atStart ? "right" : "both";
+  }
+  /* Scrolling the strip by hand rather than with scrollIntoView: that would
+     also scroll the page, and the element being brought into view lives inside
+     the sticky bar doing the covering. */
+  function revealInStrip(a){
+    if(!navStrip || !a) return;
+    if(navStrip.scrollWidth - navStrip.clientWidth <= 1) return;
+    /* Clear of the fade, read from the fade rather than guessed alongside it:
+       the current label is the one that must not be dimmed. */
+    const fade = parseFloat(
+      getComputedStyle(navStrip).getPropertyValue("--fade")) || 38;
+    const pad = fade + 6, l = a.offsetLeft, r = l + a.offsetWidth;
+    if(l - pad < navStrip.scrollLeft) navStrip.scrollLeft = Math.max(0, l - pad);
+    else if(r + pad > navStrip.scrollLeft + navStrip.clientWidth)
+      navStrip.scrollLeft = r + pad - navStrip.clientWidth;
+  }
+  let navShown = null;
+  function markStage(){
+    const active = currentStage();
+    for(const o of navStages){
+      if(o === active) o.a.setAttribute("aria-current", "true");
+      else o.a.removeAttribute("aria-current");
     }
-    document.getElementById("detail").classList.remove("on");
-    scrollTo({top:0, behavior:"smooth"});
-  };
-  // Restore the view across a breakpoint re-render, so rotating a phone does
-  // not silently throw you back to the default view.
-  if(CURRENT_VIEW !== "Season"){
-    for(const [name, el] of Object.entries(vs)){
-      el.hidden = name !== CURRENT_VIEW;
-      bs[name].setAttribute("aria-current", String(name === CURRENT_VIEW));
+    /* Only on a change: the reader is scrolling, and yanking the strip on
+       every frame would fight them. */
+    if(active && active !== navShown){
+      navShown = active;
+      revealInStrip(active.a);
+      navMetrics();
     }
   }
-  /* Switching view swaps the whole content area while focus stays on the
-     button, so without this a screen-reader user hears nothing and has no way
-     to know the page changed under them. Announced from __go rather than from
-     go(), because go() also runs on the breakpoint re-render — announcing
-     there would report a view change every time a phone was rotated. */
-  const VIEW_SAID = {
-    Season: "Season view: state headline, the all-schemes chart, five regional "
-          + "facets and both deviation tables",
-    Regions: "Regions view: all five regions on one chart, current season only",
-    Schemes: "Schemes view: all 206 schemes as one point each",
-  };
-  window.__go = k => {
-    CURRENT_VIEW = k;
-    go(k);
-    announce(VIEW_SAID[k] || `${k} view`);
-  };
-  bs.Season.onclick = () => window.__go("Season");
-  bs.Regions.onclick = () => window.__go("Regions");
-  bs.Schemes.onclick = () => window.__go("Schemes");
+  window.__markStage = markStage;
+  window.__currentStage = () => { const c = currentStage(); return c && c.el.id; };
+  window.__navMetrics = () => ({
+    h: navBar ? Math.round(navBar.getBoundingClientRect().height) : null,
+    /* Count the rows the links actually occupy. Dividing bar height by link
+       height reported 1.6 for a single row, because the bar's own padding and
+       border are not part of a link — a ratio that cannot answer "did it
+       wrap?". Distinct offsetTop can. */
+    rows: navStrip
+      ? new Set([...navStrip.children].map(a => a.offsetTop)).size : null,
+    navH: getComputedStyle(document.documentElement).getPropertyValue("--nav-h").trim(),
+    overflow: navStrip ? (navStrip.dataset.overflow || "none") : null,
+    scrollable: navStrip ? navStrip.scrollWidth - navStrip.clientWidth : null,
+  });
+  if(navStages.length){
+    let queued = false;
+    const onScroll = () => {
+      if(queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; markStage(); });
+    };
+    addEventListener("scroll", onScroll, {passive:true});
+    addEventListener("resize", () => { navMetrics(); onScroll(); });
+    if(navStrip) navStrip.addEventListener("scroll", navMetrics, {passive:true});
+    navMetrics();
+    markStage();
+  }
 
   const dl = document.getElementById("dlCsv");
   if(dl) dl.onclick = () => downloadCsv(dl);
@@ -1946,7 +3204,11 @@ let _rzTimer = null;
 addEventListener("resize", () => {
   clearTimeout(_rzTimer);
   _rzTimer = setTimeout(() => {
-    if(DATA && isNarrow() !== RENDERED_AT) render(DATA);
+    if(DATA && isNarrow() !== RENDERED_AT) return render(DATA);
+    /* No re-render, but the legend may have re-wrapped, and which item begins
+       a row decides which group rules are drawn. Cheap: a rect read per item
+       on a settled resize, not per frame. */
+    trimLegendRules();
   }, 180);
 });
 
