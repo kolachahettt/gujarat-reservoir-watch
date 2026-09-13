@@ -124,11 +124,12 @@ body{margin:0;background:var(--page,#f9f9f7);
 .viz-root{background:var(--page);color:var(--text-primary);
   padding:20px 22px 40px;max-width:1480px;margin:0 auto}
 
-/* The card containers, together. Every chart that is not the state chart is
-   drawn on a --surface-1 panel, so its labels must halo against that and not
-   against the page. Keep this list and the backgrounds in step: a container
-   that sets background:var(--surface-1) belongs here. */
-.facet, .scat, .detail{--chart-bg:var(--surface-1)}
+/* The card containers, together. A chart drawn on a --surface-1 panel must
+   halo its labels against that and not against the page. Keep this list and
+   the backgrounds in step: a container that sets background:var(--surface-1)
+   belongs here, and one that stops setting it must leave. .facet left when the
+   strip lost its card chrome and went back to being drawn on the page. */
+.scat, .detail{--chart-bg:var(--surface-1)}
 
 /* ================= TWO WIDTHS, ONE LEFT EDGE =================
    Every block was full-width, with prose capped individually by max-width.
@@ -415,39 +416,44 @@ main:focus{outline:none}
 .sw.thin{border-top-width:2px}
 .sw.bar{height:10px;border:0;width:9px;border-radius:2px}
 .sw.dash{border-top-width:2px;border-top-style:dashed}
+/* A VERTICAL rule needs a vertical swatch. The other swatches are border-top
+   on a wide, zero-height box; this is border-left on a tall, zero-width one. */
+.sw.vrule{width:0;height:11px;border-top:0;border-left-width:1px;
+  border-left-style:solid;align-self:center}
 .legend .sep{color:var(--border)}
 
-/* ---------- facets ---------- */
-/* minmax(min(100%, 340px), 1fr), not minmax(410px, 1fr).
-   auto-fit CANNOT go below its own minimum, so a fixed 410px made every facet
-   35px wider than a 375px phone and pushed the page into horizontal scroll.
-   But simply lowering it to 300px was a desktop regression: at 1425px it gave
-   four columns instead of three, shrinking each facet and its text with it.
-   `min(100%, 340px)` resolves to the container width on a phone — so one
-   column always fits — and to 340px on a desktop.
+/* ---------- the small-multiple strip ---------- */
+/* FIVE ACROSS IS THE ONLY ARRANGEMENT WITHOUT AN ORPHAN ROW. There are five
+   regions, so the column count has to be 5 or 1; four across gives 4+1 and
+   three gives 3+2, and the odd last row reads as a rendering accident rather
+   than as the end of a set.
 
-   340 AND NOT 380 BECAUSE THE STRIP MOVED INTO THE FIGURE BAND. It was the
-   only element on the page using the full-bleed tier, 1381px against 1080px
-   for every other figure, and that 301px step is what made the page appear to
-   widen as you scrolled into it. In the 1080 band a 380px minimum yields only
-   two columns and a 2+2+1 stack, which is worse than what it replaced; 340 is
-   the largest minimum that still gives three across at 1080 (351px each). The
-   count per band, for the next person who moves this:
-     1381  380 -> 3 x 452     1080  380 -> 2 x 534
-     1381  320 -> 4 x 336     1080  340 -> 3 x 351   <- now
-   Three across still leaves the 3+2 orphan row; that is the small-multiple
-   rework, not this. This commit only removes the width step. */
-.grid{display:grid;gap:13px;margin-top:11px;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
-.facet{background:var(--surface-1);border:1px solid var(--border);
-  border-radius:8px;padding:11px 12px 9px}
+   min 190px, so auto-fit resolves to exactly five in the 1080 figure band:
+   floor((1080 + 13) / (190 + 13)) = 5, each 205.6px. It steps to three at a
+   763px band and one at a 331px phone, because a fifth of those is 142px and
+   62px and neither is a chart. The orphan therefore returns between about 620
+   and 1045px of viewport; five items cannot be dealt into a grid that holds
+   two, three or four columns without one.
+
+   The card chrome is gone — no background, no border, no padding. Five bordered
+   boxes read as five separate figures, which is what "five cards" meant; the
+   point of a small multiple is that it reads as ONE comparison. It also gives
+   the chart the whole 205px instead of 181px, which is what makes the viewBox
+   land on a 1.0 scale. */
+.grid{display:grid;gap:13px 15px;margin-top:11px;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.facet{min-width:0}
+/* --t-lg at a 205px panel put "Central Gujarat" and its deviation on separate
+   lines. One step down fits both on one, which is the whole header. */
+.facet .fh{gap:6px}
+.facet .fh .nm{font-size:var(--t-md)}
+.facet .dv{font-size:var(--t-sm);color:var(--now-text);font-weight:600;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
 .fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
 .fh .nm{font-size:var(--t-lg);font-weight:600}
 .fh .meta{font-size:var(--t-xs);color:var(--muted);font-variant-numeric:tabular-nums}
-.fnums{display:flex;gap:13px;margin:3px 0 5px;font-size:var(--t-sm);
-  color:var(--text-secondary);flex-wrap:wrap}
-.fnums b{font-variant-numeric:tabular-nums;color:var(--text-primary)}
-.fnums .dv{color:var(--now-text);font-weight:600;font-variant-numeric:tabular-nums}
+/* .fnums is gone with the card: its four figures are columns in the region
+   table now, where they can be read down instead of across. */
 .plot{position:relative}
 .plot svg{display:block;width:100%;height:auto;touch-action:none}
 .cross{font-size:var(--t-md);line-height:var(--lh-body);margin-top:6px;
@@ -547,6 +553,12 @@ details.meth code{font-size:var(--t-sm);color:var(--text-primary)}
   font-family:inherit;margin-top:6px}
 .tv{display:none;margin-top:7px}
 .tv.on{display:block}
+/* The region table expands a ROW, so it needs table-row and not block, or the
+   cell collapses and the day table renders 0px wide. */
+tr.tv{margin-top:0}
+tr.tv.on{display:table-row}
+.rprose{font-size:var(--t-sm);line-height:var(--lh-body);
+  color:var(--text-secondary);margin-bottom:6px}
 .tv table{width:100%;border-collapse:collapse;font-size:var(--t-xs)}
 .tv th,.tv td{padding:2.5px 4px;text-align:right;
   font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border)}
@@ -737,6 +749,10 @@ code{overflow-wrap:anywhere;word-break:break-word}
         ranked two ways.</span></h2>
     <div class="legend fig" id="legend"></div>
     <div class="grid fig" id="grid"></div>
+    <!-- What the panels shed. Five across leaves 205px a panel, which holds a
+         name, a deviation and a shape; every other number reads better down a
+         column here than repeated five times across five cards. -->
+    <div id="tblRegions" class="fig"></div>
 
     <h3 class="sub-h">Largest negative deviations — percentage points
       <span class="q">Today's % filling against the mean % filling on the same calendar
@@ -1250,11 +1266,58 @@ let G = {};
 function setGeometry(){
   G = isNarrow()
     ? {W: 308, PADL: 27, PADR: 7,  SH: 104, GAP: 10, RH: 26, AX: 18,
-       SW: 308, SHH: 470}               // scatter: portrait
+       SW: 308, SHH: 470,              // scatter: portrait
+       YT: [0,25,50,75,100], MSTRIDE: 1}
     : {W: 470, PADL: 34, PADR: 12, SH: 112, GAP: 11, RH: 30, AX: 19,
-       SW: 940, SHH: 430};              // scatter: landscape
+       SW: 940, SHH: 430,              // scatter: landscape
+       YT: [0,25,50,75,100], MSTRIDE: 1};
   G.TOTH = G.SH + G.GAP + G.RH + G.AX;
 }
+
+/* ---------------- the small-multiple panel's own geometry ----------------
+   A viewBox is a scale factor in disguise: the rendered font size is the
+   attribute times (container width / viewBox width). The desktop geometry is
+   470 units because the state chart gets the whole 1080px figure band. A facet
+   panel gets a fifth of it, and it was being drawn with the SAME 470 units —
+   0.692 scale at a 325px panel, so its 11-unit axis labels rendered at 7.6px.
+   The phone breakpoint exists for exactly this reason and was never extended
+   to the desktop facet, where the container is a third of the state chart's.
+
+   205 units, because five panels across the 1080 band are 205.6px each, so the
+   scale is 1.0 and 11 units renders at 11px. Where auto-fit gives three across
+   instead (a 763px band) the panels are 237px and the scale is 1.16 — 12.7px,
+   the wrong side of the intent but legible, which 7.6px was not.
+
+   FEWER TICKS, NOT SMALLER ONES. 173 units of plot cannot hold five y labels
+   at 11 units without them touching, nor five month labels. Three of each:
+   0/50/100 and Jun/Aug/Oct. That is what a small multiple is — the panel keeps
+   the shape and sheds the furniture, and the shared scale is stated once.
+
+   COMPACT also drops the three per-panel strings that the region table under
+   the strip now carries: "latest report", the crossover date, and the rainfall
+   peak. Dropped because they are relocated, not because they did not fit. */
+/* AX is 19, not the 15 it started as. The x-label band has to clear the rain
+   baseline by more than the label's own descent, and an SVG text box is about
+   1.3em tall, so at 15 the month labels' boxes started 0.1 units below the
+   baseline — touching it. 19 is AXIS_FS + 8, the same rule as X_TICK_DY and
+   the same number the desktop tier uses. It cannot be written as AXIS_FS + 8
+   here because AXIS_FS is declared further down and this initialiser runs at
+   load; the over-ink probe is what enforces the relation. */
+const FACET_GEOM = {W: 205, PADL: 27, PADR: 5, SH: 86, GAP: 7, RH: 18, AX: 19,
+                    YT: [0,50,100], MSTRIDE: 2, COMPACT: true};
+FACET_GEOM.TOTH = FACET_GEOM.SH + FACET_GEOM.GAP + FACET_GEOM.RH + FACET_GEOM.AX;
+
+/* Facets use it only when the strip is actually multi-column. On a phone one
+   panel spans the measure, where the narrow geometry already resolves to ~1.0
+   and is the more readable of the two. */
+const facetGeom = () => isNarrow() ? G : FACET_GEOM;
+
+/* Geometry-aware axes. xOf/yOf stay bound to the global G — they must read it
+   per call, because setGeometry REASSIGNS G rather than mutating it, so a
+   closure over its value would capture the empty object it starts as. */
+const xForG = g => d =>
+  g.PADL + (d - 1) / (SEASON_DAYS - 1) * (g.W - g.PADL - g.PADR);
+const yForG = g => p => g.SH - 6 - (p / 100) * (g.SH - 16);
 setGeometry();
 const xOf = d => G.PADL + (d - 1) / (SEASON_DAYS - 1) * (G.W - G.PADL - G.PADR);
 const yOf = p => G.SH - 6 - (p / 100) * (G.SH - 16);
@@ -1369,29 +1432,37 @@ function gapAnnotation(g, xOf, yOf, latestDay, G){
 }
 
 function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
+  /* Geometry comes in rather than off the global, so a facet panel can be
+     drawn at its own scale instead of the state chart's. Defaults to G, which
+     is every caller that is not a facet. */
+  const GG = (opts && opts.geom) || G;
+  const xOf = xForG(GG), yOf = yForG(GG);
+  const compact = !!GG.COMPACT;
   /* The state headline carries no rainfall strip: a regional mean of regional
      means is not a quantity worth showing, and an empty panel reads as "no
      rain" rather than "not shown". */
-  const rTop = G.SH + G.GAP;
-  const totH = showRain ? G.TOTH : G.SH + G.AX;
+  const rTop = GG.SH + GG.GAP;
+  const totH = showRain ? GG.TOTH : GG.SH + GG.AX;
   const axY = totH - 3;
   let g = "";
   /* gridlines: solid hairlines, one shade off the surface (never dashed) */
-  for(const p of [0,25,50,75,100]){
-    g += `<line x1="${G.PADL}" x2="${G.W-G.PADR}" y1="${yOf(p)}" y2="${yOf(p)}"
+  for(const p of GG.YT){
+    g += `<line x1="${GG.PADL}" x2="${GG.W-GG.PADR}" y1="${yOf(p)}" y2="${yOf(p)}"
       stroke="var(--grid)" stroke-width="1"/>`;
-    g += `<text x="${G.PADL-5}" y="${yOf(p)+3.2}" text-anchor="end"
-      font-size="11" fill="var(--muted)"
+    g += `<text x="${GG.PADL-5}" y="${yOf(p)+3.2}" text-anchor="end"
+      font-size="${AXIS_FS}" fill="var(--muted)"
       style="font-variant-numeric:tabular-nums">${p}</text>`;
   }
-  /* month ticks */
+  /* month ticks. Every month on a full-width chart; every other one on a
+     panel, where five labels at 11 units do not fit 173 units of plot. */
   let ax = "";
-  for(const [d,nm] of MONTHS){
-    ax += `<line x1="${xOf(d)}" x2="${xOf(d)}" y1="${G.SH-6}" y2="${G.SH-2}"
+  MONTHS.forEach(([d,nm], i) => {
+    ax += `<line x1="${xOf(d)}" x2="${xOf(d)}" y1="${GG.SH-6}" y2="${GG.SH-2}"
       stroke="var(--baseline)" stroke-width="1"/>`;
+    if(i % GG.MSTRIDE) return;               // tick stays, label is dropped
     ax += `<text x="${xOf(d)}" y="${axY}" text-anchor="middle"
-      font-size="11" fill="var(--muted)">${nm}</text>`;
-  }
+      font-size="${AXIS_FS}" fill="var(--muted)">${nm}</text>`;
+  });
   /* latest-report rule: prior years run to 31 Oct, 2026 stops here. Saying so
      stops the shorter line reading as a collapse. */
   /* Baseline derived from the font size. It was a literal 10, set when this
@@ -1413,8 +1484,12 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
      was still emitted before the series changed the rendered output not at all
      — the frames were pixel-identical. */
   const lrRule = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
-      y2="${G.SH-6}" stroke="var(--baseline)" stroke-width="1"/>`;
-  const lrLab = `<text x="${xOf(latestDay)-3}" y="${LR_Y}" text-anchor="end"
+      y2="${GG.SH-6}" stroke="var(--baseline)" stroke-width="1"/>`;
+  /* The rule stays on a panel; only its label goes. Five panels each captioned
+     "latest report" is the same sentence five times, and the region table below
+     the strip states the report date once. */
+  const lrLab = compact ? "" :
+    `<text x="${xOf(latestDay)-3}" y="${LR_Y}" text-anchor="end"
       font-size="${AXIS_FS}" ${halo(AXIS_FS)}
       fill="var(--muted)">latest report</text>`;
 
@@ -1433,13 +1508,15 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
        meaningful rather than noise. Kept recessive: the marker locates the
        event, the orange line is still the figure. */
     const y = series[CUR][md];
-    mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${G.SH-6}"
+    /* The marker and its dot stay; the date text goes on a panel. The region
+       table's "below since" column is the same value with room to be read. */
+    mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${GG.SH-6}"
       stroke="var(--muted)" stroke-width="1" stroke-dasharray="2.5 3.5"/>
       ${y == null ? "" : `<circle cx="${xOf(md)}" cy="${yOf(y)}" r="3.4"
         fill="var(--now)" stroke="var(--chart-bg)" stroke-width="1.8"/>`}
-      <text x="${xOf(md)+4}" y="${G.SH-9}" font-size="${AXIS_FS}"
-        ${halo(AXIS_FS)}
-        fill="var(--muted)">${dosLabel(md, CUR)}</text>`;
+      ${compact ? "" : `<text x="${xOf(md)+4}" y="${GG.SH-9}"
+        font-size="${AXIS_FS}" ${halo(AXIS_FS)}
+        fill="var(--muted)">${dosLabel(md, CUR)}</text>`}`;
   }
   const cp = linePath(series[CUR]);
   const cur = `<path d="${cp}" fill="none" stroke="var(--now)"
@@ -1481,8 +1558,8 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
      finding and not a rendering fault — and the number keeps a compressed
      strip readable without hovering. */
   const rmax = RAIN_MAX;
-  const ry = v => rTop + G.RH - (v / rmax) * (G.RH - 4);
-  rr = `<line x1="${G.PADL}" x2="${G.W-G.PADR}" y1="${rTop+G.RH}" y2="${rTop+G.RH}"
+  const ry = v => rTop + GG.RH - (v / rmax) * (GG.RH - 4);
+  rr = `<line x1="${GG.PADL}" x2="${GG.W-GG.PADR}" y1="${rTop+GG.RH}" y2="${rTop+GG.RH}"
       stroke="var(--baseline)" stroke-width="1"/>`;
   /* prior-year mean rainfall, as a reference line */
   const pm = {};
@@ -1496,39 +1573,51 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
   if(pmPath) rr += `<path d="${pmPath}" fill="none" stroke="var(--muted)"
     stroke-width="1.2" opacity="0.9"/>`;
   /* 2026 daily rain: thin bars, 2px surface gap, 1px rounded ends */
-  const bw = Math.max(1.1, (G.W-G.PADL-G.PADR)/SEASON_DAYS - 0.7);
+  const bw = Math.max(1.1, (GG.W-GG.PADL-GG.PADR)/SEASON_DAYS - 0.7);
   for(const [k,v] of Object.entries(rain[CUR] || {})){
     if(v <= 0) continue;
-    const h = Math.max(0.8, rTop + G.RH - ry(v));
+    const h = Math.max(0.8, rTop + GG.RH - ry(v));
     rr += `<rect x="${(xOf(+k)-bw/2).toFixed(1)}" y="${ry(v).toFixed(1)}"
       width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="0.7"
       fill="var(--now)" opacity="0.6"/>`;
   }
-  const pk = Math.max(0, ...Object.values(rain[CUR] || {}).filter(v => v != null));
-  rr += `<text x="${G.W-G.PADR}" y="${rTop-1}" text-anchor="end"
-    font-size="${AXIS_FS}" ${halo(AXIS_FS)}
-    fill="var(--muted)">rain mm/day, regional mean · peak ${f1(pk)}</text>`;
+  /* The peak moves to the region table on a panel: this caption is 38 units of
+     text and the panel's plot is 173, so it would cover a fifth of the strip
+     it is describing. */
+  if(!compact){
+    const pk = Math.max(0, ...Object.values(rain[CUR] || {}).filter(v => v != null));
+    rr += `<text x="${GG.W-GG.PADR}" y="${rTop-1}" text-anchor="end"
+      font-size="${AXIS_FS}" ${halo(AXIS_FS)}
+      fill="var(--muted)">rain mm/day, regional mean · peak ${f1(pk)}</text>`;
+  }
   }
 
   /* Drawn after the series so the dimension line and its label sit on top of
      anything they cross, and described in the aria-label so the annotation is
      not sighted-only. */
-  const gapAnn = gapAnnotation((opts || {}).gap, xOf, yOf, latestDay, G);
+  const gapAnn = gapAnnotation((opts || {}).gap, xOf, yOf, latestDay, GG);
   const gapSaid = gapAnn && opts.gap
     ? `. ${Math.abs(opts.gap.meanPrior - opts.gap.pctNow).toFixed(1)} points ${
         opts.gap.meanPrior > opts.gap.pctNow ? "below" : "above"} the `
       + `${numWord(opts.gap.nPrior)}-year average for this date`
     : "";
 
-  const hitH = showRain ? rTop + G.RH : G.SH - 6;
-  return `<svg viewBox="0 0 ${G.W} ${totH}" role="img" tabindex="0"
+  const hitH = showRain ? rTop + GG.RH : GG.SH - 6;
+  /* The chart PUBLISHES its own geometry. The tooltip converted a cursor
+     position to a day using the global G.W and G.PADL, which silently assumed
+     every chart on the page shared one viewBox — true until a panel had its
+     own, and then the state chart's numbers would have been used to read a
+     205-unit facet, putting the crosshair on the wrong day with nothing to
+     show it was wrong. Read from the element it is pointing at instead. */
+  return `<svg viewBox="0 0 ${GG.W} ${totH}" role="img" tabindex="0"
       aria-label="Percent filling by day of season, 2026 against 2022 to 2025${
         showRain ? ", with daily rainfall below" : ""}${gapSaid}"
-      data-id="${idPrefix}">
+      data-id="${idPrefix}"
+      data-vbw="${GG.W}" data-padl="${GG.PADL}" data-padr="${GG.PADR}">
     ${g}${ax}${lrRule}${pri}${cur}${mk}${lab}${lrLab}${rr}${gapAnn}
     <line class="xh" x1="0" x2="0" y1="4" y2="${hitH}" stroke="var(--text-secondary)"
       stroke-width="1" opacity="0" pointer-events="none"/>
-    <rect class="hit" x="${G.PADL}" y="0" width="${G.W-G.PADL-G.PADR}" height="${hitH}"
+    <rect class="hit" x="${GG.PADL}" y="0" width="${GG.W-GG.PADL-GG.PADR}" height="${hitH}"
       fill="transparent" style="cursor:crosshair"/>
   </svg>`;
 }
@@ -1932,6 +2021,26 @@ function schemeSpark(s, thin){
    Three cases rendered distinctly, plus where the series stands now — the
    marker is the FIRST qualifying run, which may sit in a season that later
    recovered and fell below again. */
+/* The cell form of crossText, off the SAME fields and the same branches, so
+   the table and the sentence beneath it cannot disagree. Deliberately does not
+   re-derive the day count from the report date: crossText prints
+   current_run.length, so this prints current_run.length. The sentence remains
+   the authority — this is a summary, and the row expands to the full text. */
+function crossCell(c){
+  if(!c || c.case === "not_evaluable")
+    return {since: "—", days: null, note: "no prior-year coverage"};
+  if(c.case === "never_below")  return {since: "not this season", days: null};
+  if(c.case === "below_from_start")
+    return {since: "from the season's start", days: null};
+  const r = c.current_run;
+  if(c.currently_below && r && r.qualifies)
+    return {since: dosLabel(r.start_day, CUR), days: r.length};
+  if(c.currently_below && r)
+    return {since: "—", days: null,
+            note: `${r.length} day${r.length > 1 ? "s" : ""}, short of ${c.min_run}`};
+  return {since: "—", days: null};
+}
+
 function crossText(c, label){
   const N = c.min_run;
   const rule = `<span class="none">(${N}+ consecutive days rule)</span>`;
@@ -2309,7 +2418,16 @@ function render(d){
        crossed below all prior years</span>`;
   document.getElementById("legendYears").innerHTML = yearSwatches;
   document.getElementById("legend").innerHTML = yearSwatches +
+    /* The panels dropped their "latest report" text, so the solid rule they
+       still draw had nothing naming it — the legend covered the dashed marker
+       and not this one. Only on this legend: the state chart in stage 2 still
+       labels its own rule inline, and repeating it there would be the second
+       explanation of one line. */
     `<span class="sep">|</span>
+     <span class="it"><span class="sw vrule"
+         style="border-left-color:var(--baseline)"></span>
+       latest report — ${m.season_current} stops here, prior years run on</span>
+     <span class="sep">|</span>
      <span class="it"><span class="sw bar" style="background:var(--now);opacity:.6"></span>
        ${m.season_current} rain, mm/day</span>
      <span class="it"><span class="sw thin" style="border-color:var(--muted)"></span>
@@ -2323,31 +2441,73 @@ function render(d){
        deviation first, in <b style="color:var(--text-secondary)">pp</b> —
        percentage points, the plain difference between two percentages</span>`;
 
-  /* facets */
+  /* ---- the facets as a small-multiple strip ----
+     Five bare panels, each a region name, its deviation and the shape. The
+     cards carried seven numbers and two sentences each, which at a fifth of
+     the figure band is not a comparison but five compressed articles. What a
+     small multiple is for is the shape: five of them side by side answer "is
+     this one region or all of them?" in a glance, and the numbers answer a
+     different question, which the table below does better. */
   document.getElementById("grid").innerHTML = d.regions.map(r => {
     const dev = r.pct_now - r.mean_prior_at_now;
-    const capn = r.n_capacity_substituted
-      ? `<div class="capnote">Denominator: ${r.n_capacity_substituted} scheme-season${r.n_capacity_substituted>1?"s":""}
-         in this region published two capacities mid-season; the 2026 capacity is
-         used for those, which is the value every other season agrees on.</div>` : "";
     return `<div class="facet">
       <div class="fh"><span class="nm">${esc(r.name)}</span>
-        <span class="meta">${r.n_schemes} schemes · ${f1(r.design_mcm)} MCM design</span></div>
-      <div class="fnums">
-        <span>now <b>${f2(r.pct_now)}%</b></span>
-        <span>prior mean <b>${f2(r.mean_prior_at_now)}%</b></span>
-        <span class="dv" title="percentage points below the prior four-year mean for this date">${dev>0?"+":""}${f1(dev)} pp</span>
-        <span style="color:var(--muted)">${f1(r.mcm_now)} MCM</span>
-      </div>
+        <span class="dv" title="percentage points below this region's own prior four-year mean for this date">${dev>0?"+":""}${f1(dev)} pp</span></div>
       <div class="plot" data-region="${r.code}">
-        ${chartSVG(r.series, r.rain, r.crossover, DATA.state.day_of_season, r.code, true)}
+        ${chartSVG(r.series, r.rain, r.crossover, DATA.state.day_of_season,
+                   r.code, true, {geom: facetGeom()})}
       </div>
-      <div class="cross">${crossText(r.crossover, esc(r.name))}
-        <button class="tblbtn" data-tv="${r.code}">Show as table</button>
-        <div class="tv" id="tv-${r.code}">${tableView(r.series, DATA.state.day_of_season, r.code)}</div>
-      </div>${capn}
     </div>`;
   }).join("");
+
+  /* ---- and the numbers they shed, in one place ----
+     Nothing is dropped: every figure that was on a card is a column here, and
+     the crossover sentence and the denominator note are in the row each region
+     expands. Down a column they are also comparable, which across five cards
+     they were not. */
+  document.getElementById("tblRegions").innerHTML =
+    `<div class="tablewrap"><table class="dt"><thead><tr>
+      <th>Region</th>
+      <th style="text-align:right">Schemes</th>
+      <th style="text-align:right">% now</th>
+      <th style="text-align:right">Prior mean</th>
+      <th style="text-align:right">Deviation, pp</th>
+      <th style="text-align:right">Live MCM</th>
+      <th style="text-align:right">Design MCM</th>
+      <th style="text-align:right">Rain peak, mm/day</th>
+      <th>Below every prior year since</th>
+      <th></th></tr></thead><tbody>` +
+    d.regions.map(r => {
+      const dev = r.pct_now - r.mean_prior_at_now;
+      const pk = Math.max(0, ...Object.values((r.rain || {})[CUR] || {})
+        .filter(v => v != null));
+      const cc = crossCell(r.crossover);
+      const capn = r.n_capacity_substituted
+        ? `<div class="capnote">Denominator: ${r.n_capacity_substituted} scheme-season${r.n_capacity_substituted>1?"s":""}
+           in this region published two capacities mid-season; the 2026 capacity is
+           used for those, which is the value every other season agrees on.</div>` : "";
+      return `<tr>
+        <td class="nm">${esc(r.name)}</td>
+        <td class="n">${r.n_schemes}</td>
+        <td class="n">${f2(r.pct_now)}</td>
+        <td class="n">${f2(r.mean_prior_at_now)}</td>
+        <td class="dev">${dev>0?"+":""}${f1(dev)}</td>
+        <td class="n">${f1(r.mcm_now)}</td>
+        <td class="n">${f1(r.design_mcm)}</td>
+        <td class="n">${f1(pk)}</td>
+        <td>${cc.note
+          ? `<span class="none">${cc.note}</span>`
+          : cc.since + (cc.days != null
+              ? ` <span class="none">${cc.days} days</span>` : "")}</td>
+        <td><button class="tblbtn" data-tv="${r.code}"
+          data-show="Days" data-hide="Hide days">Days</button></td>
+      </tr>
+      <tr class="tv" id="tv-${r.code}"><td colspan="10">
+        <div class="rprose">${crossText(r.crossover, esc(r.name))}</div>${capn}
+        ${tableView(r.series, DATA.state.day_of_season, r.code)}
+      </td></tr>`;
+    }).join("") + `</tbody></table></div>
+    <p class="scrollhint">Table scrolls sideways.</p>`;
 
   /* deviation table 1 — no days-of-water here; that lives on scheme detail */
   document.getElementById("tblPP").innerHTML =
@@ -2604,10 +2764,14 @@ function wirePoints(){
 
 /* ---------------- interaction ---------------- */
 function wire(){
+  /* The labels are the button's own, not the handler's. Hardcoding "Show as
+     table" meant a button that opened as "Days" renamed itself on first close,
+     so the same control had two names depending on whether it had been used. */
   document.querySelectorAll(".tblbtn").forEach(b => b.onclick = () => {
     const el = document.getElementById("tv-" + b.dataset.tv);
-    el.classList.toggle("on");
-    b.textContent = el.classList.contains("on") ? "Hide table" : "Show as table";
+    const on = el.classList.toggle("on");
+    b.textContent = on ? (b.dataset.hide || "Hide table")
+                       : (b.dataset.show || "Show as table");
   });
 
   const tip = document.getElementById("tip");
@@ -2658,10 +2822,12 @@ function wire(){
       tip.style.top = Math.min(Math.max(8, T), innerHeight - r.height - 8) + "px";
     };
     const hide = () => { tip.classList.remove("on"); xh.setAttribute("opacity","0"); };
+    /* From the element, not the global: a facet panel has its own viewBox. */
+    const VBW = +svg.dataset.vbw, VPL = +svg.dataset.padl, VPR = +svg.dataset.padr;
     const dayAt = ev => {
       const b = svg.getBoundingClientRect();
-      const px = (ev.clientX - b.left) / b.width * G.W;
-      return Math.round((px - G.PADL) / (G.W - G.PADL - G.PADR) * (SEASON_DAYS - 1) + 1);
+      const px = (ev.clientX - b.left) / b.width * VBW;
+      return Math.round((px - VPL) / (VBW - VPL - VPR) * (SEASON_DAYS - 1) + 1);
     };
     const hit = svg.querySelector(".hit");
     hit.addEventListener("mousemove", ev => show(dayAt(ev), ev.clientX, ev.clientY));
@@ -2673,7 +2839,8 @@ function wire(){
       ev.preventDefault();
       kd = Math.max(1, Math.min(latest, kd + (ev.key === "ArrowRight" ? 1 : -1)));
       const b = svg.getBoundingClientRect();
-      show(kd, b.left + xOf(kd)/G.W*b.width, b.top + b.height/2);
+      const kx = VPL + (kd - 1)/(SEASON_DAYS - 1)*(VBW - VPL - VPR);
+      show(kd, b.left + kx/VBW*b.width, b.top + b.height/2);
     });
     svg.addEventListener("blur", hide);
   });
