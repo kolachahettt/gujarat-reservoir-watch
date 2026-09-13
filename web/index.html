@@ -276,16 +276,54 @@ h2,h2 .q{max-width:52ch}
 .mininav{position:sticky;top:0;z-index:30;
   margin:18px 0 0;padding:7px 0;background:var(--page);
   border-bottom:1px solid var(--border)}
-.mininav-in{display:flex;flex-wrap:wrap;gap:2px}
-.mininav a{font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;
+/* ONE LINE AT EVERY WIDTH, BECAUSE A BAR THAT OVERLAYS CONTENT MUST NOT GROW.
+   The five labels are 81 characters; at 11px uppercase with .06em tracking
+   that is about 610px, so against a 331px measure they wrapped to three lines
+   and a 66px sticky bar bisected the text scrolling underneath it mid-glyph.
+   Wrapping is the wrong response for an overlay: it takes more of the viewport
+   exactly when there is least of it, and it moves the anchor offset with it.
+   The strip scrolls sideways instead, which keeps every label identical to the
+   stage eyebrow it lands on — shortening them for the phone would have broken
+   that match, which is the whole reason arriving from the nav makes sense. */
+.mininav-in{--fade:38px;
+  display:flex;flex-wrap:nowrap;gap:2px;
+  min-width:0;overflow-x:auto;overscroll-behavior-x:contain;
+  scrollbar-width:none;-ms-overflow-style:none}
+/* A scrollbar inside a sticky bar would add height to the thing whose height
+   is the problem. Hidden, but the strip stays keyboard and touch scrollable,
+   and focusing an off-screen link still brings it into view natively. */
+.mininav-in::-webkit-scrollbar{display:none}
+/* The fade is the only signal that the strip runs past the edge, so it is set
+   from the actual overflow and dropped at each end of the run rather than
+   being painted permanently over the last label. */
+/* --fade is 38px, not 24: a label clipped by the edge has to read as faded
+   rather than as a typo, and at 24 the cut label kept enough contrast to look
+   like "ATE OF IT" was the text. It is one value because the script insets the
+   current label from it — see revealInStrip. With the fade at 38 and the inset
+   left at its original 28, the ACTIVE label's first 10px sat inside the fade,
+   so the one label that must stay legible was the one being dimmed. */
+.mininav-in[data-overflow="right"]{
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - var(--fade)),transparent);
+          mask-image:linear-gradient(to right,#000 calc(100% - var(--fade)),transparent)}
+.mininav-in[data-overflow="both"]{
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--fade),#000 calc(100% - var(--fade)),transparent);
+          mask-image:linear-gradient(to right,transparent,#000 var(--fade),#000 calc(100% - var(--fade)),transparent)}
+.mininav-in[data-overflow="left"]{
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 var(--fade));
+          mask-image:linear-gradient(to right,transparent,#000 var(--fade))}
+.mininav a{flex:0 0 auto;
+  font-size:var(--t-xs);text-transform:uppercase;letter-spacing:.06em;
   color:var(--text-secondary);text-decoration:none;padding:5px 9px;
   border-radius:5px;white-space:nowrap}
 .mininav a:hover{background:var(--surface-1);color:var(--text-primary)}
 .mininav a:focus-visible{outline:2px solid var(--now-text);outline-offset:1px}
 .mininav a[aria-current="true"]{background:var(--surface-1);
   color:var(--text-primary);font-weight:600}
-/* Anchored sections must clear the sticky bar when jumped to. */
-.stage{scroll-margin-top:52px}
+/* Anchored sections must clear the sticky bar when jumped to. Measured from
+   the bar at runtime, not a literal: 52px was right for a one-line bar and
+   14px short of the three-line one it actually became, so every jump landed
+   under it. The fallback is only for the frame before the first measurement. */
+.stage{scroll-margin-top:var(--nav-h,52px)}
 
 /* ---------- masthead as kicker, h1 as the finding ---------- */
 /* The site name and date, above a headline that now asserts something. Small
@@ -2711,15 +2749,66 @@ function wire(){
       if(o.el.getBoundingClientRect().top <= line) active = o;
     return active || navStages[0] || null;
   }
+  /* The bar's own height is the source for the anchor offset. It was a literal
+     52, correct for one line and wrong the moment the labels wrapped to three.
+     Publishing the measurement means the offset cannot drift from the bar
+     again, whatever the label set or the font size does later. */
+  const navBar = document.getElementById("mininav");
+  const navStrip = navBar && navBar.querySelector(".mininav-in");
+  function navMetrics(){
+    if(navBar) document.documentElement.style.setProperty("--nav-h",
+      Math.ceil(navBar.getBoundingClientRect().height) + 8 + "px");
+    if(!navStrip) return;
+    const over = navStrip.scrollWidth - navStrip.clientWidth;
+    if(over <= 1){ navStrip.removeAttribute("data-overflow"); return; }
+    const atStart = navStrip.scrollLeft <= 1;
+    const atEnd = navStrip.scrollLeft >= over - 1;
+    navStrip.dataset.overflow = atEnd ? "left" : atStart ? "right" : "both";
+  }
+  /* Scrolling the strip by hand rather than with scrollIntoView: that would
+     also scroll the page, and the element being brought into view lives inside
+     the sticky bar doing the covering. */
+  function revealInStrip(a){
+    if(!navStrip || !a) return;
+    if(navStrip.scrollWidth - navStrip.clientWidth <= 1) return;
+    /* Clear of the fade, read from the fade rather than guessed alongside it:
+       the current label is the one that must not be dimmed. */
+    const fade = parseFloat(
+      getComputedStyle(navStrip).getPropertyValue("--fade")) || 38;
+    const pad = fade + 6, l = a.offsetLeft, r = l + a.offsetWidth;
+    if(l - pad < navStrip.scrollLeft) navStrip.scrollLeft = Math.max(0, l - pad);
+    else if(r + pad > navStrip.scrollLeft + navStrip.clientWidth)
+      navStrip.scrollLeft = r + pad - navStrip.clientWidth;
+  }
+  let navShown = null;
   function markStage(){
     const active = currentStage();
     for(const o of navStages){
       if(o === active) o.a.setAttribute("aria-current", "true");
       else o.a.removeAttribute("aria-current");
     }
+    /* Only on a change: the reader is scrolling, and yanking the strip on
+       every frame would fight them. */
+    if(active && active !== navShown){
+      navShown = active;
+      revealInStrip(active.a);
+      navMetrics();
+    }
   }
   window.__markStage = markStage;
   window.__currentStage = () => { const c = currentStage(); return c && c.el.id; };
+  window.__navMetrics = () => ({
+    h: navBar ? Math.round(navBar.getBoundingClientRect().height) : null,
+    /* Count the rows the links actually occupy. Dividing bar height by link
+       height reported 1.6 for a single row, because the bar's own padding and
+       border are not part of a link — a ratio that cannot answer "did it
+       wrap?". Distinct offsetTop can. */
+    rows: navStrip
+      ? new Set([...navStrip.children].map(a => a.offsetTop)).size : null,
+    navH: getComputedStyle(document.documentElement).getPropertyValue("--nav-h").trim(),
+    overflow: navStrip ? (navStrip.dataset.overflow || "none") : null,
+    scrollable: navStrip ? navStrip.scrollWidth - navStrip.clientWidth : null,
+  });
   if(navStages.length){
     let queued = false;
     const onScroll = () => {
@@ -2728,7 +2817,9 @@ function wire(){
       requestAnimationFrame(() => { queued = false; markStage(); });
     };
     addEventListener("scroll", onScroll, {passive:true});
-    addEventListener("resize", onScroll);
+    addEventListener("resize", () => { navMetrics(); onScroll(); });
+    if(navStrip) navStrip.addEventListener("scroll", navMetrics, {passive:true});
+    navMetrics();
     markStage();
   }
 
