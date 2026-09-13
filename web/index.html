@@ -130,16 +130,26 @@ body{margin:0;background:var(--page,#f9f9f7);
    that sets background:var(--surface-1) belongs here. */
 .facet, .scat, .detail{--chart-bg:var(--surface-1)}
 
-/* ================= THREE WIDTHS, ONE LEFT EDGE =================
+/* ================= TWO WIDTHS, ONE LEFT EDGE =================
    Every block was full-width, with prose capped individually by max-width.
    That put the reading column wherever each element happened to start and let
    figures and prose share an edge, which is the "undesigned stack" reading.
 
-   One grid, three tracks, used by the root, by <main> and by each stage:
+   One grid, used by the root, by <main> and by each stage. TWO widths for
+   content, and the full width for chrome only:
 
      text   the reading column, --col wide, where all prose and headings live
      fig    the same left edge, running --fig-w to the RIGHT of it
-     full   edge to edge, for the facet strip and the stage rules
+     full   the stage rules and the sticky bar's background — not content
+
+   There was a third content tier, .bleed, and exactly one element used it: the
+   facet strip, at 1381px against 1080px for every other figure at 1440. That
+   301px step is what made the page look like it widened as you scrolled, and a
+   card grid is not a full-bleed figure — the reference class reserves that for
+   a photograph or a map, not five panels of small print. The strip is in the
+   figure band now and the class is gone rather than left unused. The named
+   lines are still here, so a genuine full-bleed element later needs
+   `grid-column:full-start / full-end` and no new machinery.
 
    FIGURES EXTEND RIGHT FROM THE TEXT EDGE; THEY DO NOT CENTRE AROUND IT.
    The first version split the overhang in two and hung half off each side of
@@ -179,7 +189,6 @@ body{margin:0;background:var(--page,#f9f9f7);
 .viz-root > #main, #main > .stage, #main > .mininav{
   grid-column:full-start / full-end}
 .fig{grid-column:fig-start / fig-end}
-.bleed{grid-column:full-start / full-end}
 /* The sticky bar spans, so nothing shows through at the edges as content
    scrolls under it, but its links align with the figure band rather than the
    page edge. */
@@ -409,15 +418,27 @@ main:focus{outline:none}
 .legend .sep{color:var(--border)}
 
 /* ---------- facets ---------- */
-/* minmax(min(100%, 380px), 1fr), not minmax(410px, 1fr).
+/* minmax(min(100%, 340px), 1fr), not minmax(410px, 1fr).
    auto-fit CANNOT go below its own minimum, so a fixed 410px made every facet
    35px wider than a 375px phone and pushed the page into horizontal scroll.
    But simply lowering it to 300px was a desktop regression: at 1425px it gave
    four columns instead of three, shrinking each facet and its text with it.
-   `min(100%, 380px)` resolves to the container width on a phone — so one
-   column always fits — and to 380px on a desktop, which keeps three. */
+   `min(100%, 340px)` resolves to the container width on a phone — so one
+   column always fits — and to 340px on a desktop.
+
+   340 AND NOT 380 BECAUSE THE STRIP MOVED INTO THE FIGURE BAND. It was the
+   only element on the page using the full-bleed tier, 1381px against 1080px
+   for every other figure, and that 301px step is what made the page appear to
+   widen as you scrolled into it. In the 1080 band a 380px minimum yields only
+   two columns and a 2+2+1 stack, which is worse than what it replaced; 340 is
+   the largest minimum that still gives three across at 1080 (351px each). The
+   count per band, for the next person who moves this:
+     1381  380 -> 3 x 452     1080  380 -> 2 x 534
+     1381  320 -> 4 x 336     1080  340 -> 3 x 351   <- now
+   Three across still leaves the 3+2 orphan row; that is the small-multiple
+   rework, not this. This commit only removes the width step. */
 .grid{display:grid;gap:13px;margin-top:11px;
-  grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
 .facet{background:var(--surface-1);border:1px solid var(--border);
   border-radius:8px;padding:11px 12px 9px}
 .fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
@@ -715,7 +736,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
         axis, with daily rainfall beneath, then the individual reservoirs
         ranked two ways.</span></h2>
     <div class="legend fig" id="legend"></div>
-    <div class="grid bleed" id="grid"></div>
+    <div class="grid fig" id="grid"></div>
 
     <h3 class="sub-h">Largest negative deviations — percentage points
       <span class="q">Today's % filling against the mean % filling on the same calendar
