@@ -1681,3 +1681,104 @@ honest ceiling is the department's own maximum-irrigation record:
 **131,988 of 243,867 hectares, 54%**, across the 31 of the 40 verified commands
 that report it. Even in its best year about half the commanded area gets no
 water. The page states that rather than implying a conversion it cannot make.
+
+## 26. Command area per scheme — 40 of 206, from the state's own Data Bank
+
+The daily report says how much water is in each reservoir and never says who
+depends on it. The command area is the missing half: the cultivable land a
+scheme is built to irrigate.
+
+### 26.1 Where it is, having established where it is not
+
+* **NRLD has no command-area column.** All 20 columns were extracted for the
+  632 Gujarat rows and checked against
+  `command|cca|hectare|ha|ayacut|culturable`. Nothing.
+* **The live WRD host has only daily reports.** `wrd-dam.gujarat.gov.in`
+  carries the PDF series and no scheme master.
+* **India-WRIS refuses connections** from here; **data.gov.in returns 403**.
+* The department's own irrigation-potential documents
+  (`major_medium_2011_12_n.pdf`, `abstract_irragition_2013_14.pdf`) are
+  **circle-, district- and category-level**, never per scheme.
+
+It exists in exactly one place: the **NWRWS Data Bank**, one page per dam,
+indexed at `guj-nwrws.gujarat.gov.in/showpage.aspx?contentid=1467`. Each page
+carries Gross Command Area, Culturable Command Area, "Maximum irrigation" with
+the year, canal lengths and discharges, year of completion, the
+Major/Medium/Minor class, and **the benefited villages by taluka**. 138 dams
+are indexed and 136 have a page.
+
+### 26.2 The source is wrong row by row, in three distinguishable ways
+
+Every page prints GCA/CCA **twice**, in a "Details Of Canal" table and a
+"Command Area" table built independently. That redundancy is what makes the
+errors detectable.
+
+1. **The page's table can be about a different dam** — 9 of the 102 that
+   parse. The dangerous ones are ordinal slips: the page indexed `Bhogavo-2`
+   holds Bhogavo-1's row, `Machchundri-2` holds Machchundri's, `Raval-2` holds
+   Raval's, `Kharo` holds Kharo-1's. Accepting these attaches one dam's command
+   to its neighbour. Caught by folding the in-table name against the index name.
+
+2. **The page can contradict itself** — 6 pages. `Umariya` prints Ukai's
+   66,168 ha in its second table; `Khambhda` prints Umariya's 4,148/2,192 in
+   its first; **Shetrunji disagrees with itself by 23×**, 57,060 against 2,514
+   ha. Neither table can be preferred a priori — Umariya's canal table is
+   right and Khambhda's is not — so a self-contradicting page yields nothing.
+   Picking a side would be a guess.
+
+3. **Two schemes can share one row.** Machchhu-I and Machchhu-II both come out
+   18,218/10,409/7,709; Godhatad and Waidy both 6,014/1,328/0. An identical
+   (GCA, CCA, max-irrigated) triple across two schemes means at least one is a
+   copy and nothing says which.
+
+A fourth trap is not an error but a reading one: **`Maximum irrigation = 0`
+with a blank year means NOT RECORDED, not zero hectares.** All 31 real figures
+carry a year; all 9 zeros are blank. Publishing them as zero would assert that
+six Kutch schemes have never irrigated a hectare.
+
+And a bug of mine, worth recording because it looked exactly like the source
+being wrong: the first parse read pages titled `Juj` whose row said `Kadana`
+and produced CCA greater than GCA. That was `find_all("table")` matching a
+wrapper and reading the wrong row — the tables are nested several deep.
+Innermost-table selection fixed it, and the in-table name then matched the
+index name on every page that parses at all.
+
+### 26.3 Coverage
+
+136 pages → 102 parse → **54 survive checks 1 and 2** → 48 after check 3 →
+matched to the 206 on **name AND district** (the coordinate work's lesson:
+matching on name alone put `Dhari`, 3.01 MCM in Rajkot, onto Dharoi's page,
+813 MCM in Mahesana, at 0.89 similarity) → **40 of 206, 19.4%.**
+
+| | |
+|---|---:|
+| Schemes with a verified command area | **40 of 206** |
+| Culturable command area | **256,888 ha** |
+| Of those, with a recorded maximum irrigated | 31 |
+| Most ever irrigated, those 31 | **131,988 ha of their 243,867 ha = 54%** |
+| Match tiers | A 34, B 6 |
+
+`data/reference/scheme_command_area.csv` carries the evidence per row; the
+excluded file records all 254 rejections with a reason.
+
+### 26.4 What the detail panel says, and refuses to say
+
+Three real numbers per scheme — hectares commanded, most ever irrigated with
+its year, storage today — and **no conversion between them**. Bhadar, Rajkot:
+commands 26,587 ha, has watered 25,823 ha in its best year (1996–97, 97% of
+the command), and holds 20.5% of its releasable capacity today.
+
+The panel states in place that the three are not divisible into one another,
+because turning storage into hectares needs a water duty and no published
+source carries one per scheme. Schemes with no verified page say so and give
+the coverage, rather than showing nothing and letting the absence read as "this
+dam commands nothing".
+
+### 26.5 An invariant this change broke and restored
+
+The per-scheme sparkline's caption promises "same basis as the figure below, so
+the two always agree", and §25 moved that figure to live while the series was
+still gross `pct_filling`. The series is now live too, using **each row's own**
+published `design_live_mcm` — exactly as `pct_filling` uses each row's own
+`design_gross_mcm` — so a capacity restatement still shows as a step, which
+§25.2's argument says is the honest behaviour on a single-scheme chart.

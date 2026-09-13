@@ -63,6 +63,11 @@ COORDS = Path("data/reference/dam_coordinates.csv")
 # page can say which of the 206 are absent and why rather than just omitting
 # them silently.
 COORDS_EX = Path("data/reference/dam_coordinates_excluded.csv")
+# Written by scripts/build_command_area.py. Culturable command area per
+# scheme, for the 40 of 206 where the state's own Data Bank page survives its
+# three self-consistency checks. The excluded file records every rejection.
+CCA_FILE = Path("data/reference/scheme_command_area.csv")
+CCA_EX = Path("data/reference/scheme_command_area_excluded.csv")
 SEASON_CAP = Path("data/processed/season_capacity.csv")
 MID = Path("data/processed/capacity_midseason_exceptions.csv")
 LEDGER = Path("data/interim/backfill_ledger.csv")
@@ -549,15 +554,29 @@ def main():
     # Thinned to every THIN_TO-th day: at 153 days x 5 seasons x 206 schemes
     # the full series would add about 2.5 MB to a 220 KB file, and a sparkline
     # cannot resolve single days anyway. Stated in the interface.
+    # LIVE, for the same reason the rest of the page is (§25). The invariant
+    # this block exists to hold is that the sparkline and the "Filling now"
+    # figure beside it share a basis, and that figure is now live — so the
+    # series has to be too, or the caption's promise that "the two always
+    # agree" becomes false.
+    #
+    # The denominator is each ROW's own published design_live_mcm, exactly as
+    # pct_filling uses each row's own design_gross_mcm. That preserves the
+    # property argued for above: a restatement shows as a step, because the
+    # step is in the published record.
     THIN_TO = 3
     per = con.execute(f"""
         SELECT f.scheme_id,
                EXTRACT(year FROM f.report_date)::INT AS season,
                f.report_date,
-               f.pct_filling AS pct
+               CASE WHEN f.design_live_mcm > 0
+                    THEN 100.0 * f.present_live_mcm / f.design_live_mcm
+               END AS pct
         FROM fact_storage f
         WHERE EXTRACT(month FROM f.report_date) IN ({months})
           AND f.pct_filling IS NOT NULL
+          AND f.design_live_mcm > 0
+          AND f.present_live_mcm IS NOT NULL
     """).df()
     per["report_date"] = pd.to_datetime(per["report_date"])
     per["dos"] = per["report_date"].dt.date.map(day_of_season)
@@ -588,6 +607,63 @@ def main():
         # one of them does not.
         row["live_pct"] = (round(100.0 * pl / dl, 1)
                            if dl and pl is not None and dl > 0 else None)
+
+    # ---- command area, for the schemes where it is verified ----------------
+    # Written by scripts/build_command_area.py from the NWRWS Data Bank, which
+    # is the only source that publishes it per scheme. 40 of 206 survive its
+    # three source checks and a name+district match; the rest carry nothing,
+    # and the page says how many and why rather than omitting them silently.
+    cca_meta = {"available": False, "n_with_cca": 0,
+                "n_schemes": int(len(tod)), "cca_ha_total": 0,
+                "source": None, "source_url": None,
+                "expected_file": str(CCA_FILE)}
+    if CCA_FILE.exists():
+        cdf = pd.read_csv(CCA_FILE)
+        need = {"scheme_id", "cca_ha", "gca_ha"}
+        if not need <= set(cdf.columns):
+            print(f"WARNING {CCA_FILE} lacks {need - set(cdf.columns)}; ignored")
+        else:
+            keep = ["gca_ha", "cca_ha", "max_irrigated_ha",
+                    "max_irrigated_year", "scheme_class", "year_completed",
+                    "river", "n_command_villages", "contentid", "match_tier"]
+            by_id = {int(r["scheme_id"]): r for _, r in cdf.iterrows()}
+            n_max = 0
+            for row in schemes:
+                c = by_id.get(row["scheme_id"])
+                if c is None:
+                    continue
+                cmd = {}
+                for k in keep:
+                    v = c.get(k)
+                    cmd[k] = None if pd.isna(v) else (
+                        int(v) if k in ("gca_ha", "cca_ha", "max_irrigated_ha",
+                                        "n_command_villages", "contentid")
+                        else v)
+                # Empty max_irrigated means NOT RECORDED (blank year in the
+                # source), never zero hectares — nine of the forty are in that
+                # position and the interface must not imply they never
+                # irrigated anything.
+                if cmd.get("max_irrigated_ha") is not None:
+                    n_max += 1
+                row["command"] = cmd
+            with_cca = [r for r in schemes if r.get("command")]
+            mx = [r for r in with_cca
+                  if r["command"].get("max_irrigated_ha") is not None]
+            cca_meta.update(
+                available=bool(with_cca), n_with_cca=len(with_cca),
+                cca_ha_total=int(sum(r["command"]["cca_ha"] for r in with_cca)),
+                n_with_max=len(mx),
+                max_irrigated_ha_total=int(
+                    sum(r["command"]["max_irrigated_ha"] for r in mx)),
+                cca_ha_of_those_with_max=int(
+                    sum(r["command"]["cca_ha"] for r in mx)),
+                source="Gujarat NWRWS Data Bank — Canals and Command Area",
+                source_url=("https://guj-nwrws.gujarat.gov.in/showpage.aspx"
+                            "?contentid=1467&lang=English"),
+                excluded_file=str(CCA_EX))
+            print(f"command area: {len(with_cca)} of {len(schemes)} schemes "
+                  f"({cca_meta['cca_ha_total']:,} ha CCA); "
+                  f"{len(mx)} carry a recorded maximum irrigated")
 
     # ---- coordinates, if anyone has supplied them --------------------------
     coords, coords_meta = {}, {
@@ -718,6 +794,7 @@ def main():
         "schemes": schemes,
         "coords": coords,
         "coords_meta": coords_meta,
+        "cca_meta": cca_meta,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(doc, separators=(",", ":")), encoding="utf-8")

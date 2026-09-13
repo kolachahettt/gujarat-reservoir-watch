@@ -840,6 +840,29 @@ table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
 .dgrid .vsub{font-size:var(--t-sm);color:var(--muted);margin-top:2px}
 .dnote{font-size:var(--t-sm);color:var(--muted);margin-top:10px;line-height:var(--lh-body);
   border-top:1px solid var(--rule-hair);padding-top:8px}
+
+/* ---- "The land it waters" ----
+   A second tile group inside the detail panel, separated by a rule and a
+   heading rather than a box, because the panel is already a box. Its tiles
+   reuse .dgrid so the two groups line up on the same column grid instead of
+   inventing a second measure inside one panel. */
+.cmd{margin-top:15px;padding-top:12px;border-top:1px solid var(--border)}
+.cmd-h{font-family:var(--ff-display);font-weight:600;font-size:var(--t-md);
+  color:var(--text-primary)}
+/* Major / medium / minor — the department's own class for the scheme. Set as a
+   quiet tag, not a badge: it is context, not a status. */
+.cmd-cls{font-family:var(--ff-body);font-weight:400;font-size:var(--t-xs);
+  text-transform:uppercase;letter-spacing:.055em;color:var(--muted);
+  margin-left:6px}
+/* Hectares. Kept smaller than the figure so "95,222 ha" reads as one quantity
+   rather than a number next to a word. */
+.cmd .cu{font-size:var(--t-sm);color:var(--muted)}
+.cmd-note{font-size:var(--t-sm);color:var(--muted);margin-top:10px;
+  line-height:var(--lh-body)}
+.cmd-note a{color:inherit}
+.cmd-none{margin-top:15px;padding-top:12px;border-top:1px solid var(--border);
+  font-size:var(--t-sm);color:var(--muted);line-height:var(--lh-body)}
+.cmd-none a{color:inherit}
 .spark{margin:11px 0 2px;max-width:520px}
 .spark svg{display:block;width:100%;height:auto}
 .sparkcap{font-size:var(--t-xs);color:var(--muted);line-height:var(--lh-data);margin-top:3px}
@@ -1207,6 +1230,26 @@ function announce(msg){
 }
 const f1 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(1);
 const f2 = v => (v==null||isNaN(v)) ? "—" : (+v).toFixed(2);
+/* Whole numbers with a thousands separator. Command areas run to five digits
+   (Dharoi commands 95,222 ha) and "95222" is unreadable at a glance. en-IN
+   would group it 95,222 the same way here but lakh-groups six-digit figures,
+   which this page does not use anywhere else, so the grouping is en-GB. */
+const fInt = v => (v==null||isNaN(v)) ? "—"
+  : Math.round(+v).toLocaleString("en-GB");
+
+/* The Data Bank writes a water year as YYYY.YY — 1993.94 is 1993–94. Two of
+   the thirteen values are irregular: '1979.8' has its trailing zero dropped
+   (1979–80) and '1998.98' is a typo for 1998–99.
+   Padding fixes the first. The second is left as the source printed it —
+   rendering "1998–98" looks wrong because it IS wrong, and quietly promoting
+   it to 1998–99 would be inventing a year the source does not give. */
+function fWaterYear(v){
+  if(v == null || v === "") return "";
+  const s = String(v);
+  const m = s.match(/^(\d{4})\.(\d{1,2})$/);
+  if(!m) return s;
+  return m[1] + "–" + m[2].padEnd(2, "0");
+}
 
 /* ================= NARRATIVE TITLES =================
    Every title on this page used to be a label — "Gujarat — all 206 schemes",
@@ -2402,6 +2445,78 @@ function downloadCsv(btn){
    third day to keep the JSON small, and the marker rule is "five CONSECUTIVE
    evaluable days". A thinned series cannot evaluate that rule, and drawing a
    marker from data that cannot support it would be worse than omitting it. */
+/* ---- the land this reservoir waters ----
+   For the 40 schemes whose command area survived verification (§26), the
+   detail panel says what the daily report never does: how much cultivable land
+   the scheme commands, the most it has ever actually irrigated in a year, and
+   how full it is today. Three real numbers, no conversion between them.
+
+   The three cases are different claims and are worded differently:
+     - a command area AND a recorded maximum  -> both, with the year
+     - a command area, maximum NOT RECORDED   -> the area, and say so. A blank
+       year in the source means unrecorded, not zero hectares; nine of the
+       forty are in that position and six of those are Kutch schemes, so
+       printing "0 ha ever irrigated" would libel them.
+     - no verified page                       -> say that, and how many do
+       have one, rather than showing nothing and letting the absence read as
+       "this dam commands nothing".
+
+   NOTHING here multiplies storage by area. There is no water duty in any
+   published source, so the page states the ceiling it does have — the
+   department's own maximum — and stops. */
+function commandBlock(s){
+  const cm = (DATA.cca_meta || {});
+  const c = s.command;
+  if(!c){
+    if(!cm.available) return "";
+    return `<div class="cmd cmd-none">No verified command area for this
+      scheme. The state's Data Bank publishes one per dam, but its pages
+      disagree with themselves or with their own index often enough that only
+      <b>${cm.n_with_cca} of ${cm.n_schemes}</b> survive checking — see
+      <a href="#stage-working">how this is built</a>.</div>`;
+  }
+  const cca = c.cca_ha, mx = c.max_irrigated_ha;
+  const pct = schemePct(s);
+  const cls = c.scheme_class
+    ? `<span class="cmd-cls">${esc(String(c.scheme_class).toLowerCase())}</span>`
+    : "";
+  /* The share is of the COMMAND, not of anything to do with today's water. */
+  const share = (mx != null && cca > 0)
+    ? `<div class="vsub">${Math.round(mx / cca * 100)}% of the command</div>`
+    : "";
+  const maxCell = mx != null
+    ? `<div class="v">${fInt(mx)} <span class="cu">ha</span></div>
+       <div class="vsub">best year on record${c.max_irrigated_year
+         ? ", " + esc(fWaterYear(c.max_irrigated_year)) : ""}</div>
+       ${share}`
+    : `<div class="v sm"><span style="color:var(--muted)">not recorded</span></div>
+       <div class="vsub">the source leaves the year blank, which means
+         unrecorded — not zero</div>`;
+  return `<div class="cmd">
+    <div class="cmd-h">The land it waters ${cls}</div>
+    <div class="dgrid">
+      <div class="c"><div class="k">Culturable command area</div>
+        <div class="v">${fInt(cca)} <span class="cu">ha</span></div>
+        <div class="vsub">cultivable land the scheme is built to
+          irrigate${c.gca_ha ? ", of " + fInt(c.gca_ha) + " ha gross" : ""}</div></div>
+      <div class="c"><div class="k">Most ever irrigated</div>${maxCell}</div>
+      <div class="c"><div class="k">In the reservoir today</div>
+        <div class="v">${f1(pct)}%</div>
+        <div class="vsub">${f2(s.present_live_mcm)} MCM of releasable
+          water</div></div>
+    </div>
+    <div class="cmd-note">Command area from the ${esc(cm.source ||
+      "Gujarat NWRWS Data Bank")}${c.contentid
+      ? ` (<a href="https://guj-nwrws.gujarat.gov.in/showpage.aspx?contentid=${
+          c.contentid}&amp;lang=English" rel="nofollow noopener"
+          target="_blank">scheme page</a>)` : ""}${c.n_command_villages
+      ? `, which lists ${c.n_command_villages} villages in this command` : ""}.
+      These three figures are not divisible into one another: turning storage
+      into hectares needs a water duty, and no published source carries one
+      per scheme.</div>
+  </div>`;
+}
+
 function schemeSpark(s, thin){
   const ser = s.series || {};
   const cur = ser[CUR] || {};
@@ -2458,10 +2573,12 @@ function schemeSpark(s, thin){
     <svg viewBox="0 0 ${G.W} ${H}" role="img"
       aria-label="Percent filling by day of season for this scheme, ${CUR}
       against ${YRS[0]} to ${YRS[YRS.length-1]}">${g}${lines}</svg>
-    <div class="sparkcap">Percent filling by day of season &mdash;
-      <b>${CUR}</b> against ${YRS[0]}&ndash;${YRS[YRS.length-1]}. Same basis as
-      the figure below, so the two always agree. Plotted every ${thin}rd day,
-      so brief dips are not resolved and no crossover date is marked.</div>
+    <div class="sparkcap">${LIVE_BASIS ? "Live" : "Gross"} storage as a
+      percentage of ${LIVE_BASIS ? "live" : "design"} capacity, by day of
+      season &mdash; <b>${CUR}</b> against ${YRS[0]}&ndash;${YRS[YRS.length-1]}.
+      Same basis as the figure below, so the two always agree. Plotted every
+      ${thin}rd day, so brief dips are not resolved and no crossover date is
+      marked.</div>
   </div>`;
 }
 
@@ -3704,12 +3821,12 @@ function wire(){
           <div class="v sm">${esc(s.warning || "—")}</div>
           <div class="vsub">${warnNote(s.warning)}</div></div>
       </div>
+      ${commandBlock(s)}
       <div class="dnote">Days of water is this reservoir's live storage divided by
         <b>today's</b> canal release rate, and nothing more. Release rates are set
         daily and often stop altogether, so this figure says which reservoirs to
         look at — it is not a drawdown estimate and does not state when any
-        reservoir empties. Command areas are not published in this report, so it
-        cannot tell you whether this reservoir serves a particular field.</div>`;
+        reservoir empties.</div>`;
     det.classList.add("on");
     document.getElementById("dclose").onclick = () => det.classList.remove("on");
     det.scrollIntoView({behavior:"smooth", block:"nearest"});

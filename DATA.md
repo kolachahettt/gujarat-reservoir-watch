@@ -150,6 +150,44 @@ the dams they share. Do not reach for 2023; §24.4 has the measurements.
 
 ---
 
+## Command area, and the 40 schemes that have one
+
+The daily report never says who depends on a reservoir. Command area comes from
+the **Gujarat NWRWS Data Bank**, one page per dam, which is the only source
+found that publishes it per scheme — NRLD has no such column (all 20 were
+checked), the live WRD host serves only daily PDFs, India-WRIS refuses
+connections and data.gov.in returns 403, and the department's own
+irrigation-potential documents are circle- and district-level.
+
+```bash
+python scripts/build_command_area.py --fetch
+```
+
+That fetches `showpage.aspx?contentid=1467` and the 136 per-dam pages into
+`data/raw/nwrws/` (gitignored, ~13 MB, about 30 minutes at one request per
+second), then writes:
+
+* `data/reference/scheme_command_area.csv` — the 40 verified schemes, with GCA,
+  CCA, maximum ever irrigated and its year, scheme class, and the match tier
+* `data/reference/scheme_command_area_excluded.csv` — all 254 rejections, each
+  with the reason
+
+**The source is unreliable row by row, and the script says so per row.** Of the
+102 pages that parse, 9 carry a different dam's row (`Bhogavo-2`'s page holds
+Bhogavo-1's), 6 contradict their own second table (Shetrunji by 23x, 57,060
+against 2,514 ha), and 2 pairs share one row. Each page prints GCA/CCA twice,
+which is what makes the errors detectable. 40 of 206 survive; the page states
+that coverage. See PROJECT_BRIEF.md section 26.
+
+One reading trap the file encodes rather than flattens: **`max_irrigated_ha`
+empty means NOT RECORDED**, because the source leaves the year blank for those
+nine schemes. It does not mean zero hectares, and six of the nine are Kutch
+schemes.
+
+The figures are old. Maximum-irrigation years run 1979-80 to 2007-08 and the
+department's statewide season-wise table ends 2007-08, so the command areas
+predate the SAUNI transfers into Saurashtra.
+
 ## The archived basis-risk project
 
 `archive/` holds the predecessor project, finished and kept separate. Its source data

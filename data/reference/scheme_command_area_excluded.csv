@@ -1,0 +1,255 @@
+scheme_id,scheme_name,district,nwrws_name,contentid,reason,detail
+,,,Ukai,2465,source row rejected,"maximum irrigated 88,564 exceeds CCA 66,168"
+,,,Umariya,2467,source row rejected,"the page disagrees with itself: canal table 2,192 ha vs command table 66,168 ha"
+,,,Kelia,2477,source row rejected,no command-area table on the page
+,,,Khambhda,2478,source row rejected,"the page disagrees with itself: canal table 2,192 ha vs command table 1,870 ha"
+,,,Kadana,2489,source row rejected,"maximum irrigated 16,413 exceeds CCA 14,403"
+,,,Karjan,2870,source row rejected,only one of the two tables carries a CCA
+,,,Guhai,2878,source row rejected,GCA or CCA missing from the table
+,,,Juj,2884,source row rejected,"CCA 4,180 exceeds GCA 1,061, which cannot be"
+,,,Doswada,2888,source row rejected,"maximum irrigated 1,081 exceeds CCA 502"
+,,,Damanganga,2892,source row rejected,only one of the two tables carries a CCA
+,,,Dantiwada,2894,source row rejected,"maximum irrigated 50,284 exceeds CCA 45,823"
+,,,Pigut,2909,source row rejected,"the page disagrees with itself: canal table 1,406 ha vs command table 1,668 ha"
+,,,Ver-2,2929,source row rejected,"CCA 3,558 exceeds GCA 2,118, which cannot be"
+,,,Harnav-1,2931,source row rejected,no command-area table on the page
+,,,Harnav-2,2933,source row rejected,GCA or CCA missing from the table
+,,,Machannala -1,2951,source row rejected,no command-area table on the page
+,,,Mahi(Vipar),2953,source row rejected,no command-area table on the page
+,,,Mazam,2955,source row rejected,no command-area table on the page
+,,,Meshwo,2957,source row rejected,no command-area table on the page
+,,,Rami,2959,source row rejected,no command-area table on the page
+,,,Lakhigam,2961,source row rejected,no command-area table on the page
+,,,Watrak,2963,source row rejected,no command-area table on the page
+,,,Vakleshvar-Bhe,2965,source row rejected,no command-area table on the page
+,,,Saraswati berej,2969,source row rejected,no command-area table on the page
+,,,Sipu,2971,source row rejected,no command-area table on the page
+,,,Sukhi,2973,source row rejected,no command-area table on the page
+,,,Hadaf,2975,source row rejected,no command-area table on the page
+,,,Hathmati,2977,source row rejected,no command-area table on the page
+,,,Kankavati,2471,source row rejected,no command-area table on the page
+,,,Shetrunji,2967,source row rejected,"the page disagrees with itself: canal table 57,060 ha vs command table 2,514 ha"
+,,,Ambajal,2999,source row rejected,no command-area table on the page
+,,,Aji-2,3001,source row rejected,no command-area table on the page
+,,,Aji-3,3003,source row rejected,no command-area table on the page
+,,,Ishwariya,3005,source row rejected,no command-area table on the page
+,,,Und-1,3007,source row rejected,"CCA or GCA is zero (GCA 10,940, CCA 0) — a blank cell, not an area"
+,,,Uben(PW),3012,source row rejected,"the page's table is about a different dam ('Uben', Junagadh)"
+,,,Uben,3014,source row rejected,GCA or CCA missing from the table
+,,,Ozat(PW),3016,source row rejected,"the page's table is about a different dam ('Ozat-2', Junagadh)"
+,,,Karmal,3019,source row rejected,no command-area table on the page
+,,,Kalindri,3021,source row rejected,"maximum irrigated 7,385 exceeds CCA 21"
+,,,Kharo,3027,source row rejected,"the page's table is about a different dam ('Kharo-1', Bhavnagar)"
+,,,Khodiyar,3029,source row rejected,"CCA 9,864 exceeds GCA 850, which cannot be"
+,,,Goma,3032,source row rejected,GCA or CCA missing from the table
+,,,Gondli,3034,source row rejected,no command-area table on the page
+,,,Ghelo(PW),3038,source row rejected,no command-area table on the page
+,,,Ghelo(Somnath),3040,source row rejected,"the page's table is about a different dam ('Ghelo (s)', Rajkot)"
+,,,Chaprwadi(Lunivav),3042,source row rejected,no command-area table on the page
+,,,Chaprwadi(Jetpur),3048,source row rejected,"the page's table is about a different dam ('Chaprwadi', Rajkot)"
+,,,Dai-minsar,3052,source row rejected,no command-area table on the page
+,,,Ghi,3056,source row rejected,no command-area table on the page
+,,,Dhrafad,3058,source row rejected,GCA or CCA missing from the table
+,,,Puna,3062,source row rejected,no command-area table on the page
+,,,Fulku,3064,source row rejected,no command-area table on the page
+,,,Fulgar-1,3066,source row rejected,"maximum irrigated 2,162 exceeds CCA 2,031"
+,,,Fulgar-2,3068,source row rejected,GCA or CCA missing from the table
+,,,Phophal-2,3070,source row rejected,GCA or CCA missing from the table
+,,,Bhogavo-2,3088,source row rejected,"the page's table is about a different dam ('Bhogavo-1', Surendranagar)"
+,,,Machchundri,3120,source row rejected,GCA or CCA missing from the table
+,,,Machchundri-2,3123,source row rejected,"the page's table is about a different dam ('Machchundri', Junagadh)"
+,,,Madhuvanti,3127,source row rejected,GCA or CCA missing from the table
+,,,Motisar,3140,source row rejected,no command-area table on the page
+,,,Rangmati,3142,source row rejected,no command-area table on the page
+,,,Raydi,3156,source row rejected,no command-area table on the page
+,,,Raval-2,3159,source row rejected,"the page's table is about a different dam ('Raval', Junagadh)"
+,,,Raval(pw),3169,source row rejected,GCA or CCA missing from the table
+,,,Shingoda,3185,source row rejected,GCA or CCA missing from the table
+,,,Sapda,3187,source row rejected,no command-area table on the page
+,,,Sasoi,3189,source row rejected,"maximum irrigated 4,554 exceeds CCA 4,075"
+,,,Sani,3191,source row rejected,"maximum irrigated 5,004 exceeds CCA 2,325"
+,,,Sankroli,3193,source row rejected,GCA or CCA missing from the table
+,,,Sonmati,3199,source row rejected,no command-area table on the page
+,,,Hiren-1,3205,source row rejected,GCA or CCA missing from the table
+,,,Hiren-2,3207,source row rejected,GCA or CCA missing from the table
+,,,Kasawati,2475,source row rejected,no command-area table on the page
+,,,Don,2483,source row rejected,"CCA or GCA is zero (GCA 0, CCA 490) — a blank cell, not an area"
+,,,Jangdiya,2882,source row rejected,"the page's table is about a different dam ('Jagadiya', Kutch)"
+,,,Tapar,2890,source row rejected,"CCA or GCA is zero (GCA 8,090, CCA 0) — a blank cell, not an area"
+,,,Niruna,2901,source row rejected,"the page disagrees with itself: canal table 3,036 ha vs command table 5,400 ha"
+,,,Sannadro,2919,source row rejected,"CCA or GCA is zero (GCA 0, CCA 3,016) — a blank cell, not an area"
+,,,Suvi,2921,source row rejected,"CCA 3,183 exceeds GCA 2,327, which cannot be"
+,,,Miti,2923,source row rejected,"CCA 1,364 exceeds GCA 682, which cannot be"
+,,,Rudrmata,2925,source row rejected,"CCA 4,048 exceeds GCA 2,251, which cannot be"
+,,,Waidy,2927,row duplicated across schemes,"GCA 6,014 / CCA 1,328 / max 0 also appears for: Waidy (2927), Godhatad (2481)"
+,,,Godhatad,2481,row duplicated across schemes,"GCA 6,014 / CCA 1,328 / max 0 also appears for: Waidy (2927), Godhatad (2481)"
+,,,Bhogavo-1,3080,row duplicated across schemes,"GCA 4,336 / CCA 4,240 / max 2,035 also appears for: Bhogavo-1 (3080), Limbdi bhogavo (3177)"
+,,,Limbdi bhogavo,3177,row duplicated across schemes,"GCA 4,336 / CCA 4,240 / max 2,035 also appears for: Bhogavo-1 (3080), Limbdi bhogavo (3177)"
+,,,Machchu-1,3106,row duplicated across schemes,"GCA 18,218 / CCA 10,409 / max 7,709 also appears for: Machchu-1 (3106), Machchu-2 (3115)"
+,,,Machchu-2,3115,row duplicated across schemes,"GCA 18,218 / CCA 10,409 / max 7,709 also appears for: Machchu-1 (3106), Machchu-2 (3115)"
+147,Advana,Porbandar,,,no verified command-area page,no Data Bank page survived the checks for this name
+163,Aji - II,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+160,Aji-I,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+151,Aji-III,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+111,Aji-IV,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+134,Ambajal,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+145,Amipur,Porbandar,,,no verified command-area page,no Data Bank page survived the checks for this name
+178,Bangawadi,Morbi,,,no verified command-area page,no Data Bank page survived the checks for this name
+136,Bantva-Kharo,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+19,Bhadar (P),Mahisagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+149,Bhadar - II,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+51,Bhukhi,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+189,Brahmani,Morbi,,,no verified command-area page,no Data Bank page survived the checks for this name
+200,Brahmani-II,Morbi,,,no verified command-area page,no Data Bank page survived the checks for this name
+165,Chhaparwadi-II,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+42,Damanganga,Valsad,,,no verified command-area page,no Data Bank page survived the checks for this name
+4,Dantiwada,Banaskantha,,,no verified command-area page,no Data Bank page survived the checks for this name
+112,Demi - III,Morbi,,,no verified command-area page,no Data Bank page survived the checks for this name
+15,Deo,Panchmahal,,,no verified command-area page,no Data Bank page survived the checks for this name
+180,Dhari,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+75,Dhatarwadi-II,Amreli,,,no verified command-area page,no Data Bank page survived the checks for this name
+184,Dholidhaja,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+99,Dia-Minsar,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+63,Don,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+170,Dondi,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+37,Doswada,Tapi,,,no verified command-area page,no Data Bank page survived the checks for this name
+135,Draphad,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+185,Falku,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+110,Fulzar (KB),Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+98,Fulzar-I,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+116,Fulzar-II,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+104,Gadhaki,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+61,Gajansar,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+97,Ghee,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+174,Ghelo - S,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+93,Ghelo-I,Amreli,,,no verified command-area page,no Data Bank page survived the checks for this name
+166,Ghodadhroi,Morbi,,,no verified command-area page,no Data Bank page survived the checks for this name
+46,Godhatad,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+89,Goma,Botad,,,no verified command-area page,no Data Bank page survived the checks for this name
+173,Gondali,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+201,Gorathiya,Sabarkantha,,,no verified command-area page,no Data Bank page survived the checks for this name
+28,Guhai,Sabarkantha,,,no verified command-area page,no Data Bank page survived the checks for this name
+16,Hadaf,Dahod,,,no verified command-area page,no Data Bank page survived the checks for this name
+86,Hanol,Bhavnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+33,Harnav-II,Sabarkantha,,,no verified command-area page,no Data Bank page survived the checks for this name
+131,Hasanapur,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+30,Hathmati,Arvalli,,,no verified command-area page,no Data Bank page survived the checks for this name
+140,Hiran-I,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+125,Hiran-II,Gir Somnath,,,no verified command-area page,no Data Bank page survived the checks for this name
+177,Ishwaria,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+58,Jangdia,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+196,Jaspara-Mandva,Bhavnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+32,Javanpura,Sabarkantha,,,no verified command-area page,no Data Bank page survived the checks for this name
+141,Jhanjeshri,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+43,Jhuj,Navsari,,,no verified command-area page,no Data Bank page survived the checks for this name
+123,Kabarka,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+179,Kabir-Sarovar,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+17,Kadana,Mahisagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+54,Kaila,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+26,Kali - II,Dahod,,,no verified command-area page,no Data Bank page survived the checks for this name
+146,Kalindri,Porbandar,,,no verified command-area page,no Data Bank page survived the checks for this name
+87,Kaniyad,Botad,,,no verified command-area page,no Data Bank page survived the checks for this name
+107,Kankavati,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+52,Kankawati,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+20,Karad,Panchmahal,,,no verified command-area page,no Data Bank page survived the checks for this name
+6,Karjan,Narmada,,,no verified command-area page,no Data Bank page survived the checks for this name
+155,Karmal,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+157,Karnuki,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+56,Kaswati,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+44,Kelia,Navsari,,,no verified command-area page,no Data Bank page survived the checks for this name
+1,Khambhada,Botad,,,no verified command-area page,no Data Bank page survived the checks for this name
+143,Khambhala,Porbandar,,,no verified command-area page,no Data Bank page survived the checks for this name
+80,Kharo,Bhavnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+197,Khedva,Sabarkantha,,,no verified command-area page,no Data Bank page survived the checks for this name
+168,Khodapipar,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+65,Khodiyar,Amreli,,,no verified command-area page,no Data Bank page survived the checks for this name
+39,Lakhigam,Surat,,,no verified command-area page,no Data Bank page survived the checks for this name
+162,Lalpari,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+31,Lank,Arvalli,,,no verified command-area page,no Data Bank page survived the checks for this name
+190,Lim-Bhogavo-I,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+187,Lim-Bhogavo-II,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+21,Machchhanala,Dahod,,,no verified command-area page,no Data Bank page survived the checks for this name
+158,Machchhu - I,Morbi,,,no verified command-area page,no Data Bank page survived the checks for this name
+150,Machchhu-II,Morbi,,,no verified command-area page,no Data Bank page survived the checks for this name
+203,Machchhu-III,Morbi,,,no verified command-area page,no Data Bank page survived the checks for this name
+127,Machhundri,Gir Somnath,,,no verified command-area page,no Data Bank page survived the checks for this name
+129,Madhuvanti,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+79,Malpara,Botad,,,no verified command-area page,no Data Bank page survived the checks for this name
+29,Mazam,Arvalli,,,no verified command-area page,no Data Bank page survived the checks for this name
+34,Meshwo,Arvalli,,,no verified command-area page,no Data Bank page survived the checks for this name
+195,Minsar (V),Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+64,Mitti,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+191,Morshal,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+139,Mota-Gujariya,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+167,Motisar,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+186,Nimbmani,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+50,Niruna,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+161,Nyari - I,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+183,Nyka,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+138,Ozat- Weir(Vanthali),Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+132,Ozat-II,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+137,Ozat-Weir,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+176,Phadangbeti,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+142,Phodarness,Porbandar,,,no verified command-area page,no Data Bank page survived the checks for this name
+159,Phophal - I,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+113,Phophal-II,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+10,Pigut,Bharuch,,,no verified command-area page,no Data Bank page survived the checks for this name
+88,Pingli,Bhavnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+130,Prempara,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+102,Puna,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+68,Raidy,Amreli,,,no verified command-area page,no Data Bank page survived the checks for this name
+41,Rami,Chhotaudepur,,,no verified command-area page,no Data Bank page survived the checks for this name
+204,Rana Khirasara,Porbandar,,,no verified command-area page,no Data Bank page survived the checks for this name
+108,Rangmati,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+126,Raval,Gir Somnath,,,no verified command-area page,no Data Bank page survived the checks for this name
+48,Rudramata,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+105,Ruparel,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+120,Rupavati,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+198,Sabali,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+192,Saburi,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+47,Sanandro,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+95,Sani,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+73,Sankroli,Amreli,,,no verified command-area page,no Data Bank page survived the checks for this name
+114,Sapada,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+199,Saran,Porbandar,,,no verified command-area page,no Data Bank page survived the checks for this name
+96,Sasoi,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+205,Sasoi-II,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+117,Shedhabhadthari,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+71,Shell-Dedumal,Amreli,,,no verified command-area page,no Data Bank page survived the checks for this name
+76,Shetrunji,Bhavnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+124,Shingoda,Gir Somnath,,,no verified command-area page,no Data Bank page survived the checks for this name
+122,Sindhani,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+5,Sipu,Banaskantha,,,no verified command-area page,no Data Bank page survived the checks for this name
+171,Sodvadar,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+115,Sonmati,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+40,Sukhi,Chhotaudepur,,,no verified command-area page,no Data Bank page survived the checks for this name
+169,Survo,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+55,Suvi,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+45,Tappar,Kachchh,,,no verified command-area page,no Data Bank page survived the checks for this name
+66,Thebi,Amreli,,,no verified command-area page,no Data Bank page survived the checks for this name
+193,Triveni Thanga,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+128,Uben,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+36,Ukai,Tapi,,,no verified command-area page,no Data Bank page survived the checks for this name
+24,Umaria,Dahod,,,no verified command-area page,no Data Bank page survived the checks for this name
+103,Umiyasagar,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+94,Und-I,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+121,Und-III,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+2,Utavali,Botad,,,no verified command-area page,no Data Bank page survived the checks for this name
+175,Vachhapari,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+69,Vadiya,Amreli,,,no verified command-area page,no Data Bank page survived the checks for this name
+188,Vansal,Surendranagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+202,Varansi,Kheda,,,no verified command-area page,no Data Bank page survived the checks for this name
+100,Vartu-I,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+109,Vartu-II,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+38,Ver-II,Surat,,,no verified command-area page,no Data Bank page survived the checks for this name
+118,Veradi,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+194,Veradi-II,Devbhumi Dwarka,,,no verified command-area page,no Data Bank page survived the checks for this name
+156,Veri,Rajkot,,,no verified command-area page,no Data Bank page survived the checks for this name
+101,Vijarkhi,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+133,Vrajmi,Junagadh,,,no verified command-area page,no Data Bank page survived the checks for this name
+23,WNKL.-BHEY,Dahod,,,no verified command-area page,no Data Bank page survived the checks for this name
+206,Wagadiya,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+35,Waidy,Arvalli,,,no verified command-area page,no Data Bank page survived the checks for this name
+12,Wanakbori,Mahisagar,,,no verified command-area page,no Data Bank page survived the checks for this name
+27,Watrak,Arvalli,,,no verified command-area page,no Data Bank page survived the checks for this name
+119,Wodisang,Jamnagar,,,no verified command-area page,no Data Bank page survived the checks for this name
