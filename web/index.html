@@ -5,30 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gujarat Reservoir Watch — season to date</title>
 <style>
-/* Palette: only values documented as passing in the data-viz reference palette.
-   2026 = categorical slot 2 (orange). Prior years = the blue SEQUENTIAL ramp,
-   light -> dark for 2022 -> 2025, because year is ordered data, not nominal.
-   No step lighter than 250 on light / darker than 600 on dark, per the ordinal
-   floor. */
+/* ================= PALETTE: WATER, AND ITS ABSENCE =================
+   One editorial opposition carries the whole page. Stored water is a
+   green-shifted blue; absence is dry ochre — the colour Kutch actually is,
+   rather than an alarm red. The two hues meet at a near-paper midpoint, so a
+   reservoir sitting at its own normal has almost no ink and only anomaly is
+   loud. That is the argument for every number below.
+
+   COLOUR IS DATA, NOT FURNITURE. The accent used to do triple duty: the 2026
+   series, the deviation encoding AND the UI chrome (pressed filters, focus
+   rings, the old view switcher). When the same hue is both signal and
+   scaffolding a reader learns to discount it. Chrome is neutral ink now and
+   saturated colour appears only where it encodes something.
+
+   EVERY VALUE HERE IS SOLVED, NOT PICKED. Ratios are stated against the page
+   and the card, and the binding constraint is the worse of the two.
+
+   WHAT THE SWEEP FOUND IN THE OLD PALETTE, since this replaces it: six graphic
+   tokens were below the 3:1 that WCAG 1.4.11 asks of non-text content — the
+   prior-year ramp's three light steps (2.00, 2.37, 2.83) and three diverging
+   steps (2.62, 1.76, 1.70). Earlier contrast passes on this project swept TEXT
+   only, so the series ramps had never been measured. Worse, those lines render
+   at opacity 0.85, so what was actually drawn was 1.79 / 2.06 / 2.39 / 2.82 —
+   every step failing, including the darkest. Opacity on an encoded series is
+   the root cause: the colour that encodes the value is not the colour on
+   screen. The ramp is solved at full opacity and the opacity is gone. */
 .viz-root{
   color-scheme:light;
-  --surface-1:#fcfcfb; --page:#f9f9f7;
-  --text-primary:#0b0b0b; --text-secondary:#52514e;
+  /* Warm paper, not the cool #f9f9f7 near-white, which is the colour of a
+     spreadsheet. The card stays a step lighter than the page, as before. */
+  --surface-1:#fefcf8; --page:#faf7f2;
+  --text-primary:#0b0b0b; --text-secondary:#52504b;   /* 7.54 / 7.86 */
   /* Was #898781, which is 3.50:1 on the surface — it reads as "quiet" but at
      10.5-12.5px it is body text, and body text needs 4.5:1. Thirteen separate
-     uses failed on it. #6b6963 is 5.35:1 on the surface and 5.21:1 on the
-     page, still clearly recessive against #0b0b0b primary text. */
-  --muted:#6b6963;
-  --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
-  /* TWO oranges, because WCAG asks two different questions of them.
-     --now is the GRAPHIC orange: the 2026 line, the rain bars, the marker
-     dots. Non-text graphics need 3:1 (1.4.11) and #eb6834 gives 3.12:1, so it
-     passes and is left alone — darkening it would change the chart's identity
-     for no accessibility gain.
-     --now-text is for the same colour used as TEXT, which needs 4.5:1 at
-     these sizes and where #eb6834 fails at 3.12:1 — the deviation figures,
-     the tooltip's current-season row, the direct "2026" chart labels, and the
-     white-on-orange active view button (3.20:1, the worst of them). */
+     uses failed on it. Warmed to match the ground: 5.26 on the page, 5.49 on
+     the card, still clearly recessive against #0b0b0b primary text. */
+  --muted:#6b6760;
+  /* THREE RULE WEIGHTS, because a stage boundary and a table row were the same
+     hairline and so the six stages read as one undifferentiated scroll.
+       hair    table rows, tooltip dividers, chart gridlines   1.22
+       border  component frames: cards, buttons, the legend    1.49
+       strong  stage boundaries, the header and footer rules   2.20
+     --border is a solid hex now rather than rgba(11,11,11,0.10): an alpha rule
+     composites differently over the page than over a card, so the "same"
+     border was two different colours depending on what it sat on. */
+  --rule-hair:#e4e1dd; --border:#d1ccc4; --rule-strong:#b1a89b;
+  --grid:#e4e1dd; --baseline:#b1a89b;
+  /* TWO terracottas, because WCAG asks two different questions of them.
+     --now is the GRAPHIC one: the 2026 line, the rain bars, the marker dots.
+     Non-text graphics need 3:1 (1.4.11); this is 4.05 on the page, 4.22 on a
+     card, with headroom rather than the old 3.04/3.12 hairline pass.
+     --now-text is the same colour used as TEXT, which needs 4.5:1 at these
+     sizes — the deviation figures, the tooltip's current-season row, the
+     direct "2026" chart labels. 5.73 / 5.98. */
   /* What sits BEHIND a chart, so an annotation label can halo itself against
      it. The state chart is drawn straight onto the page; every other chart is
      inside a card. The page value is the default; the card containers override
@@ -58,68 +87,121 @@
      running to 266 characters at the 1480px max-width. */
   --measure:68ch;
 
-  --now:#eb6834; --now-text:#c2410c;
-  /* The label that sits ON the accent fill. It cannot be a fixed white: in
-     dark mode --now-text is a LIGHT orange (it has to be, to read against a
-     near-black page), and white on it measures 2.8:1. The polarity flips with
-     the theme, so the colour is a token rather than a literal. */
-  --on-accent:#ffffff;
+  --now:#bc6032; --now-text:#984d29;
   /* Staleness banner. Checked rather than eyeballed: #8f2f10 on #fdf0e8 is
      7.28:1, AAA at body size. A warning the reader cannot read is not a
      warning. Deliberately NOT --now, which is 3.12:1 on the surface and fails
      AA as text — that is a separate finding. */
   --warn-fg:#8f2f10; --warn-bg:#fdf0e8; --warn-bd:#e8b79b;
-  --y22:#86b6ef; --y23:#6da7ec; --y24:#5598e7; --y25:#3987e5;
-  --tip-bg:#ffffff;
+  /* Prior years are WATER: the normal against which 2026 is read. Sequential
+     light -> dark for 2022 -> 2025, because year is ordered, not nominal, and
+     every step clears the graphic floor with the opacity removed.
+
+     COMPRESSED TO 3.20 / 3.92 / 4.60 / 5.42, not 3.20 to 8.51. The first
+     solve ran the ramp to 8.51 and the render showed why that is wrong: the
+     3:1 floor forces the REFERENCE series to be fairly dark, so at 6.08 and
+     8.51 the prior years out-contrasted --now at 4.05 and the context shouted
+     over the finding. Lightness is therefore not available as the prominence
+     channel; width (3.0 against 1.4) and hue (20deg against 193deg) are.
+     Luminance stays monotonic, so recency still reads, and the legend names
+     the years anyway. */
+  --y22:#4695aa; --y23:#3e8598; --y24:#38798a; --y25:#336d7d;
+  --tip-bg:#fffdfa;
   /* Diverging scale for deviation: 42 of 206 schemes are ABOVE their prior
      mean and 164 below, so polarity is real and diverging is the right job.
-     Poles and the neutral midpoint are the documented diverging pair
-     (blue <-> red, gray midpoint); the intermediate steps are interpolated
-     between them, one arm at a time, as that pair prescribes. */
-  --d-neg3:#e34948; --d-neg2:#ea7b7a; --d-neg1:#f1adac;
-  --d-zero:#f0efec;
-  --d-pos1:#9ec5f4; --d-pos2:#2a78d6;
-  --land:none; --admin:#d8d6ce;
-  /* Categorical slots 1-5, in the documented order. Used only by the region
-     comparison, where region is a nominal category and every line is the
-     current season, so there is no year for these to be confused with. */
-  --cat1:#2a78d6; --cat2:#eb6834; --cat3:#1baf7a;
-  --cat4:#eda100; --cat5:#e87ba4;
+     Ochre for below its own normal, water for above, meeting at a midpoint
+     that is nearly the paper.
+     The OUTER steps clear 3:1 (5.73 / 3.20 and 3.19 / 5.67). The INNER steps
+     do not, deliberately: 1.89 and 1.20. That is the editorial point — a dam
+     at its own normal should be almost no ink — and it is a real trade, so it
+     is stated here rather than buried. It also means a dot's perceivability on
+     the map must not depend on its fill; see .pt, which carries the outline
+     that says a dam is there at all. */
+  --d-neg3:#984d29; --d-neg2:#c57751; --d-neg1:#d3af9d;
+  --d-zero:#e5e3df;
+  --d-pos1:#4b95a8; --d-pos2:#316a78;
+  /* A dot's OUTLINE, carrying "a dam is here" independent of its fill. The
+     ring used to be --surface-1, i.e. the panel colour, so it separated
+     overlapping dots and was invisible against the panel otherwise. With a
+     near-paper midpoint a dam at its own normal would then have had almost no
+     edge at all, on the one figure whose claim is that 179 of them are
+     located. 3.26 on the page, 3.40 on a card. */
+  --dot-edge:#908881;
+  --land:none; --admin:#d1ccc4;
+  /* Categorical slots 1-5. Used only by the region comparison, where region is
+     nominal and every line is the current season.
+     cat2 WAS #eb6834 — the same value as --now. Five region lines and one of
+     them was drawn in the 2026 series colour, so a reader could take Central
+     Gujarat for the current season. Violet: clear of both editorial hues
+     (ochre ~20deg, water ~193deg) at 4.21 / 4.39.
+
+     cat3, cat4 and cat5 were at 2.63, 2.03 and 2.52 — three of the five region
+     lines below the graphic floor, found by the same sweep that caught the
+     year ramp. Darkened at their own hues, because lightness is what contrast
+     needs and hue is what tells the five regions apart: 158.5 / 40.8 / 337.4
+     degrees are unchanged, and all three now sit near 3.3.
+
+     Two hues sit within ~21 degrees of an editorial one — cat4 (40.8) near
+     ochre (20), cat1 (212.8) near water (192.9). They never appear in the same
+     figure: the regions chart plots current-season deviation only, so there is
+     no prior-year ramp beside them and no 2026 series to confuse them with.
+     Each line is also direct-labelled at its end. */
+  --cat1:#2a78d6; --cat2:#9f59c0; --cat3:#189b6c;
+  --cat4:#b87d00; --cat5:#e2578b;
 }
+/* DARK IS SOLVED AGAINST THE CARD, NOT THE PAGE. --surface-1 is lighter than
+   --page here, so a light ink has LESS contrast on a card than on the page —
+   the reverse of the light theme. Solving against the page put the ramp's
+   first step at 2.83 on cards, passing on one background and failing on the
+   other. The binding constraint is the lighter background in dark mode and the
+   darker one in light mode. */
 @media (prefers-color-scheme:dark){
   :root:where(:not([data-theme="light"])) .viz-root{
     color-scheme:dark;
-    --surface-1:#1a1a19; --page:#0d0d0d;
-    --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
-    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
-    /* Dark mode keeps --muted at #898781: on #1a1a19 that is 4.85:1, which
-       already passes. Only the orange fails here, and only as text — 4.48:1,
-       just under the 4.5 line. */
-    --now:#d95926; --now-text:#f0793f; --on-accent:#1a1a19;
+    --surface-1:#1b1a18; --page:#0f0e0d;          /* warm near-black */
+    --text-primary:#ffffff; --text-secondary:#c4c0b5; --muted:#8a857c;
+    --rule-hair:#25221d; --border:#36312a; --rule-strong:#514a3f;
+    --grid:#25221d; --baseline:#514a3f;
+    --now:#ba6236; --now-text:#cf8059;            /* 4.05 / 5.70 on the card */
     --warn-fg:#f9a97c; --warn-bg:#2a1c14; --warn-bd:#5d3a26;  /* 8.63:1 */
-    --y22:#184f95; --y23:#1c5cab; --y24:#256abf; --y25:#2a78d6;
-    --tip-bg:#232321;
+    /* Ramp direction flips: in dark the later years are LIGHTER, so the most
+       recent prior year still carries the most contrast. 3.21 / 4.42 / 6.12 /
+       8.48 on the card. */
+    --y22:#357282; --y23:#3c8092; --y24:#428da1; --y25:#489ab0;
+    --tip-bg:#242220;
+    --d-neg3:#cf8059; --d-neg2:#99593a; --d-neg1:#5f4133;
+    --d-zero:#2e2c29;
+    --d-pos1:#3a7180; --d-pos2:#4a9fb5;
+    --dot-edge:#7d766e;
+    --land:none; --admin:#36312a;
+    --cat1:#3987e5; --cat2:#b478d0; --cat3:#199e70;
+    --cat4:#c98500; --cat5:#d55181;
   }
 }
+/* The explicit opt-in, identical to the media-query block above. Two copies
+   because one is `prefers-color-scheme` and the other is `data-theme="dark"`,
+   and CSS has no way to share a declaration list between them. */
 :root[data-theme="dark"] .viz-root{
   color-scheme:dark;
-  --surface-1:#1a1a19; --page:#0d0d0d;
-  --text-primary:#ffffff; --text-secondary:#c3c2b7; --muted:#898781;
-  --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
-  --now:#d95926; --now-text:#f0793f; --on-accent:#1a1a19;
+  --surface-1:#1b1a18; --page:#0f0e0d;
+  --text-primary:#ffffff; --text-secondary:#c4c0b5; --muted:#8a857c;
+  --rule-hair:#25221d; --border:#36312a; --rule-strong:#514a3f;
+  --grid:#25221d; --baseline:#514a3f;
+  --now:#ba6236; --now-text:#cf8059;
   --warn-fg:#f9a97c; --warn-bg:#2a1c14; --warn-bd:#5d3a26;  /* 8.63:1 */
-  --y22:#184f95; --y23:#1c5cab; --y24:#256abf; --y25:#2a78d6;
-  --tip-bg:#232321;
-  --d-neg3:#e66767; --d-neg2:#c25a5a; --d-neg1:#8f4747;
-  --d-zero:#383835;
-  --d-pos1:#256abf; --d-pos2:#3987e5;
-  --land:none; --admin:#3a3a37;
-  --cat1:#3987e5; --cat2:#d95926; --cat3:#199e70;
+  --y22:#357282; --y23:#3c8092; --y24:#428da1; --y25:#489ab0;
+  --tip-bg:#242220;
+  --d-neg3:#cf8059; --d-neg2:#99593a; --d-neg1:#5f4133;
+  --d-zero:#2e2c29;
+  --d-pos1:#3a7180; --d-pos2:#4a9fb5;
+  --dot-edge:#7d766e;
+  --land:none; --admin:#36312a;
+  --cat1:#3987e5; --cat2:#b478d0; --cat3:#199e70;
   --cat4:#c98500; --cat5:#d55181;
 }
 
 *{box-sizing:border-box}
-body{margin:0;background:var(--page,#f9f9f7);
+body{margin:0;background:var(--page,#faf7f2);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 .viz-root{background:var(--page);color:var(--text-primary);
   padding:20px 22px 40px;max-width:1480px;margin:0 auto}
@@ -197,7 +279,7 @@ body{margin:0;background:var(--page,#f9f9f7);
 
 /* ---------- header ---------- */
 header.hd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;
-  justify-content:space-between;border-bottom:1px solid var(--border);
+  justify-content:space-between;border-bottom:1px solid var(--rule-strong);
   padding-bottom:12px}
 h1{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.01em}
 .prov{font-size:var(--t-sm);color:var(--text-secondary);line-height:var(--lh-body)}
@@ -229,10 +311,11 @@ h1{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.01em}
 .headline{margin:18px 0 6px;display:flex;flex-wrap:wrap;gap:26px;
   align-items:flex-start}
 .hero{min-width:210px}
-/* 42px counts as large text, where 3:1 applies and #eb6834 scrapes 3.04:1 —
-   compliant, but a 1% margin on the single most important number on the page.
-   It uses the text orange for the headroom; the chart line beside it keeps the
-   brighter --now, so the two are close rather than identical. Worth it. */
+/* 42px counts as large text, where 3:1 applies, and --now now clears 4.05 — so
+   either token would pass here. It keeps --now-text (5.73) anyway: this is the
+   single most important number on the page and the headroom is free, and it
+   stays a shade deeper than the chart line beside it, so the two read as
+   related rather than identical. */
 .hero .n{font-size:var(--t-display);line-height:1;letter-spacing:-.02em;color:var(--now-text)}
 .hero .u{font-size:var(--t-md);color:var(--text-secondary);margin-top:5px}
 .hero .sub{font-size:var(--t-md);color:var(--text-secondary);margin-top:9px;
@@ -282,7 +365,7 @@ h2,h2 .q{max-width:52ch}
    The page was fourteen full-width siblings in one flow, separated by gaps of
    9 to 30px with no common unit and no section boundaries — nothing told a
    reader where one idea ended and the next began. Stages give it joints. */
-.stage{padding:34px 0 8px;border-top:1px solid var(--border)}
+.stage{padding:34px 0 8px;border-top:1px solid var(--rule-strong)}
 .stage:first-of-type{padding-top:14px;border-top:0}
 /* The eyebrow labels the stage and is the same string as its mini-nav link, so
    arriving from the nav lands on a matching label rather than on a guess. */
@@ -341,7 +424,7 @@ h2,h2 .q{max-width:52ch}
   color:var(--text-secondary);text-decoration:none;padding:5px 9px;
   border-radius:5px;white-space:nowrap}
 .mininav a:hover{background:var(--surface-1);color:var(--text-primary)}
-.mininav a:focus-visible{outline:2px solid var(--now-text);outline-offset:1px}
+.mininav a:focus-visible{outline:2px solid var(--text-primary);outline-offset:1px}
 .mininav a[aria-current="true"]{background:var(--surface-1);
   color:var(--text-primary);font-weight:600}
 /* Anchored sections must clear the sticky bar when jumped to. Measured from
@@ -389,7 +472,7 @@ h2,h2 .q{max-width:52ch}
   background:var(--surface-1);color:var(--text-primary);
   border:1px solid var(--border);border-radius:6px;padding:7px 12px;
   font-size:var(--t-md);text-decoration:none;transition:top .12s}
-.skip:focus{top:8px;outline:2px solid var(--now-text);outline-offset:1px}
+.skip:focus{top:8px;outline:2px solid var(--text-primary);outline-offset:1px}
 /* The skip target takes focus programmatically, so it must not draw a ring as
    though it were an interactive control. */
 main:focus{outline:none}
@@ -490,7 +573,7 @@ main:focus{outline:none}
 .plot{position:relative}
 .plot svg{display:block;width:100%;height:auto;touch-action:none}
 .cross{font-size:var(--t-md);line-height:var(--lh-body);margin-top:6px;
-  color:var(--text-secondary);border-top:1px solid var(--border);
+  color:var(--text-secondary);border-top:1px solid var(--rule-hair);
   padding-top:6px}
 .cross b{color:var(--text-primary)}
 .cross .none{color:var(--muted)}
@@ -532,8 +615,8 @@ table.dt{width:100%;border-collapse:collapse;font-size:var(--t-sm);margin-top:9p
   border-radius:7px;overflow:hidden}
 table.dt th{text-align:left;font-size:var(--t-xs);text-transform:uppercase;
   letter-spacing:.055em;color:var(--muted);font-weight:600;
-  padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
-table.dt td{padding:5.5px 9px;border-bottom:1px solid var(--border);
+  padding:7px 9px;border-bottom:1px solid var(--rule-hair);white-space:nowrap}
+table.dt td{padding:5.5px 9px;border-bottom:1px solid var(--rule-hair);
   color:var(--text-secondary)}
 table.dt tr:last-child td{border-bottom:0}
 table.dt td.n{text-align:right;font-variant-numeric:tabular-nums;
@@ -564,7 +647,7 @@ table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
    against the tiles beside it rather than taking it on trust. */
 .dgrid .vsub{font-size:var(--t-sm);color:var(--muted);margin-top:2px}
 .dnote{font-size:var(--t-sm);color:var(--muted);margin-top:10px;line-height:var(--lh-body);
-  border-top:1px solid var(--border);padding-top:8px}
+  border-top:1px solid var(--rule-hair);padding-top:8px}
 .spark{margin:11px 0 2px;max-width:520px}
 .spark svg{display:block;width:100%;height:auto}
 .sparkcap{font-size:var(--t-xs);color:var(--muted);line-height:var(--lh-data);margin-top:3px}
@@ -594,10 +677,10 @@ tr.tv.on{display:table-row}
   color:var(--text-secondary);margin-bottom:6px}
 .tv table{width:100%;border-collapse:collapse;font-size:var(--t-xs)}
 .tv th,.tv td{padding:2.5px 4px;text-align:right;
-  font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border)}
+  font-variant-numeric:tabular-nums;border-bottom:1px solid var(--rule-hair)}
 .tv th:first-child,.tv td:first-child{text-align:left}
 .tv th{color:var(--muted);font-weight:600}
-footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--border);
+footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--rule-strong);
   font-size:var(--t-sm);color:var(--muted);line-height:var(--lh-body)}
 /* The SHA-256 and the source URL are long unbroken strings. Without this they
    set a minimum width on the footer and pushed the page 36px wider than a
@@ -605,21 +688,11 @@ footer.ft{margin-top:26px;padding-top:12px;border-top:1px solid var(--border);
 code{overflow-wrap:anywhere;word-break:break-word}
 .nofc{margin-top:9px;font-size:var(--t-sm);color:var(--text-secondary)}
 
-/* ---------- view switcher & second view ---------- */
-.views{display:flex;gap:0;margin-top:9px;border:1px solid var(--border);
-  border-radius:6px;overflow:hidden;width:max-content}
-.views button{background:var(--surface-1);border:0;cursor:pointer;
-  font-family:inherit;font-size:var(--t-sm);padding:5px 13px;
-  color:var(--text-secondary);border-right:1px solid var(--border)}
-.views button:last-child{border-right:0}
-/* White on --now was 3.20:1, the worst failure on the page and on a primary
-   control. The fill uses the text orange, and the label uses --on-accent so
-   the pairing survives the theme flip: light gives white on #c2410c at
-   5.18:1, dark gives near-black on #f0793f at 6.23:1. Both fills also clear
-   3:1 against their page, so the active state has a visible edge and is not
-   signalled by colour alone — aria-current carries it for assistive tech. */
-.views button[aria-current="true"]{background:var(--now-text);
-  color:var(--on-accent);font-weight:600}
+/* The .views tab-bar rules are gone with the tab bar itself, which the
+   six-stage reorder deleted — dead CSS, and it held the last accent-on-a-
+   control in the file. --on-accent went with it: it existed only to label that
+   fill, and its insight (a label on an accent cannot be a fixed white, because
+   the accent's polarity flips with the theme) is recorded in the brief. */
 .hdrow{display:flex;gap:7px;align-items:stretch;margin-top:9px;flex-wrap:wrap}
 .dlbtn{background:var(--surface-1);border:1px solid var(--border);
   border-radius:6px;cursor:pointer;font-family:inherit;font-size:var(--t-sm);
@@ -633,7 +706,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 .filters button{background:var(--surface-1);border:1px solid var(--border);
   border-radius:5px;cursor:pointer;font-family:inherit;font-size:var(--t-sm);
   padding:3px 9px;color:var(--text-secondary)}
-.filters button[aria-pressed="true"]{border-color:var(--now);
+.filters button[aria-pressed="true"]{border-color:var(--text-primary);
   color:var(--text-primary);font-weight:600}
 .placement{background:var(--surface-1);border:1px solid var(--border);
   border-left:2px solid var(--muted);border-radius:7px;padding:11px 13px;
@@ -1531,7 +1604,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
   for(const y of YRS){
     const p = linePath(series[y]);
     if(p) pri += `<path d="${p}" fill="none" stroke="${COL[y]}"
-      stroke-width="1.4" stroke-linejoin="round" opacity="0.85"/>`;
+      stroke-width="1.4" stroke-linejoin="round"/>`;
   }
   /* crossover marker: dashed because it marks a threshold event, not a grid */
   let mk = "";
@@ -1552,8 +1625,11 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
         fill="var(--muted)">${dosLabel(md, CUR)}</text>`}`;
   }
   const cp = linePath(series[CUR]);
+  /* Wider than it was. With the reference ramp pushed above the contrast
+     floor, lightness can no longer make 2026 the loudest line, so width and
+     hue carry it: 3.0 against the ramp's 1.4. */
   const cur = `<path d="${cp}" fill="none" stroke="var(--now)"
-    stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
   /* direct label on the one series that matters.
      It sits above the endpoint by default. When the series ends high that puts
      it in the "latest report" label's band at the top of the plot, which is
@@ -1604,7 +1680,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
     .map((k,i) => (i?"L":"M") + xOf(k).toFixed(1) + " " + ry(pm[k]).toFixed(1))
     .join(" ");
   if(pmPath) rr += `<path d="${pmPath}" fill="none" stroke="var(--muted)"
-    stroke-width="1.2" opacity="0.9"/>`;
+    stroke-width="1.2"/>`;
   /* 2026 daily rain: thin bars, 2px surface gap, 1px rounded ends */
   const bw = Math.max(1.1, (GG.W-GG.PADL-GG.PADR)/SEASON_DAYS - 0.7);
   for(const [k,v] of Object.entries(rain[CUR] || {})){
@@ -1612,7 +1688,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
     const h = Math.max(0.8, rTop + GG.RH - ry(v));
     rr += `<rect x="${(xOf(+k)-bw/2).toFixed(1)}" y="${ry(v).toFixed(1)}"
       width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="0.7"
-      fill="var(--now)" opacity="0.6"/>`;
+      fill="var(--now)"/>`;
   }
   /* The peak moves to the region table on a panel: this caption is 38 units of
      text and the panel's plot is 173, so it would cover a fifth of the strip
@@ -2025,10 +2101,10 @@ function schemeSpark(s, thin){
   for(const y of YRS){
     const p = linePath(ser[y] || {}, xf, yf, thin);
     if(p) lines += `<path d="${p}" fill="none" stroke="${COL[y]}"
-      stroke-width="1.2" opacity="0.85" stroke-linejoin="round"/>`;
+      stroke-width="1.2" stroke-linejoin="round"/>`;
   }
   lines += `<path d="${linePath(cur, xf, yf, thin)}" fill="none"
-    stroke="var(--now)" stroke-width="2.2" stroke-linejoin="round"
+    stroke="var(--now)" stroke-width="2.6" stroke-linejoin="round"
     stroke-linecap="round"/>`;
   /* Same halo as the state chart's direct label, for the same reason: the
      prior years run above the 2026 endpoint here too. */
@@ -2218,12 +2294,16 @@ function scatterSVG(list){
   g += `<text x="${xp(xs[1])-4}" y="${H2-B-7}" text-anchor="end" font-size="11"
       fill="var(--muted)">${narrow ? "above →" : "above prior years →"}</text>`;
 
-  /* Largest first so small dots land on top and stay clickable; a 1.5px
-     surface ring separates overlaps without drawing a border. */
+  /* Largest first so small dots land on top and stay clickable. The ring is
+     --dot-edge, not the panel colour: it separates overlaps AND gives every
+     dot a visible edge, so a dam near its own normal is still locatable when
+     its fill is nearly the paper. Width scales with the radius -- a flat
+     1.5px ring is more than half of a 2.6-unit dot and would swamp it. */
   const pts = [...list].sort((a,b) => b.design_gross_mcm - a.design_gross_mcm)
     .map(s => `<circle cx="${xp(Math.max(xs[0],Math.min(xs[1],s.dev_pp))).toFixed(1)}"
       cy="${yp(s.design_gross_mcm).toFixed(1)}" r="${capR(s.design_gross_mcm)}"
-      fill="${devColor(s.dev_pp)}" stroke="var(--surface-1)" stroke-width="1.5"
+      fill="${devColor(s.dev_pp)}" stroke="var(--dot-edge)"
+      stroke-width="${Math.min(1.3, capR(s.design_gross_mcm) * 0.34).toFixed(2)}"
       class="pt" data-id="${s.scheme_id}" style="cursor:pointer"><title>${
       esc(s.scheme_name)} — ${esc(s.district)}, ${esc(regName(s.region))} — ${
       f1(s.pct_filling)}% now, ${f1(s.dev_pp)} pp vs prior mean, ${
@@ -2256,7 +2336,8 @@ function scatterLegend(){
         `<div><svg width="${b.r*2+4}" height="${b.r*2+4}" aria-hidden="true"
            focusable="false"><circle
            cx="${b.r+2}" cy="${b.r+2}" r="${b.r}" fill="var(--muted)"
-           stroke="var(--surface-1)" stroke-width="1.5"/></svg>${b.lb}</div>`
+           stroke="var(--dot-edge)"
+           stroke-width="${Math.min(1.3, b.r * 0.34).toFixed(2)}"/></svg>${b.lb}</div>`
         ).join("")}</div>
     </div>
     <div class="grp" style="color:var(--muted);max-width:34ch;line-height:var(--lh-body)">
@@ -2345,7 +2426,8 @@ function mapSVG(list, coords, geo){
     .map(s => { const c = coords[s.scheme_id];
       return `<circle cx="${px(c[1]).toFixed(1)}" cy="${py(c[0]).toFixed(1)}"
         r="${capR(s.design_gross_mcm)}" fill="${devColor(s.dev_pp)}"
-        stroke="var(--surface-1)" stroke-width="1.5" class="pt"
+        stroke="var(--dot-edge)"
+        stroke-width="${Math.min(1.3, capR(s.design_gross_mcm) * 0.34).toFixed(2)}" class="pt"
         data-id="${s.scheme_id}" style="cursor:pointer"><title>${
         esc(s.scheme_name)} — ${esc(s.district)} — ${f1(s.pct_filling)}% now, ${
         f1(s.dev_pp)} pp</title></circle>`; }).join("");
