@@ -1594,3 +1594,90 @@ outage") and is unassessed.
 `data/reference/dam_coordinates.csv` carries the evidence per row — tier, the
 matched NRLD name and PIC, capacity difference, kilometres outside the district,
 taluka similarity — so any point on the map can be traced to what justified it.
+
+## 25. The page leads with live storage, because that is what the department decides on
+
+The monitor spent its first version answering "how full are the reservoirs?"
+on **gross** storage, which is the percentage the source itself prints. That is
+the wrong quantity for the question a farmer is actually asking, and the
+department says so in its own operating notes. From the Data Bank page for the
+Mahi Right Bank Canal command:
+
+> "Ravi Season — Mahi Right Bank Canal (Shedhi Branch and Meshwo weir scheme)
+> command area is based on the available live storage from Kadana Dam.
+> Therefore, planning in Ravi season is based on the available live storage
+> from Kadana Dam."
+
+Gross storage includes **dead storage** — the water below the lowest outlet,
+which no canal can draw. Statewide that is **1,204.6 MCM**: water that is in
+the reservoirs and cannot be released. So the hero, the headline, the deck and
+every figure that compares against the prior years now read live.
+
+### 25.1 It is not a cosmetic change
+
+Gross does not overstate evenly, and it overstates most where it matters most:
+
+| Region | Gross % | Live % | Gross flatters by | Gross dev | Live dev |
+|---|---:|---:|---:|---:|---:|
+| Kutch | 22.80 | 17.20 | 5.60 | −54.2 | **−57.4** |
+| North Gujarat | 42.23 | 38.08 | 4.15 | −35.9 | −38.3 |
+| Saurashtra | 48.79 | 46.92 | 1.87 | −34.3 | −35.5 |
+| Central Gujarat | 62.37 | 60.14 | 2.23 | −17.0 | −18.1 |
+| South Gujarat | 77.48 | 75.31 | 2.17 | −7.9 | −8.7 |
+| **State** | **65.10** | **62.50** | **2.60** | **−18.0** | **−19.2** |
+
+Ranking the twenty worst reservoirs on the two bases agrees on only **fourteen
+of them** — the two bases name six different dams as furthest below. A page
+leading with live and listing the gross worst-twenty would contradict itself
+about which reservoirs are in trouble, so `deviation_pp` is ranked on live.
+
+### 25.2 A live percentage needs a live denominator, established the same way
+
+`design_live_mcm` is restated by the source just as `design_gross_mcm` is — in
+10 of 1,030 scheme-seasons. So `check_capacity.py`'s `classify_season` is now
+parameterised on the column and run twice, writing
+`season_live_capacity_mcm` and `live_capacity_class` beside the gross pair.
+One rule, applied twice, rather than a second copy of it that can drift.
+
+The live class deliberately does **not** feed the gate. Exactly one
+scheme-season moves on live while holding steady on gross — scheme 18 in 2025,
+by 0.05% — which is inside the 0.5% rounding tolerance. Letting live open new
+gate cases would halt the pipeline on rounding noise.
+
+The prior-year baseline gets its **own** comparability test against the live
+capacity rather than a borrowed pass from the gross one. That matters: the two
+tests disagree for four schemes, and Rudramata gains prior years on live
+(4 against 2) because its live capacity held through a season in which its
+gross capacity was restated.
+
+### 25.3 One basis, decided once
+
+`LIVE_BASIS` is set in `render()` before any figure is built, and only when the
+state **and every region** carry live series. Everything that plots a series
+reads `seriesOf()`; everything per-scheme reads `schemeDev/schemePct/
+schemePrior`. The first version of this change set the hero to live and left
+the chart beneath it annotating the gross gap — 19.2 against 18.0 on one
+screen — and headed the next stage "Kutch is 54.2 points below" against the
+deck's 57.4. The flag exists so that cannot recur.
+
+Gross is demoted, not dropped. The hero still prints it ("On gross capacity …
+it is 65.10%") because a reader who checked yesterday saw that number and must
+be able to see where it went. The CSV carries both, with a note on which one
+the page shows.
+
+### 25.4 A mislabel this found
+
+The regional table's "Live MCM" column was printing `mcm_now`, which is the sum
+of `present_gross_mcm`. The label and the number had disagreed since the table
+was written, because there was no live figure to put in it. Both now are what
+they say they are, and the column beside it is live capacity rather than gross
+design.
+
+### 25.5 What the page still cannot say
+
+Not how many hectares go unwatered. That needs a water duty — depth applied per
+hectare per season — and no published source carries one per scheme. The
+honest ceiling is the department's own maximum-irrigation record:
+**131,988 of 243,867 hectares, 54%**, across the 31 of the 40 verified commands
+that report it. Even in its best year about half the commanded area gets no
+water. The page states that rather than implying a conversion it cannot make.

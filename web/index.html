@@ -409,8 +409,34 @@ h1{font-size:var(--t-xl);margin:0 0 3px;letter-spacing:-.01em}
    related rather than identical. */
 .hero .n{font-size:var(--t-display);line-height:1;letter-spacing:-.02em;color:var(--now-text)}
 .hero .u{font-size:var(--t-md);color:var(--text-secondary);margin-top:5px}
-.hero .sub{font-size:var(--t-md);color:var(--text-secondary);margin-top:9px;
-  max-width:270px;line-height:var(--lh-body)}
+/* The hero unit now carries a sentence rather than a label, so the 270px cap
+   that suited "of design capacity, statewide" would set it eight words to a
+   line. It gets the same measure as the sub beneath it. */
+.hero .u,.hero .sub{max-width:min(360px,100%);line-height:var(--lh-body)}
+.hero .u b{color:var(--text-primary);font-weight:700}
+.hero .sub{font-size:var(--t-md);color:var(--text-secondary);margin-top:9px}
+
+/* ---- "What this number decides" ----
+   A quotation and its consequence, set apart from the generated prose around
+   it. Left rule rather than a box: the page has exactly one boxed element
+   (the legend) and a second would read as a sibling of it rather than as an
+   aside. --rule-strong not --now: this block is not a warning. */
+.decision{margin:26px 0 4px;max-width:var(--measure)}
+.decision-h{font-size:var(--t-lg);font-weight:600;margin:0 0 10px}
+.decision-q{margin:0 0 12px;padding:0 0 0 15px;
+  border-left:3px solid var(--rule-strong)}
+.decision-q p{margin:0;font-family:var(--ff-display);font-size:var(--t-lg);
+  line-height:var(--lh-body);color:var(--text-primary)}
+.decision-q footer{margin-top:7px;font-size:var(--t-sm);
+  color:var(--text-secondary);line-height:var(--lh-body)}
+.decision-q footer a{color:inherit}
+.decision-p{margin:0 0 10px;font-size:var(--t-md);
+  line-height:var(--lh-body);color:var(--text-secondary)}
+.decision-p b{color:var(--text-primary);font-weight:700}
+/* The caveat is the one thing on this page that says what it CANNOT say, so it
+   is set quieter than the claim above it but not hidden. */
+.decision-caveat{font-size:var(--t-sm);padding-top:9px;
+  border-top:1px solid var(--rule-hair)}
 /* BOUNDING THE CHART'S TEXT, NOT JUST ITS WIDTH.
    SVG font-size is in viewBox units, so it scales with the container. With
    flex:1 and no cap this chart reached 806px for a 470-unit viewBox — scale
@@ -984,6 +1010,40 @@ code{overflow-wrap:anywhere;word-break:break-word}
         <div class="legend" id="legendYears"></div>
       </div>
     </section>
+
+    <!-- Why live storage, in the department's own words. This sits directly
+         under the hero because it is the justification for the number the
+         hero prints: the page leads with live storage because live storage is
+         what the irrigation department plans a rabi season on. Static markup,
+         not generated — it is a quotation, and nothing about it varies with
+         the day's data. -->
+    <aside class="decision" aria-labelledby="decisionH">
+      <h2 id="decisionH" class="decision-h">What this number decides</h2>
+      <blockquote class="decision-q">
+        <p>“Ravi Season — Mahi Right Bank Canal (Shedhi Branch and Meshwo weir
+           scheme) command area is based on the available live storage from
+           Kadana Dam. Therefore, planning in Ravi season is based on the
+           available live storage from Kadana Dam.”</p>
+        <footer>Gujarat Narmada, Water Resources, Water Supply and Kalpsar
+          Department — Data Bank, canal rotation schedule for the Mahi Right
+          Bank Canal command
+          <a href="https://guj-nwrws.gujarat.gov.in/showpage.aspx?contentid=2953&amp;lang=English"
+             rel="nofollow noopener" target="_blank">(scheme page)</a></footer>
+      </blockquote>
+      <p class="decision-p"><b>This page publishes that input.</b> The rabi
+        command area is set by how much live storage a dam has when the season
+        is planned, so the figure above is not a status light — it is the
+        quantity the decision is made on. The department's rotation schedule
+        opens the first rabi canal run on <b>16 October</b>.</p>
+      <p class="decision-p decision-caveat">What this page cannot tell you is
+        how many hectares go unwatered. That conversion needs a water duty —
+        depth applied per hectare per season — and no published source carries
+        one per scheme. The honest ceiling is the department's own record of
+        the most each command has ever actually irrigated:
+        <b>131,988 of 243,867 hectares</b>, or 54%, across the 31 schemes that
+        report it. Even in its best year, about half of the commanded area
+        does not get water.</p>
+    </aside>
   </section>
 
   <!-- Sticky, and AFTER stage 2 rather than before the headline: navigation
@@ -1090,6 +1150,26 @@ code{overflow-wrap:anywhere;word-break:break-word}
 <script>
 const YRS = ["2022","2023","2024","2025"];
 const CUR = "2026";
+
+/* ---- ONE BASIS FOR THE WHOLE PAGE ----
+   The page leads with live storage (§25). Every figure that compares against
+   the prior years therefore has to be on the live basis too, or the page
+   prints two different answers to the same question: the first version of
+   this change left the hero saying the state was 19.2 points below its
+   four-year mean while the chart under it annotated 18.0, and the next stage
+   headed itself "Kutch is 54.2 points below" against the deck's 57.4.
+
+   So the basis is decided ONCE, from whether the build published live series,
+   and read through seriesOf() everywhere a series is plotted. Gross remains
+   the fallback for a view built before live existed. */
+let LIVE_BASIS = false;
+function seriesOf(o){
+  return (LIVE_BASIS && o && o.live_series) ? o.live_series : (o.series || {});
+}
+/* The denominator, named for axis labels and captions. */
+function basisLabel(){
+  return LIVE_BASIS ? "% of live capacity" : "% of design capacity";
+}
 const COL = {2022:"var(--y22)",2023:"var(--y23)",2024:"var(--y24)",2025:"var(--y25)"};
 const SEASON_DAYS = 153;
 const MONTHS = [[1,"Jun"],[31,"Jul"],[62,"Aug"],[93,"Sep"],[123,"Oct"]];
@@ -1201,21 +1281,75 @@ function priorStanding(pctNow, meanPrior, priorAtNow){
   };
 }
 
+/* ---- Which basis is the page speaking in? ----
+   One helper, so the headline, the hero and the deck cannot end up quoting
+   different denominators for the same reservoirs. It returns the LIVE figures
+   when the build published them, and the gross ones otherwise — the fallback
+   exists because a view built before §25 has no live keys, and a page that
+   threw on an older JSON would be a worse failure than one that speaks in
+   gross for a day.
+
+   `live` is reported so callers can change their WORDING, not just their
+   numbers: "full" is the wrong word for a live percentage. */
+function liveBasis(s){
+  const ok = s && s.live_pct_now != null && s.live_mean_prior_at_now != null;
+  return ok
+    ? {live: true, pct: s.live_pct_now, meanPrior: s.live_mean_prior_at_now,
+       priors: s.live_prior_at_now, mcm: s.live_mcm_now,
+       design: s.design_live_mcm}
+    : {live: false, pct: s.pct_now, meanPrior: s.mean_prior_at_now,
+       priors: s.prior_at_now, mcm: s.mcm_now, design: s.design_mcm};
+}
+
+/* Per-scheme accessors, used by the beeswarm, the map, the ranked tables and
+   the lookup. Same fallback discipline: if the build did not publish a live
+   figure for a scheme, that scheme reads gross rather than dropping out of a
+   table it belongs in. */
+function schemeDev(s){
+  return (LIVE_BASIS && s && s.live_dev_pp != null) ? s.live_dev_pp : s.dev_pp;
+}
+function schemePct(s){
+  return (LIVE_BASIS && s && s.live_pct_today != null) ? s.live_pct_today
+       : (LIVE_BASIS && s && s.live_pct != null) ? s.live_pct
+       : s.pct_filling;
+}
+function schemePrior(s){
+  return (LIVE_BASIS && s && s.live_mean_prior != null) ? s.live_mean_prior
+                                                        : s.mean_prior;
+}
+
+/* Region equivalent. Same contract, different key names in the JSON. */
+function liveBasisRegion(r){
+  const ok = r && r.live_pct_now != null && r.live_mean_prior_at_now != null;
+  return ok
+    ? {live: true, pct: r.live_pct_now, meanPrior: r.live_mean_prior_at_now}
+    : {live: false, pct: r.pct_now, meanPrior: r.mean_prior_at_now};
+}
+
 /* ---- Title 1: the page headline ---- */
 function headlineTitle(d, inSeason){
   const m = d.meta, s = d.state;
-  const pct = f2(s.pct_now);
+  /* Live, on the same basis as the hero. The headline and the hero disagreeing
+     about what "full" means would be worse than either basis alone, so both
+     read the same helper and fall back together if live is ever absent. */
+  const L = liveBasis(s);
+  const pct = f2(L.pct);
   const first = Math.min(...m.seasons_prior);
-  const st = priorStanding(s.pct_now, s.mean_prior_at_now, s.prior_at_now);
+  const st = priorStanding(L.pct, L.meanPrior, L.priors);
   /* Off season the page is a closed record, so the verb is past and the date
      is "that date" rather than "this date" — the reader is not looking at
      today. */
   const was = inSeason ? "are" : "were";
   const when = inSeason ? "this date" : "that date";
+  /* "of usable water" rather than "full": on a live basis the number answers a
+     different question, and calling it "full" would invite the reader to
+     compare it against the gross percentages they have seen elsewhere. */
+  const full = L.live ? "holding <b>" + pct + "%</b> of the water they can release"
+                      : "<b>" + pct + "%</b> full";
   const lead = inSeason
-    ? `Gujarat's reservoirs are <b>${pct}%</b> full`
+    ? `Gujarat's reservoirs are ${full}`
     : `At the close of the ${m.season_current} season, Gujarat's reservoirs `
-      + `were <b>${pct}%</b> full`;
+      + `were ${full}`;
 
   if(!st) return {branch: "Z",
     text: `${lead} on ${esc(m.report_date)}`};
@@ -1244,14 +1378,29 @@ function headlineTitle(d, inSeason){
    for the seven off-season months, and a null return rather than a hedged
    sentence when no baseline exists. */
 function deckText(d, inSeason){
-  const withBase = (d.schemes || []).filter(s => s.mean_prior != null);
+  /* Counted on the live basis too, so the deck's "N of 206" and the headline's
+     percentage are the same measurement. The two bases barely disagree on
+     which schemes are short — 165 live against 166 gross, one scheme
+     (Sani) sitting on the rounding boundary — but they disagree on WHICH prior
+     years are comparable for four schemes, because live capacity and gross
+     capacity were restated in different seasons. */
+  const liveScheme = (d.schemes || []).some(s => s.live_dev_pp != null);
+  const devOf = s => liveScheme ? s.live_dev_pp : s.dev_pp;
+  const withBase = (d.schemes || [])
+    .filter(s => (liveScheme ? s.live_mean_prior : s.mean_prior) != null);
+  /* Ranked on the live basis, matching the headline. The order can genuinely
+     differ between bases — live widens every region's gap, and by unequal
+     amounts (Kutch -54.2 gross becomes -57.4 live, Saurashtra -34.3 becomes
+     -35.5) — so ranking on gross while leading with live could name a
+     different worst region than the hero implies. */
   const regs = (d.regions || [])
-    .filter(r => r.pct_now != null && r.mean_prior_at_now != null)
-    .map(r => ({name: r.name, dev: r.pct_now - r.mean_prior_at_now,
-                cap: r.design_mcm || 0}));
+    .map(r => ({r, b: liveBasisRegion(r)}))
+    .filter(x => x.b.pct != null && x.b.meanPrior != null)
+    .map(x => ({name: x.r.name, dev: x.b.pct - x.b.meanPrior,
+                cap: x.r.design_mcm || 0}));
   if(!withBase.length || regs.length < 2) return null;
 
-  const below = withBase.filter(s => s.dev_pp < 0).length;
+  const below = withBase.filter(s => devOf(s) < 0).length;
   const above = withBase.length - below;
   const n = withBase.length;
   const by = [...regs].sort((a, b) => a.dev - b.dev || b.cap - a.cap);
@@ -1260,13 +1409,16 @@ function deckText(d, inSeason){
   const hold = inSeason ? "hold" : "held";
   const are = inSeason ? "are" : "were";
   const is = inSeason ? "is" : "was";
+  /* "releasable" names the basis in one word. Without it the sentence invites
+     the reader to check it against a gross percentage from somewhere else. */
+  const water = liveScheme ? "releasable water" : "water";
 
   if(regs.every(r => r.dev > 0)) return {branch: "C",
-    text: `<b>${above}</b> of ${n} reservoirs ${hold} more water than their `
+    text: `<b>${above}</b> of ${n} reservoirs ${hold} more ${water} than their `
         + `own average for this date, and every region ${is} above its own — `
         + `<b>${esc(best.name)}</b> by ${best.dev.toFixed(1)} points.`};
   if(regs.every(r => r.dev < 0)) return {branch: "A",
-    text: `<b>${below}</b> of ${n} reservoirs ${hold} less water than their `
+    text: `<b>${below}</b> of ${n} reservoirs ${hold} less ${water} than their `
         + `own average for this date, and all ${numWord(nReg)} regions `
         + `${are} short — <b>${esc(worst.name)}</b> by `
         + `${Math.abs(worst.dev).toFixed(1)} points.`};
@@ -1320,15 +1472,17 @@ function stateChartTitle(d, inSeason){
   const m = d.meta, s = d.state;
   const CURk = String(m.season_current);
   const yrs = m.seasons_prior.map(String);
-  const ser = s.series || {};
+  // the series this title describes is the one the chart plots
+  const ser = seriesOf(s);
+  const L = liveBasis(s);
   const latest = s.day_of_season;
-  const st = priorStanding(s.pct_now, s.mean_prior_at_now, s.prior_at_now);
+  const st = priorStanding(L.pct, L.meanPrior, L.priors);
   const label = {branch: "Z", text: `Gujarat — all ${m.n_schemes} schemes`};
 
   const cross = s.crossover || {};
   const run = cross.current_run || {};
   const atClose = inSeason ? "" : `The ${m.season_current} season ended at `
-                                + `<b>${f2(s.pct_now)}%</b> — `;
+                                + `<b>${f2(L.pct)}%</b> — `;
 
   /* Slope over a stated window. Stated in the title precisely so the claim is
      checkable: a reader can read both endpoints off the chart. */
@@ -1375,9 +1529,10 @@ function stateChartTitle(d, inSeason){
    already computed and printed below the chart. */
 function regionsTitle(d, inSeason){
   const rs = (d.regions || [])
-    .filter(r => r.pct_now != null && r.mean_prior_at_now != null)
-    .map(r => ({name: r.name, dev: r.pct_now - r.mean_prior_at_now,
-                cap: r.design_mcm || 0}));
+    .map(r => ({r, b: liveBasisRegion(r)}))
+    .filter(x => x.b.pct != null && x.b.meanPrior != null)
+    .map(x => ({name: x.r.name, dev: x.b.pct - x.b.meanPrior,
+                cap: x.r.design_mcm || 0}));
   if(rs.length < 2) return {branch: "Z",
     text: "Deviation from each region's own prior-year average"};
   /* Stable tiebreak on capacity, so two regions at an identical deviation do
@@ -1975,8 +2130,9 @@ const REGION_COL = {
    years, on the same evaluability rule as the crossover marker — a day counts
    only if all four prior years have a value for it. */
 function regionDeviation(r){
-  const cur = r.series[CUR] || {};
-  const priors = YRS.map(y => r.series[y] || {});
+  const ser = seriesOf(r);
+  const cur = ser[CUR] || {};
+  const priors = YRS.map(y => ser[y] || {});
   const out = {};
   for(const k of Object.keys(cur).map(Number).sort((a, b) => a - b)){
     if(priors.some(p => p[k] === undefined)) continue;
@@ -2162,13 +2318,23 @@ function buildCsv(){
     ["NOTE", "deviation_pp compares against the mean of prior years whose "
            + "PUBLISHED capacity matches this date's within the tolerance "
            + "above. n_prior_years gives how many survived."],
+    ["NOTE", "THE PAGE LEADS WITH LIVE STORAGE, so live_pct and "
+           + "live_deviation_pp are the figures shown on screen. "
+           + "live_pct = 100 * present_live_mcm / design_live_mcm, and its "
+           + "baseline is built from prior years whose published LIVE "
+           + "capacity matches this date's - a different test from the gross "
+           + "one, so n_prior_years_live can differ from n_prior_years "
+           + "(it does for 4 schemes). The gross columns are kept so the "
+           + "source's own published percentage can still be reproduced."],
     ["NOTE", "Nothing here is a forecast. Every figure is an observed "
            + "reading or a comparison of observed readings."],
     ["NOTE", "Comment lines start with #. pandas: read_csv(f, comment='#')"],
   ];
   const cols = ["scheme_id", "scheme_name", "district", "region",
+                "live_pct", "live_mean_prior_pct", "n_prior_years_live",
+                "live_deviation_pp",
                 "pct_filling", "present_gross_mcm", "present_live_mcm",
-                "design_gross_mcm",
+                "design_gross_mcm", "design_live_mcm",
                 "outflow_canal_cusecs", "days_water_at_release", "warning",
                 "mean_prior_pct", "n_prior_years", "deviation_pp"];
   const lines = P.map(r => "# " + r.map(String).join(","));
@@ -2176,9 +2342,12 @@ function buildCsv(){
   for(const s of DATA.schemes){
     lines.push([
       m.report_date, s.scheme_id, s.scheme_name, s.district, regName(s.region),
+      csvNum(s.live_pct, 2), csvNum(s.live_mean_prior, 2), s.n_prior_live,
+      csvNum(s.live_dev_pp, 2),
       csvNum(s.pct_filling, 2), csvNum(s.present_gross_mcm, 2),
       csvNum(s.present_live_mcm, 2),
-      csvNum(s.design_gross_mcm, 2), csvNum(s.outflow_canal_cusecs, 1),
+      csvNum(s.design_gross_mcm, 2), csvNum(s.design_live_mcm, 2),
+      csvNum(s.outflow_canal_cusecs, 1),
       csvNum(s.days_water_at_release, 1), s.warning,
       csvNum(s.mean_prior, 2), s.n_prior, csvNum(s.dev_pp, 2),
     ].map(csvCell).join(","));
@@ -2470,14 +2639,14 @@ function scatterSVG(list){
      its fill is nearly the paper. Width scales with the radius -- a flat
      1.5px ring is more than half of a 2.6-unit dot and would swamp it. */
   const pts = [...list].sort((a,b) => b.design_gross_mcm - a.design_gross_mcm)
-    .map(s => `<circle cx="${xp(Math.max(xs[0],Math.min(xs[1],s.dev_pp))).toFixed(1)}"
+    .map(s => `<circle cx="${xp(Math.max(xs[0],Math.min(xs[1],schemeDev(s)))).toFixed(1)}"
       cy="${yp(s.design_gross_mcm).toFixed(1)}" r="${capR(s.design_gross_mcm)}"
-      fill="${devColor(s.dev_pp)}" stroke="var(--dot-edge)"
+      fill="${devColor(schemeDev(s))}" stroke="var(--dot-edge)"
       class="fx" data-region="${s.region}"
       stroke-width="${Math.min(1.3, capR(s.design_gross_mcm) * 0.34).toFixed(2)}"
       class="pt" data-id="${s.scheme_id}" style="cursor:pointer"><title>${
       esc(s.scheme_name)} — ${esc(s.district)}, ${esc(regName(s.region))} — ${
-      f1(s.pct_filling)}% now, ${f1(s.dev_pp)} pp vs prior mean, ${
+      f1(schemePct(s))}% now, ${f1(schemeDev(s))} pp vs prior mean, ${
       f1(s.design_gross_mcm)} MCM design</title></circle>`)
     .join("");
 
@@ -2596,13 +2765,13 @@ function mapSVG(list, coords, geo){
   const dots = [...pts].sort((a,b2) => b2.design_gross_mcm - a.design_gross_mcm)
     .map(s => { const c = coords[s.scheme_id];
       return `<circle cx="${px(c[1]).toFixed(1)}" cy="${py(c[0]).toFixed(1)}"
-        r="${capR(s.design_gross_mcm)}" fill="${devColor(s.dev_pp)}"
+        r="${capR(s.design_gross_mcm)}" fill="${devColor(schemeDev(s))}"
         stroke="var(--dot-edge)"
         stroke-width="${Math.min(1.3, capR(s.design_gross_mcm) * 0.34).toFixed(2)}"
         class="pt fx" data-region="${s.region}"
         data-id="${s.scheme_id}" style="cursor:pointer"><title>${
-        esc(s.scheme_name)} — ${esc(s.district)} — ${f1(s.pct_filling)}% now, ${
-        f1(s.dev_pp)} pp</title></circle>`; }).join("");
+        esc(s.scheme_name)} — ${esc(s.district)} — ${f1(schemePct(s))}% now, ${
+        f1(schemeDev(s))} pp</title></circle>`; }).join("");
   return `<svg viewBox="0 0 ${W2} ${H2}" role="img"
     aria-label="Dams as points, sized by design capacity and coloured by
     deviation, over district outlines">
@@ -2627,6 +2796,16 @@ let RENDERED_AT = null;
 
 function render(d){
   DATA = d;
+  /* Set before ANY figure is built, because every one of them reads it. A
+     build that published live storage puts the whole page on the live basis;
+     one that did not leaves it on gross. Both the state and the regions have
+     to carry live series — a page with a live headline and gross facets is
+     the inconsistency this flag exists to prevent. */
+  LIVE_BASIS = !!(d.state && d.state.live_pct_now != null
+                  && d.state.live_mean_prior_at_now != null
+                  && d.state.live_series
+                  && (d.regions || []).every(r => r.live_series
+                                                  && r.live_pct_now != null));
   RAIN_MAX = rainCeiling(d.regions);   // one scale, before any strip is drawn
   setGeometry();
   RENDERED_AT = isNarrow();
@@ -2712,26 +2891,48 @@ function render(d){
 
   /* headline */
   const s = d.state;
-  const weakest = Object.entries(s.prior_at_now).sort((a,b)=>a[1]-b[1])[0];
-  document.getElementById("heroN").textContent = f2(s.pct_now) + "%";
-  document.getElementById("heroU").innerHTML =
+  /* ---- the hero is LIVE storage, not gross ----
+     The department plans a rabi season on live storage, so live is the figure
+     the page leads with (§25). Gross counts the dead storage below the lowest
+     outlet, which no canal can draw: statewide that is 1,204 MCM of water
+     that is in the reservoirs and cannot be released. Gross does not overstate
+     evenly either — it flatters Kutch by 5.6 points and South Gujarat by 2.2 —
+     so the basis change matters most in the driest region.
+
+     The gross figure is not dropped, it is demoted: a reader who checked this
+     page yesterday saw 65.10% and must be able to see where it went, or the
+     page looks like it revised itself overnight. */
+  const live = LIVE_BASIS;
+  const weakest = Object.entries(live ? s.live_prior_at_now : s.prior_at_now)
+    .sort((a,b)=>a[1]-b[1])[0];
+  const pctNow = live ? s.live_pct_now : s.pct_now;
+  const meanPrior = live ? s.live_mean_prior_at_now : s.mean_prior_at_now;
+  document.getElementById("heroN").textContent = f2(pctNow) + "%";
+  document.getElementById("heroU").innerHTML = live
     // MCM expanded here because this is its first appearance on the page;
     // every later use is the abbreviation alone.
-    `of design capacity, statewide<br><span style="color:var(--muted)">
-     ${f1(s.mcm_now)} of ${f1(s.design_mcm)} million cubic metres (MCM)
-     on ${m.report_date}</span>`;
+    ? `of <b>live</b> capacity — the water that can be released<br>
+       <span style="color:var(--muted)">
+       ${f1(s.live_mcm_now)} of ${f1(s.design_live_mcm)} million cubic metres
+       (MCM) on ${m.report_date}. On gross capacity, which counts the
+       ${f1(s.design_mcm - s.design_live_mcm)} MCM of dead storage below the
+       outlets, it is ${f2(s.pct_now)}%.</span>`
+    : `of design capacity, statewide<br><span style="color:var(--muted)">
+       ${f1(s.mcm_now)} of ${f1(s.design_mcm)} million cubic metres (MCM)
+       on ${m.report_date}</span>`;
   document.getElementById("heroS").innerHTML =
-    `Against a four-year mean of <b>${f2(s.mean_prior_at_now)}%</b> on the same
-     calendar date. The weakest prior year on this date was <b>${weakest[0]}</b>
-     at <b>${f2(weakest[1])}%</b> — 2026 is ${f2(weakest[1]-s.pct_now)} points
-     below even that.`;
+    `Against a four-year mean of <b>${f2(meanPrior)}%</b> on the same
+     calendar date${live ? ", live against live" : ""}. The weakest prior year
+     on this date was <b>${weakest[0]}</b> at <b>${f2(weakest[1])}%</b> —
+     2026 is ${f2(weakest[1]-pctNow)} points below even that.`;
   document.getElementById("stMeta").textContent =
-    `day ${s.day_of_season} of the season · % of design capacity`;
-  const stSeries = s.series;
+    `day ${s.day_of_season} of the season · ${basisLabel()}`;
+  const stSeries = seriesOf(s);
   document.getElementById("statePlot").innerHTML =
     chartSVG(stSeries, null, s.crossover, s.day_of_season, "state", false,
-      {gap: {pctNow: s.pct_now, meanPrior: s.mean_prior_at_now,
-             nPrior: Object.keys(s.prior_at_now || {}).length}});
+      {gap: {pctNow: pctNow, meanPrior: meanPrior,
+             nPrior: Object.keys(live ? (s.live_prior_at_now || {})
+                                      : (s.prior_at_now || {})).length}});
   /* Armed immediately after the chart is in the document, in the same task, so
      the first painted frame is already the from-state. Deferring it would show
      the finished line for a frame and then hide it to animate — a flash, which
@@ -2800,7 +3001,7 @@ function render(d){
      this one region or all of them?" in a glance, and the numbers answer a
      different question, which the table below does better. */
   document.getElementById("grid").innerHTML = d.regions.map(r => {
-    const dev = r.pct_now - r.mean_prior_at_now;
+    const dev = (b => b.pct - b.meanPrior)(liveBasisRegion(r));
     /* tabindex + aria-label so a keyboard reaches the same highlight a
        pointer gets, and a reader hears which region it landed on. Not
        role="button": it is not a button, it is a panel you can point at. */
@@ -2809,7 +3010,7 @@ function render(d){
       <div class="fh"><span class="nm">${esc(r.name)}</span>
         <span class="dv" title="percentage points below this region's own prior four-year mean for this date">${dev>0?"+":""}${f1(dev)} pp</span></div>
       <div class="plot" data-region="${r.code}">
-        ${chartSVG(r.series, r.rain, r.crossover, DATA.state.day_of_season,
+        ${chartSVG(seriesOf(r), r.rain, r.crossover, DATA.state.day_of_season,
                    r.code, true, {geom: facetGeom()})}
       </div>
     </div>`;
@@ -2827,13 +3028,17 @@ function render(d){
       <th style="text-align:right">% now</th>
       <th style="text-align:right">Prior mean</th>
       <th style="text-align:right">Deviation, pp</th>
+      <!-- This column was headed "Live MCM" and printed mcm_now, which is the
+           sum of present_GROSS storage — the label and the number disagreed
+           before live figures existed to put in it. Both are now what they
+           say they are. -->
       <th style="text-align:right">Live MCM</th>
-      <th style="text-align:right">Design MCM</th>
+      <th style="text-align:right">Live capacity</th>
       <th style="text-align:right">Rain peak, mm/day</th>
       <th>Below every prior year since</th>
       <th></th></tr></thead><tbody>` +
     d.regions.map(r => {
-      const dev = r.pct_now - r.mean_prior_at_now;
+      const dev = (b => b.pct - b.meanPrior)(liveBasisRegion(r));
       const pk = Math.max(0, ...Object.values((r.rain || {})[CUR] || {})
         .filter(v => v != null));
       const cc = crossCell(r.crossover);
@@ -2845,11 +3050,11 @@ function render(d){
         tabindex="0">
         <td class="nm">${esc(r.name)}</td>
         <td class="n">${r.n_schemes}</td>
-        <td class="n">${f2(r.pct_now)}</td>
-        <td class="n">${f2(r.mean_prior_at_now)}</td>
+        <td class="n">${f2(liveBasisRegion(r).pct)}</td>
+        <td class="n">${f2(liveBasisRegion(r).meanPrior)}</td>
         <td class="dev">${dev>0?"+":""}${f1(dev)}</td>
-        <td class="n">${f1(r.mcm_now)}</td>
-        <td class="n">${f1(r.design_mcm)}</td>
+        <td class="n">${f1(LIVE_BASIS ? r.live_mcm_now : r.mcm_now)}</td>
+        <td class="n">${f1(LIVE_BASIS ? r.design_live_mcm : r.design_mcm)}</td>
         <td class="n">${f1(pk)}</td>
         <td>${cc.note
           ? `<span class="none">${cc.note}</span>`
@@ -2860,7 +3065,7 @@ function render(d){
       </tr>
       <tr class="tv fx" data-region="${r.code}" id="tv-${r.code}"><td colspan="10">
         <div class="rprose">${crossText(r.crossover, esc(r.name))}</div>${capn}
-        ${tableView(r.series, DATA.state.day_of_season, r.code)}
+        ${tableView(seriesOf(r), DATA.state.day_of_season, r.code)}
       </td></tr>`;
     }).join("") + `</tbody></table></div>
     <p class="scrollhint">Table scrolls sideways.</p>`;
@@ -2874,24 +3079,26 @@ function render(d){
       <th style="text-align:right">Deviation, pp</th>
       <th style="text-align:right"><abbr title="How many of the four prior years entered this scheme's baseline. Fewer than 4 means a year was excluded because its published design capacity did not match this date's, so the comparison rests on a shorter baseline.">Yrs</abbr></th>
       <th style="text-align:right">Live MCM</th>
-      <th style="text-align:right">Design MCM</th></tr></thead><tbody>` +
+      <th style="text-align:right">Live capacity</th></tr></thead><tbody>` +
     d.deviation_pp.map(r => `<tr class="fx" data-region="${r.region}">
       <td class="nm">${esc(r.scheme_name)}${r.restated
         ? '<span class="flag" title="design capacity restated between years">restated</span>':''}</td>
       <td>${esc(r.district)}</td><td>${esc(regName(r.region))}</td>
-      <td class="n">${f1(r.pct_filling)}</td>
-      <td class="n">${f1(r.mean_prior)}</td>
-      <td class="dev">${f1(r.dev_pp)}</td>
-      <td class="n">${r.n_prior}</td>
+      <td class="n">${f1(schemePct(r))}</td>
+      <td class="n">${f1(schemePrior(r))}</td>
+      <td class="dev">${f1(schemeDev(r))}</td>
+      <td class="n">${LIVE_BASIS && r.n_prior_live != null ? r.n_prior_live
+                                                            : r.n_prior}</td>
       <td class="n">${f1(r.present_live_mcm)}</td>
-      <td class="n">${f1(r.design_gross_mcm)}</td></tr>`).join("") +
+      <td class="n">${f1(LIVE_BASIS && r.design_live_mcm != null
+                         ? r.design_live_mcm : r.design_gross_mcm)}</td></tr>`).join("") +
     `</tbody></table></div>
      <div class="scrollhint">Table scrolls sideways &rarr;</div>`;
 
   document.getElementById("tblVol").innerHTML =
     `<div class="tablewrap"><table class="dt"><thead><tr>
       <th>Scheme</th><th>District</th><th>Region</th>
-      <th style="text-align:right">Design MCM</th>
+      <th style="text-align:right">Live capacity</th>
       <th style="text-align:right">% now</th>
       <th style="text-align:right">Prior mean</th>
       <th style="text-align:right">Deviation, pp</th>
@@ -2899,10 +3106,11 @@ function render(d){
     d.deviation_volume.map(r => `<tr class="fx" data-region="${r.region}">
       <td class="nm">${esc(r.scheme_name)}</td>
       <td>${esc(r.district)}</td><td>${esc(regName(r.region))}</td>
-      <td class="n">${f1(r.design_gross_mcm)}</td>
-      <td class="n">${f1(r.pct_filling)}</td>
-      <td class="n">${f1(r.mean_prior)}</td>
-      <td class="n">${f1(r.dev_pp)}</td>
+      <td class="n">${f1(LIVE_BASIS && r.design_live_mcm != null
+                         ? r.design_live_mcm : r.design_gross_mcm)}</td>
+      <td class="n">${f1(schemePct(r))}</td>
+      <td class="n">${f1(schemePrior(r))}</td>
+      <td class="n">${f1(schemeDev(r))}</td>
       <td class="dev">${f1(r.shortfall_mcm)}</td></tr>`).join("") +
     `</tbody></table></div>
      <div class="scrollhint">Table scrolls sideways &rarr;</div>`;
@@ -3003,17 +3211,18 @@ function renderRegionsView(){
 
   const rows = REGION_ORDER
     .map(c => DATA.regions.find(r => r.code === c)).filter(Boolean)
-    .map(r => ({r, dev: r.pct_now - r.mean_prior_at_now}))
+    .map(r => ({r, b: liveBasisRegion(r)}))
+    .map(({r, b}) => ({r, dev: b.pct - b.meanPrior, now: b.pct}))
     .sort((a, b) => a.dev - b.dev);
 
   // The legend carries the values, so on a narrow screen where the direct
   // labels do not fit nothing is lost but the position.
-  document.getElementById("regLegend").innerHTML = rows.map(({r, dev}) =>
+  document.getElementById("regLegend").innerHTML = rows.map(({r, dev, now}) =>
     `<span class="ri fx" data-region="${r.code}"><span class="sw thin"
        style="border-color:${REGION_COL[r.code]}"></span>
      <b>${esc(r.name)}</b>
      <span class="rv">${f1(dev)} pp</span>
-     <span class="rs">now ${f1(r.pct_now)}%</span></span>`).join("");
+     <span class="rs">now ${f1(now)}%</span></span>`).join("");
 
   const worst = rows[0], best = rows[rows.length - 1];
   document.getElementById("regNote").innerHTML =
@@ -3403,7 +3612,7 @@ function wire(){
     res.innerHTML = list.slice(0,40).map(s =>
       `<button data-id="${s.scheme_id}">${esc(s.scheme_name)}
         <span class="rg">· ${esc(s.district)} · ${esc(regName(s.region))} ·
-        ${f1(s.pct_filling)}%</span></button>`).join("");
+        ${f1(schemePct(s))}%</span></button>`).join("");
     res.classList.add("on");
     res.querySelectorAll("button").forEach(b => b.onclick = () => {
       /* Anchored to the search block: a result picked from the box should
@@ -3465,17 +3674,19 @@ function wire(){
       ${schemeSpark(s, DATA.meta.scheme_series_thin_to || 3)}
       <div class="dgrid">
         <div class="c"><div class="k">Filling now</div>
-          <div class="v">${f2(s.pct_filling)}%</div>
-          <div class="vsub">gross storage ÷ design gross</div></div>
-        <div class="c"><div class="k">Gross storage</div>
-          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
-          <div class="vsub">all the water in the reservoir</div></div>
-        <div class="c"><div class="k">Design gross</div>
-          <div class="v">${f2(s.design_gross_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
-          <div class="vsub">capacity when full</div></div>
+          <div class="v">${f2(schemePct(s))}%</div>
+          <div class="vsub">${LIVE_BASIS && s.live_pct != null
+            ? "live storage ÷ design live · gross basis "+f2(s.pct_filling)+"%"
+            : "gross storage ÷ design gross"}</div></div>
         <div class="c"><div class="k">Live storage</div>
           <div class="v">${f2(s.present_live_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
           <div class="vsub">the part that can be released</div></div>
+        <div class="c"><div class="k">Design live</div>
+          <div class="v">${f2(s.design_live_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
+          <div class="vsub">releasable capacity when full</div></div>
+        <div class="c"><div class="k">Gross storage</div>
+          <div class="v">${f2(s.present_gross_mcm)} <span style="font-size:var(--t-sm);color:var(--muted)">MCM</span></div>
+          <div class="vsub">including ${f2(s.design_gross_mcm - s.design_live_mcm)} MCM of dead storage</div></div>
         <div class="c"><div class="k">Canal release</div>
           <div class="v">${rel ? f1(s.outflow_canal_cusecs)+
             ' <span style="font-size:var(--t-sm);color:var(--muted)">cusecs</span>' :
@@ -3483,8 +3694,11 @@ function wire(){
         <div class="c"><div class="k">Days of water <span style="text-transform:none;letter-spacing:0">at today's release rate</span></div>
           ${dw}</div>
         <div class="c"><div class="k">Same date, prior years</div>
-          <div class="v sm">${s.mean_prior!=null
-            ? f2(s.mean_prior)+"% mean of "+s.n_prior+" yr"+(s.n_prior>1?"s":"")
+          <div class="v sm">${schemePrior(s)!=null
+            ? f2(schemePrior(s))+"% mean of "
+              + (LIVE_BASIS && s.n_prior_live != null ? s.n_prior_live : s.n_prior)
+              + " yr"
+              + ((LIVE_BASIS && s.n_prior_live != null ? s.n_prior_live : s.n_prior)>1?"s":"")
             : '<span style="color:var(--muted)">no comparable prior year</span>'}</div></div>
         <div class="c"><div class="k">Warning level</div>
           <div class="v sm">${esc(s.warning || "—")}</div>

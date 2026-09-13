@@ -1,4 +1,4 @@
-scheme_id,season,scheme_name,district,region,capacity_class,season_capacity_mcm,n_dates,n_values,n_days_majority,n_days_minority,runs,values,first_date,last_date,change_dates
-43,2025,Jhuj,Navsari,SG,mid_season,,152,2,85,67,28.65@2025-06-01..2025-08-06(67); 24.45@2025-08-07..2025-10-31(85),24.45/28.65,2025-06-01,2025-10-31,2025-08-07
-44,2025,Kelia,Navsari,SG,mid_season,,152,2,85,67,19.98@2025-06-01..2025-08-06(67); 17.46@2025-08-07..2025-10-31(85),17.46/19.98,2025-06-01,2025-10-31,2025-08-07
-76,2024,Shetrunji,Bhavnagar,Sau,mid_season,,153,2,94,59,415.44@2024-06-01..2024-09-02(94); 346.48@2024-09-03..2024-10-31(59),346.48/415.44,2024-06-01,2024-10-31,2024-09-03
+scheme_id,season,scheme_name,district,region,capacity_class,season_capacity_mcm,live_capacity_class,season_live_capacity_mcm,live_values,live_change_dates,n_dates,n_values,n_days_majority,n_days_minority,runs,values,first_date,last_date,change_dates
+43,2025,Jhuj,Navsari,SG,mid_season,,mid_season,,24.17/27.58,2025-08-07,152,2,85,67,28.65@2025-06-01..2025-08-06(67); 24.45@2025-08-07..2025-10-31(85),24.45/28.65,2025-06-01,2025-10-31,2025-08-07
+44,2025,Kelia,Navsari,SG,mid_season,,mid_season,,17.36/19.23,2025-08-07,152,2,85,67,19.98@2025-06-01..2025-08-06(67); 17.46@2025-08-07..2025-10-31(85),17.46/19.98,2025-06-01,2025-10-31,2025-08-07
+76,2024,Shetrunji,Bhavnagar,Sau,mid_season,,mid_season,,341.45/374.41,2024-09-03,153,2,94,59,415.44@2024-06-01..2024-09-02(94); 346.48@2024-09-03..2024-10-31(59),346.48/415.44,2024-06-01,2024-10-31,2024-09-03

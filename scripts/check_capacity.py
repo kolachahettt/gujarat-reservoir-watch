@@ -111,13 +111,19 @@ def canon_map(values, eps):
     return out
 
 
-def classify_season(g, eps, edge_max_days):
+def classify_season(g, eps, edge_max_days, col="design_gross_mcm"):
     """One scheme-season -> (class, season_capacity, detail dict).
 
     g is sorted by report_date and holds only in-season dates.
+
+    `col` exists so the LIVE design capacity is established by this identical
+    rule rather than by a second copy of it. The page leads with live storage
+    (the water that can actually be released), and a live percentage needs a
+    live denominator that is as stable within a season as the gross one — the
+    source restates live capacity too, in 10 of 1,030 scheme-seasons.
     """
-    cmap = canon_map(g["design_gross_mcm"].dropna().unique(), eps)
-    cap = g["design_gross_mcm"].map(cmap)
+    cmap = canon_map(g[col].dropna().unique(), eps)
+    cap = g[col].map(cmap)
     dates = list(g["report_date"])
 
     # contiguous runs of one canonical capacity
@@ -221,7 +227,7 @@ def main():
     det = con.execute(f"""
         SELECT scheme_id, scheme_name, district, region, report_date,
                EXTRACT(year FROM report_date)::INT AS season,
-               design_gross_mcm
+               design_gross_mcm, design_live_mcm
         FROM fact_storage
         WHERE design_gross_mcm IS NOT NULL
           AND EXTRACT(month FROM report_date) IN ({months})
@@ -233,15 +239,45 @@ def main():
     rule("SEASON CAPACITY — one value per scheme-season, or none")
     rows = []
     for (sid, season), g in det.groupby(["scheme_id", "season"], sort=True):
-        cls, cap, d = classify_season(g.sort_values("report_date"),
-                                      args.eps, args.edge_max_days)
+        g = g.sort_values("report_date")
+        cls, cap, d = classify_season(g, args.eps, args.edge_max_days)
+        # The live denominator, by the same rule. Its class is recorded but
+        # does NOT feed the gate: the gate exists to stop an unreviewed GROSS
+        # restatement breaking the published percentage, and live has exactly
+        # one season where it moves and gross does not — scheme 18 in 2025, by
+        # 0.05%, which is inside the rounding tolerance. Letting live open new
+        # gate cases would halt the pipeline on rounding noise.
+        lcls, lcap, ld = classify_season(g, args.eps, args.edge_max_days,
+                                         col="design_live_mcm")
         rows.append({"scheme_id": int(sid), "season": int(season),
                      "scheme_name": g["scheme_name"].iloc[-1],
                      "district": g["district"].iloc[-1],
                      "region": g["region"].iloc[-1],
-                     "capacity_class": cls, "season_capacity_mcm": cap, **d})
+                     "capacity_class": cls, "season_capacity_mcm": cap,
+                     "live_capacity_class": lcls,
+                     "season_live_capacity_mcm": lcap,
+                     # the live run detail, under its own names: **d below is
+                     # the GROSS detail, and one shared 'values' column would
+                     # have printed gross figures under a live heading
+                     "live_values": ld["values"],
+                     "live_change_dates": ld["change_dates"], **d})
     seas = pd.DataFrame(rows)
     print(seas["capacity_class"].value_counts().to_string())
+    print(f"\nlive denominator, same rule: "
+          + ", ".join(f"{k}={v}" for k, v in
+                      seas["live_capacity_class"].value_counts().items())
+          + f"  ({seas['season_live_capacity_mcm'].notna().sum()} usable)")
+    # Where live is unusable but gross is fine the scheme-season still has a
+    # gross baseline, so it is reported rather than assumed harmless.
+    only_live = seas[seas["season_live_capacity_mcm"].isna()
+                     & seas["season_capacity_mcm"].notna()]
+    if len(only_live):
+        print(f"  {len(only_live)} scheme-season(s) have a gross capacity but "
+              f"no stable live one, so they carry no live percentage:")
+        for _, r in only_live.iterrows():
+            print(f"    {r['scheme_id']:>4} {r['scheme_name'][:22]:<23}"
+                  f"{r['season']}  live values {r['live_values']}"
+                  f"  changed {r['live_change_dates']}")
 
     edge = seas[seas["capacity_class"] == "edge_exception"]
     midi = seas[seas["capacity_class"] == "mid_season"]

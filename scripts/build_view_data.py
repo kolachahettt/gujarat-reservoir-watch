@@ -197,18 +197,30 @@ def main():
           f"prior {PRIOR_SEASONS})")
     scap = pd.read_csv(SEASON_CAP)
     con.register("season_cap", scap[["scheme_id", "season", "capacity_class",
-                                     "season_capacity_mcm"]])
+                                     "season_capacity_mcm",
+                                     "live_capacity_class",
+                                     "season_live_capacity_mcm"]])
 
     # ---- denominator: season capacity, falling back to the 2026 value -------
+    #
+    # LIVE runs alongside GROSS, by the same rule and with the same fallback.
+    # Live is the water that can actually be released — gross includes dead
+    # storage below the lowest outlet, which no canal can reach — so live is
+    # what the page leads with (§25). The two denominators differ by 1,204 MCM
+    # statewide, and the difference is not spread evenly: Kutch is 22.8% full
+    # on gross and 17.2% on live, so gross flatters the driest region most.
     con.execute(f"""
         CREATE OR REPLACE TEMP VIEW cap AS
         WITH cur AS (
-            SELECT scheme_id, design_gross_mcm AS cap_2026
+            SELECT scheme_id, design_gross_mcm AS cap_2026,
+                   design_live_mcm  AS lcap_2026
             FROM fact_storage WHERE report_date = DATE '{REPORT_DATE}'
         )
         SELECT sc.scheme_id, sc.season, sc.capacity_class,
                COALESCE(sc.season_capacity_mcm, c.cap_2026) AS cap_mcm,
-               sc.season_capacity_mcm IS NULL AS cap_substituted
+               sc.season_capacity_mcm IS NULL AS cap_substituted,
+               COALESCE(sc.season_live_capacity_mcm, c.lcap_2026) AS lcap_mcm,
+               sc.season_live_capacity_mcm IS NULL AS lcap_substituted
         FROM season_cap sc JOIN cur c USING (scheme_id)
     """)
 
@@ -219,6 +231,8 @@ def main():
                f.report_date,
                sum(f.present_gross_mcm) AS present_mcm,
                sum(c.cap_mcm)           AS design_mcm,
+               sum(f.present_live_mcm)  AS present_live_mcm,
+               sum(c.lcap_mcm)          AS design_live_mcm,
                count(*)                 AS schemes
         FROM fact_storage f
         JOIN dim_scheme d USING (scheme_id)
@@ -230,6 +244,7 @@ def main():
     ser["report_date"] = pd.to_datetime(ser["report_date"])
     ser["dos"] = ser["report_date"].dt.date.map(day_of_season)
     ser["pct"] = 100.0 * ser["present_mcm"] / ser["design_mcm"]
+    ser["lpct"] = 100.0 * ser["present_live_mcm"] / ser["design_live_mcm"]
 
     # ---- rainfall: regional mean of the 24 h column ------------------------
     rain = con.execute("""
@@ -262,6 +277,10 @@ def main():
         mcm_cur = series_map(ser, code, CURRENT_SEASON, "present_mcm")
         latest_day = max(cur) if cur else None
         prior_at_latest = [p[latest_day] for p in priors if latest_day in p]
+        lcur = series_map(ser, code, CURRENT_SEASON, "lpct")
+        lpriors = [series_map(ser, code, y, "lpct") for y in PRIOR_SEASONS]
+        lmcm_cur = series_map(ser, code, CURRENT_SEASON, "present_live_mcm")
+        lprior_at_latest = [p[latest_day] for p in lpriors if latest_day in p]
         sub = con.execute("""
             SELECT count(*) FROM cap c JOIN dim_scheme d USING (scheme_id)
             WHERE c.cap_substituted AND d.region_latest = ?
@@ -279,6 +298,20 @@ def main():
             "mean_prior_at_now": (round(sum(prior_at_latest)
                                         / len(prior_at_latest), 2)
                                   if prior_at_latest else None),
+            # live, same construction — including its own prior baseline, so a
+            # live percentage is never compared against a gross average
+            "design_live_mcm": round(float(
+                ser[(ser.region == code) & (ser.season == CURRENT_SEASON)]
+                ["design_live_mcm"].iloc[-1]), 1),
+            "live_pct_now": (round(lcur[latest_day], 2)
+                             if latest_day in lcur else None),
+            "live_mcm_now": round(lmcm_cur.get(latest_day, float("nan")), 1),
+            "live_mean_prior_at_now": (round(sum(lprior_at_latest)
+                                             / len(lprior_at_latest), 2)
+                                       if lprior_at_latest else None),
+            "live_series": {str(CURRENT_SEASON): lcur,
+                            **{str(y): series_map(ser, code, y, "lpct")
+                               for y in PRIOR_SEASONS}},
             "n_capacity_substituted": int(sub),
             "series": {str(CURRENT_SEASON): cur,
                        **{str(y): series_map(ser, code, y, "pct")
@@ -301,8 +334,11 @@ def main():
 
     # ---- state, same construction ------------------------------------------
     st = ser.groupby(["season", "dos"], as_index=False).agg(
-        present_mcm=("present_mcm", "sum"), design_mcm=("design_mcm", "sum"))
+        present_mcm=("present_mcm", "sum"), design_mcm=("design_mcm", "sum"),
+        present_live_mcm=("present_live_mcm", "sum"),
+        design_live_mcm=("design_live_mcm", "sum"))
     st["pct"] = 100.0 * st["present_mcm"] / st["design_mcm"]
+    st["lpct"] = 100.0 * st["present_live_mcm"] / st["design_live_mcm"]
 
     def st_map(season, col):
         s = st[st["season"] == season]
@@ -311,12 +347,27 @@ def main():
 
     st_cur = st_map(CURRENT_SEASON, "pct")
     st_priors = [st_map(y, "pct") for y in PRIOR_SEASONS]
+    st_lcur = st_map(CURRENT_SEASON, "lpct")
+    st_lpriors = [st_map(y, "lpct") for y in PRIOR_SEASONS]
     st_day = max(st_cur)
     state = {
         "pct_now": round(st_cur[st_day], 2),
         "mcm_now": round(st_map(CURRENT_SEASON, "present_mcm")[st_day], 1),
         "design_mcm": round(float(st[st.season == CURRENT_SEASON]
                                   ["design_mcm"].iloc[-1]), 1),
+        # LIVE — what the page leads with. Its own denominator and its own
+        # prior baseline: mixing a live numerator with a gross average would
+        # manufacture a deviation out of dead storage.
+        "live_pct_now": round(st_lcur[st_day], 2),
+        "live_mcm_now": round(st_map(CURRENT_SEASON,
+                                     "present_live_mcm")[st_day], 1),
+        "design_live_mcm": round(float(st[st.season == CURRENT_SEASON]
+                                       ["design_live_mcm"].iloc[-1]), 1),
+        "live_prior_at_now": {str(y): round(p[st_day], 2)
+                              for y, p in zip(PRIOR_SEASONS, st_lpriors)
+                              if st_day in p},
+        "live_series": {str(CURRENT_SEASON): st_lcur,
+                        **{str(y): st_map(y, "lpct") for y in PRIOR_SEASONS}},
         "day_of_season": int(st_day),
         "prior_at_now": {str(y): round(p[st_day], 2)
                          for y, p in zip(PRIOR_SEASONS, st_priors)
@@ -328,6 +379,9 @@ def main():
                 **{str(y): st_map(y, "present_mcm") for y in PRIOR_SEASONS}},
         "crossover": crossover(st_cur, st_priors, CROSSOVER_MIN_RUN),
     }
+    state["live_mean_prior_at_now"] = round(
+        sum(state["live_prior_at_now"].values())
+        / len(state["live_prior_at_now"]), 2) if state["live_prior_at_now"] else None
     state["mean_prior_at_now"] = round(
         sum(state["prior_at_now"].values()) / len(state["prior_at_now"]), 2)
 
@@ -344,6 +398,11 @@ def main():
                -- on screen and in the CSV.
                f.pct_filling, f.present_gross_mcm, f.present_live_mcm,
                f.design_gross_mcm,
+               -- the live denominator, so the scheme detail can print a live
+               -- percentage whose numerator and denominator divide into each
+               -- other. present_live / design_GROSS was the ratio the note
+               -- above warns about; this is the one that closes.
+               f.design_live_mcm,
                f.outflow_canal_cusecs, f.days_water_at_release, f.warning,
                d.n_design_variants
         FROM fact_storage f JOIN dim_scheme d USING (scheme_id)
@@ -356,7 +415,15 @@ def main():
     ann = con.execute(f"""
         SELECT f.scheme_id, EXTRACT(year FROM f.report_date)::INT AS season,
                f.pct_filling, c.capacity_class, c.season_capacity_mcm,
-               t.design_gross_mcm AS cap_today
+               t.design_gross_mcm AS cap_today,
+               -- the live percentage on the same prior date, on that season's
+               -- own live capacity. Computed here rather than taken from the
+               -- source, which publishes only the gross percentage.
+               CASE WHEN c.season_live_capacity_mcm > 0
+                    THEN 100.0 * f.present_live_mcm / c.season_live_capacity_mcm
+               END AS live_pct,
+               c.live_capacity_class, c.season_live_capacity_mcm,
+               t.design_live_mcm AS lcap_today
         FROM fact_storage f
         JOIN today t USING (scheme_id)
         JOIN season_cap c ON c.scheme_id = f.scheme_id
@@ -376,6 +443,17 @@ def main():
     base = ann[ok].groupby("scheme_id").agg(
         mean_prior=("pct_filling", "mean"), n_prior=("pct_filling", "size"),
         years=("season", lambda s: sorted(int(x) for x in s))).reset_index()
+    # The live baseline gets its OWN comparability test against the live
+    # capacity, not a borrowed pass from the gross one. A scheme whose gross
+    # capacity held steady while its live capacity was restated would otherwise
+    # contribute a prior year measured on a different denominator.
+    lmid = ann["live_capacity_class"] == "mid_season"
+    lok = (~lmid) & ann["live_pct"].notna() & (
+        ((ann["season_live_capacity_mcm"] - ann["lcap_today"]).abs()
+         / ann["lcap_today"]) <= eps)
+    lbase = ann[lok].groupby("scheme_id").agg(
+        live_mean_prior=("live_pct", "mean"),
+        n_prior_live=("live_pct", "size")).reset_index()
     tod = con.execute("SELECT * FROM today").df()
     # Hazard 5, applied as a DERIVED fix rather than a re-parse: dim_scheme
     # takes district from the latest report, and on 2026-09-11 Kabarka's cell
@@ -400,26 +478,55 @@ def main():
               f"at parse time")
 
     dev = tod.merge(base, on="scheme_id")
+    dev = dev.merge(lbase, on="scheme_id", how="left")
     dev["dev_pp"] = dev["pct_filling"] - dev["mean_prior"]
-    dev["shortfall_mcm"] = (dev["mean_prior"] - dev["pct_filling"]) / 100.0 \
-        * dev["design_gross_mcm"]
     dev["restated"] = dev["n_design_variants"] > 1
+    # Live, and the page RANKS on it. This is not cosmetic: ranking the twenty
+    # worst on gross and on live agrees on only fourteen of them, so the two
+    # bases name six different dams as furthest below. A page that leads with
+    # live and then lists the gross worst-twenty is contradicting itself about
+    # which reservoirs are in trouble.
+    dev["live_pct_today"] = pd.Series(
+        100.0 * dev["present_live_mcm"] / dev["design_live_mcm"]
+    ).where(dev["design_live_mcm"] > 0)
+    dev["live_dev_pp"] = dev["live_pct_today"] - dev["live_mean_prior"]
+    # The volume shortfall follows the same basis: how much RELEASABLE water is
+    # missing against the prior-year norm, over the live capacity.
+    dev["shortfall_mcm"] = (dev["live_mean_prior"] - dev["live_pct_today"]) \
+        / 100.0 * dev["design_live_mcm"]
+    # Gross kept alongside, so the CSV can still reconcile to the source's own
+    # published percentage.
+    dev["shortfall_gross_mcm"] = (dev["mean_prior"] - dev["pct_filling"]) \
+        / 100.0 * dev["design_gross_mcm"]
 
     def rows(df, cols):
         return json.loads(df[cols].to_json(orient="records"))
 
     cols_pp = ["scheme_id", "scheme_name", "district", "region", "pct_filling",
                "mean_prior", "dev_pp", "n_prior", "present_live_mcm",
-               "design_gross_mcm", "days_water_at_release", "restated"]
-    dev_pp = rows(dev.nsmallest(20, "dev_pp"), cols_pp)
+               "design_gross_mcm", "design_live_mcm", "live_pct_today",
+               "live_mean_prior", "live_dev_pp", "n_prior_live",
+               "days_water_at_release", "restated"]
+    rank = "live_dev_pp" if dev["live_dev_pp"].notna().all() else "dev_pp"
+    dev_pp = rows(dev.nsmallest(20, rank), cols_pp)
     dev_vol = rows(dev.nlargest(10, "shortfall_mcm"),
                    ["scheme_id", "scheme_name", "district", "region",
-                    "design_gross_mcm", "pct_filling", "mean_prior", "dev_pp",
-                    "shortfall_mcm"])
+                    "design_gross_mcm", "design_live_mcm", "pct_filling",
+                    "mean_prior", "dev_pp", "live_pct_today",
+                    "live_mean_prior", "live_dev_pp", "shortfall_mcm",
+                    "shortfall_gross_mcm"])
+    print(f"deviation tables ranked on: {rank}")
 
     sch = tod.merge(base[["scheme_id", "mean_prior", "n_prior"]],
                     on="scheme_id", how="left").sort_values("scheme_name")
     sch["dev_pp"] = sch["pct_filling"] - sch["mean_prior"]
+    sch = sch.merge(lbase, on="scheme_id", how="left")
+    # today's live percentage on today's live capacity, against the live
+    # baseline. Both sides live, so the deviation is not part dead storage.
+    sch["live_pct_today"] = pd.Series(
+        100.0 * sch["present_live_mcm"] / sch["design_live_mcm"]
+    ).where(sch["design_live_mcm"] > 0)
+    sch["live_dev_pp"] = sch["live_pct_today"] - sch["live_mean_prior"]
 
     # ---- per-scheme five-year series, for the detail sparkline -------------
     # Uses fact_storage.pct_filling - the SAME basis as the figure printed
@@ -467,11 +574,20 @@ def main():
     schemes = rows(sch, ["scheme_id", "scheme_name", "district", "region",
                          "pct_filling", "present_gross_mcm",
                          "present_live_mcm", "design_gross_mcm",
+                         "design_live_mcm",
                          "outflow_canal_cusecs", "days_water_at_release",
-                         "warning", "mean_prior", "n_prior", "dev_pp"])
-    # Attach each scheme's own five-year series.
+                         "warning", "mean_prior", "n_prior", "dev_pp",
+                         "live_mean_prior", "n_prior_live", "live_dev_pp"])
+    # Attach each scheme's own five-year series, and its live percentage.
     for row in schemes:
         row["series"] = series_by_scheme.get(row["scheme_id"], {})
+        dl, pl = row.get("design_live_mcm"), row.get("present_live_mcm")
+        # Guarded rather than assumed: a zero or absent live capacity would
+        # divide by zero, and the honest output for that scheme is no live
+        # percentage at all. All 206 carry one today; the guard is for the day
+        # one of them does not.
+        row["live_pct"] = (round(100.0 * pl / dl, 1)
+                           if dl and pl is not None and dl > 0 else None)
 
     # ---- coordinates, if anyone has supplied them --------------------------
     coords, coords_meta = {}, {
