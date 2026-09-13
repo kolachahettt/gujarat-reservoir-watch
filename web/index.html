@@ -549,6 +549,35 @@ h2,h2 .q{max-width:52ch}
   .deck{font-size:var(--t-md)}
 }
 
+/* ---------- cross-view focus ----------
+   One region, five figures listening. Hover or focus a region anywhere and the
+   deviation chart brings its line forward, the small-multiple strip lifts its
+   panel, the map lights that region's dams and fades the other ~160, and the
+   matching rows highlight in all three tables. It adds no data: it connects
+   what is already on the page, which is the difference between five figures
+   and one instrument.
+
+   `fx` marks an element that participates in dimming; `data-region` carries
+   the identity. TWO ATTRIBUTES ON PURPOSE, and `fx` sits at exactly ONE level
+   per component. Dimming everything with a [data-region] would compound:
+   .facet holds a .plot that also carries the region, and nested opacity
+   multiplies, so a dimmed panel would have gone to 0.0625 rather than 0.25.
+
+   The dim is applied by rewriting ONE stylesheet rule, not by touching
+   elements. See paintFocus(): a class write per element would be ~250
+   classList operations on every hover change across 179 dots, five panels and
+   three tables, and it would jank. One textContent write lets the style system
+   do the work it is for. */
+.fx{transition:opacity .12s linear}
+.facet[tabindex]:focus-visible,
+#tblRegions tbody tr[tabindex]:focus-visible{
+  outline:2px solid var(--text-primary);outline-offset:2px}
+/* Motion here is a 120ms fade on an opacity change, which is the mildest thing
+   on the page, but the rule is the rule: asked to reduce, it does not move. */
+@media (prefers-reduced-motion:reduce){
+  .fx{transition:none}
+}
+
 /* ---------- keyboard and screen-reader plumbing ---------- */
 /* Visually hidden but still announced. NOT display:none and NOT
    visibility:hidden, either of which removes it from the accessibility tree —
@@ -1978,13 +2007,14 @@ function regionsSVG(){
   for(const d of devs){
     const p = linePath(d.dev, xp, yp, 1);
     if(!p) continue;
-    lines += `<path d="${p}" fill="none" stroke="${REGION_COL[d.code]}"
-      stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    lines += `<path class="fx" data-region="${d.code}" d="${p}" fill="none"
+      stroke="${REGION_COL[d.code]}" stroke-width="2" stroke-linejoin="round"
+      stroke-linecap="round"/>`;
     const end = Math.max(...Object.keys(d.dev).map(Number));
     const v = d.dev[end];
-    lines += `<circle cx="${xp(end)}" cy="${yp(v)}" r="3.2"
-      fill="${REGION_COL[d.code]}" stroke="var(--surface-1)"
-      stroke-width="1.8"/>`;
+    lines += `<circle class="fx" data-region="${d.code}" cx="${xp(end)}"
+      cy="${yp(v)}" r="3.2" fill="${REGION_COL[d.code]}"
+      stroke="var(--surface-1)" stroke-width="1.8"/>`;
     ends.push({d, x: xp(end), y: yp(v) + 3.4, y0: yp(v) + 3.4, v});
   }
 
@@ -2020,14 +2050,16 @@ function regionsSVG(){
       // comparing against yp(v) made every label look moved.
       const moved = Math.abs(e.y - e.y0) > 2;
       if(moved){
-        labels += `<line x1="${e.x + 4}" y1="${yp(e.v)}" x2="${e.x + 7}"
+        labels += `<line class="fx" data-region="${e.d.code}"
+          x1="${e.x + 4}" y1="${yp(e.v)}" x2="${e.x + 7}"
           y2="${e.y - 3.4}" stroke="${REGION_COL[e.d.code]}"
           stroke-width="1" opacity="0.6"/>`;
       }
       /* Haloed too: the push-apart loop moves a label off its own line end,
          which can land it on a neighbouring series or its own leader. The
          stroke inherits to the tspan, so the name and the number both get it. */
-      labels += `<text x="${e.x + 9}" y="${e.y}" font-size="${FS_REGLABEL}"
+      labels += `<text class="fx" data-region="${e.d.code}" x="${e.x + 9}"
+        y="${e.y}" font-size="${FS_REGLABEL}"
         ${halo(FS_REGLABEL)} fill="var(--text-primary)">${esc(e.d.name)}
         <tspan fill="${REGION_COL[e.d.code]}" font-weight="700"
           style="font-variant-numeric:tabular-nums">${f1(e.v)}</tspan></text>`;
@@ -2401,6 +2433,7 @@ function scatterSVG(list){
     .map(s => `<circle cx="${xp(Math.max(xs[0],Math.min(xs[1],s.dev_pp))).toFixed(1)}"
       cy="${yp(s.design_gross_mcm).toFixed(1)}" r="${capR(s.design_gross_mcm)}"
       fill="${devColor(s.dev_pp)}" stroke="var(--dot-edge)"
+      class="fx" data-region="${s.region}"
       stroke-width="${Math.min(1.3, capR(s.design_gross_mcm) * 0.34).toFixed(2)}"
       class="pt" data-id="${s.scheme_id}" style="cursor:pointer"><title>${
       esc(s.scheme_name)} — ${esc(s.district)}, ${esc(regName(s.region))} — ${
@@ -2525,7 +2558,8 @@ function mapSVG(list, coords, geo){
       return `<circle cx="${px(c[1]).toFixed(1)}" cy="${py(c[0]).toFixed(1)}"
         r="${capR(s.design_gross_mcm)}" fill="${devColor(s.dev_pp)}"
         stroke="var(--dot-edge)"
-        stroke-width="${Math.min(1.3, capR(s.design_gross_mcm) * 0.34).toFixed(2)}" class="pt"
+        stroke-width="${Math.min(1.3, capR(s.design_gross_mcm) * 0.34).toFixed(2)}"
+        class="pt fx" data-region="${s.region}"
         data-id="${s.scheme_id}" style="cursor:pointer"><title>${
         esc(s.scheme_name)} — ${esc(s.district)} — ${f1(s.pct_filling)}% now, ${
         f1(s.dev_pp)} pp</title></circle>`; }).join("");
@@ -2720,7 +2754,11 @@ function render(d){
      different question, which the table below does better. */
   document.getElementById("grid").innerHTML = d.regions.map(r => {
     const dev = r.pct_now - r.mean_prior_at_now;
-    return `<div class="facet">
+    /* tabindex + aria-label so a keyboard reaches the same highlight a
+       pointer gets, and a reader hears which region it landed on. Not
+       role="button": it is not a button, it is a panel you can point at. */
+    return `<div class="facet fx" data-region="${r.code}"
+      data-focus-pin tabindex="0" aria-label="${esc(r.name)}">
       <div class="fh"><span class="nm">${esc(r.name)}</span>
         <span class="dv" title="percentage points below this region's own prior four-year mean for this date">${dev>0?"+":""}${f1(dev)} pp</span></div>
       <div class="plot" data-region="${r.code}">
@@ -2756,7 +2794,8 @@ function render(d){
         ? `<div class="capnote">Denominator: ${r.n_capacity_substituted} scheme-season${r.n_capacity_substituted>1?"s":""}
            in this region published two capacities mid-season; the 2026 capacity is
            used for those, which is the value every other season agrees on.</div>` : "";
-      return `<tr>
+      return `<tr class="fx" data-region="${r.code}" data-focus-pin
+        tabindex="0">
         <td class="nm">${esc(r.name)}</td>
         <td class="n">${r.n_schemes}</td>
         <td class="n">${f2(r.pct_now)}</td>
@@ -2772,7 +2811,7 @@ function render(d){
         <td><button class="tblbtn" data-tv="${r.code}"
           data-show="Days" data-hide="Hide days">Days</button></td>
       </tr>
-      <tr class="tv" id="tv-${r.code}"><td colspan="10">
+      <tr class="tv fx" data-region="${r.code}" id="tv-${r.code}"><td colspan="10">
         <div class="rprose">${crossText(r.crossover, esc(r.name))}</div>${capn}
         ${tableView(r.series, DATA.state.day_of_season, r.code)}
       </td></tr>`;
@@ -2789,7 +2828,7 @@ function render(d){
       <th style="text-align:right"><abbr title="How many of the four prior years entered this scheme's baseline. Fewer than 4 means a year was excluded because its published design capacity did not match this date's, so the comparison rests on a shorter baseline.">Yrs</abbr></th>
       <th style="text-align:right">Live MCM</th>
       <th style="text-align:right">Design MCM</th></tr></thead><tbody>` +
-    d.deviation_pp.map(r => `<tr>
+    d.deviation_pp.map(r => `<tr class="fx" data-region="${r.region}">
       <td class="nm">${esc(r.scheme_name)}${r.restated
         ? '<span class="flag" title="design capacity restated between years">restated</span>':''}</td>
       <td>${esc(r.district)}</td><td>${esc(regName(r.region))}</td>
@@ -2810,7 +2849,7 @@ function render(d){
       <th style="text-align:right">Prior mean</th>
       <th style="text-align:right">Deviation, pp</th>
       <th style="text-align:right">Shortfall MCM</th></tr></thead><tbody>` +
-    d.deviation_volume.map(r => `<tr>
+    d.deviation_volume.map(r => `<tr class="fx" data-region="${r.region}">
       <td class="nm">${esc(r.scheme_name)}</td>
       <td>${esc(r.district)}</td><td>${esc(regName(r.region))}</td>
       <td class="n">${f1(r.design_gross_mcm)}</td>
@@ -2923,7 +2962,7 @@ function renderRegionsView(){
   // The legend carries the values, so on a narrow screen where the direct
   // labels do not fit nothing is lost but the position.
   document.getElementById("regLegend").innerHTML = rows.map(({r, dev}) =>
-    `<span class="ri"><span class="sw thin"
+    `<span class="ri fx" data-region="${r.code}"><span class="sw thin"
        style="border-color:${REGION_COL[r.code]}"></span>
      <b>${esc(r.name)}</b>
      <span class="rv">${f1(dev)} pp</span>
@@ -3067,6 +3106,91 @@ function wirePoints(){
        beneath the chart the point was clicked on. */
     if(window.__showDetail)
       window.__showDetail(s, document.querySelector("#stage-lookup .scat"));
+  });
+}
+
+/* ---------------- cross-view focus ----------------
+   One region at a time, shared by every figure. Hover or focus sets it
+   transiently; a click on a panel or a region-table row PINS it, because hover
+   does not exist on a touch screen and a highlight you cannot hold is a
+   highlight half the readers cannot use.
+
+   THE DIM IS ONE STYLESHEET RULE, rewritten. The alternative — adding and
+   removing a class on each participant — is about 250 classList writes per
+   change across 179 map dots, five panels, the deviation chart and three
+   tables, on every pointer move that crosses a boundary. Rewriting the text of
+   a single <style> is one DOM write and lets the style engine do the matching,
+   which is the thing it is fast at. */
+let FOCUS_PIN = null, FOCUS_HOVER = null, FX_STYLE = null;
+const FOCUS_DIM = 0.25;
+
+function paintFocus(){
+  if(!FX_STYLE){
+    FX_STYLE = document.createElement("style");
+    FX_STYLE.id = "fxStyle";
+    document.head.appendChild(FX_STYLE);
+  }
+  const code = FOCUS_PIN || FOCUS_HOVER;
+  if(!code){ FX_STYLE.textContent = ""; return; }
+  /* CSS.escape because the value goes into a selector. The region codes are
+     three letters today and this is still not a place to concatenate an
+     unescaped string. */
+  const s = `[data-region="${CSS.escape(code)}"]`;
+  FX_STYLE.textContent =
+    `.viz-root .fx:not(${s}){opacity:${FOCUS_DIM}}` +
+    /* A pin needs to look different from a hover or nobody can tell it stuck.
+       Neutral ink, not the accent: colour on this page means data. */
+    (FOCUS_PIN
+      ? `#tblRegions tbody tr${s}{background:var(--rule-hair)}` +
+        `.facet${s}{box-shadow:-3px 0 0 0 var(--text-primary)}`
+      : "");
+}
+
+function setFocusHover(code){
+  if(code === FOCUS_HOVER) return;      // pointerover fires constantly
+  FOCUS_HOVER = code;
+  paintFocus();
+}
+
+function setFocusPin(code){
+  FOCUS_PIN = (FOCUS_PIN === code) ? null : code;
+  paintFocus();
+  announce(FOCUS_PIN
+    ? `${regName(FOCUS_PIN)} pinned. Its dams, its line and its rows are `
+      + `highlighted in every figure. Press Escape to clear.`
+    : "Region highlight cleared.");
+}
+window.__focus = () => ({pin: FOCUS_PIN, hover: FOCUS_HOVER,
+                        css: FX_STYLE ? FX_STYLE.textContent.length : 0});
+/* Exposed for testing, like __markStage and __trimLegendRules: the dim is a
+   visual state, and the only trustworthy check is a screenshot of it, which
+   needs a way to set the state from outside. */
+window.__setFocus = code => { FOCUS_PIN = code || null; paintFocus(); };
+
+function wireFocus(){
+  const root = document.querySelector(".viz-root");
+  if(!root) return;
+  const regOf = el => {
+    const n = el && el.closest ? el.closest("[data-region]") : null;
+    return n ? n.getAttribute("data-region") : null;
+  };
+  root.addEventListener("pointerover", e => setFocusHover(regOf(e.target)));
+  root.addEventListener("pointerleave", () => setFocusHover(null));
+  /* focusin, not focus: focus does not bubble, and the handles are deep. */
+  root.addEventListener("focusin", e => setFocusHover(regOf(e.target)));
+  root.addEventListener("focusout", e => {
+    if(!root.contains(e.relatedTarget)) setFocusHover(null);
+  });
+  root.addEventListener("click", e => {
+    /* A dot's click already opens the scheme detail and the Days button
+       already expands a row. Only the two handles that mean "this region"
+       pin it. */
+    if(e.target.closest("button,a,input,select,textarea")) return;
+    const h = e.target.closest("[data-focus-pin]");
+    if(h) setFocusPin(h.getAttribute("data-region"));
+  });
+  addEventListener("keydown", e => {
+    if(e.key === "Escape" && FOCUS_PIN) setFocusPin(FOCUS_PIN);
   });
 }
 
@@ -3375,6 +3499,14 @@ function wire(){
 
   const dl = document.getElementById("dlCsv");
   if(dl) dl.onclick = () => downloadCsv(dl);
+
+  /* Delegated on .viz-root, so it survives every re-render without rewiring:
+     the figures are replaced wholesale on a breakpoint change and there is
+     nothing per-element to reattach. */
+  wireFocus();
+  /* A pin set before a re-render is still the truth afterwards -- the region
+     did not stop existing because the charts were rebuilt. */
+  paintFocus();
 }
 
 /* Crossing the breakpoint changes the viewBox, so the charts have to be
