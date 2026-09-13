@@ -30,9 +30,12 @@
      the tooltip's current-season row, the direct "2026" chart labels, and the
      white-on-orange active view button (3.20:1, the worst of them). */
   /* What sits BEHIND a chart, so an annotation label can halo itself against
-     it. The state chart is drawn straight onto the page; a facet chart is
-     inside a card. Declared as a variable and overridden on .facet rather
-     than hardcoded, so a chart moved between the two keeps a correct halo. */
+     it. The state chart is drawn straight onto the page; every other chart is
+     inside a card. The page value is the default; the card containers override
+     it together, immediately below, so the list of them is one line and adding
+     a fourth is an obvious edit. Three separate declarations is how .scat and
+     .detail came to be missing it while .facet had it — a #f9f9f7 halo on a
+     #fcfcfb panel, near-invisible and still wrong. */
   --chart-bg:var(--page);
   /* ---------- type scale ----------
      Six steps, ratios 1.18 / 1.23 / 1.25 / 1.25 / 1.60. Replaces seventeen
@@ -120,6 +123,12 @@ body{margin:0;background:var(--page,#f9f9f7);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 .viz-root{background:var(--page);color:var(--text-primary);
   padding:20px 22px 40px;max-width:1480px;margin:0 auto}
+
+/* The card containers, together. Every chart that is not the state chart is
+   drawn on a --surface-1 panel, so its labels must halo against that and not
+   against the page. Keep this list and the backgrounds in step: a container
+   that sets background:var(--surface-1) belongs here. */
+.facet, .scat, .detail{--chart-bg:var(--surface-1)}
 
 /* ================= THREE WIDTHS, ONE LEFT EDGE =================
    Every block was full-width, with prose capped individually by max-width.
@@ -410,7 +419,7 @@ main:focus{outline:none}
 .grid{display:grid;gap:13px;margin-top:11px;
   grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
 .facet{background:var(--surface-1);border:1px solid var(--border);
-  border-radius:8px;padding:11px 12px 9px;--chart-bg:var(--surface-1)}
+  border-radius:8px;padding:11px 12px 9px}
 .fh{display:flex;justify-content:space-between;align-items:baseline;gap:9px}
 .fh .nm{font-size:var(--t-lg);font-weight:600}
 .fh .meta{font-size:var(--t-xs);color:var(--muted);font-variant-numeric:tabular-nums}
@@ -1331,13 +1340,11 @@ function gapAnnotation(g, xOf, yOf, latestDay, G){
     <line x1="${dx - cap}" x2="${dx + cap}" y1="${yNow.toFixed(1)}"
       y2="${yNow.toFixed(1)}" stroke="var(--text-secondary)" stroke-width="1"/>
     <text x="${lx}" y="${l1y.toFixed(1)}" text-anchor="end" font-size="${FS_BIG}"
-      font-weight="700" fill="var(--text-primary)" stroke="var(--chart-bg)"
-      stroke-width="2.6" paint-order="stroke"
-      stroke-linejoin="round">${bigTxt}</text>
+      font-weight="700" fill="var(--text-primary)"
+      ${halo(FS_BIG)}>${bigTxt}</text>
     ${!sub ? "" : `<text x="${lx}" y="${l2y.toFixed(1)}" text-anchor="end"
-      font-size="${FS_SUB}" fill="var(--muted)" stroke="var(--chart-bg)"
-      stroke-width="2.4" paint-order="stroke"
-      stroke-linejoin="round">${sub}</text>`}`;
+      font-size="${FS_SUB}" fill="var(--muted)"
+      ${halo(FS_SUB)}>${sub}</text>`}`;
 }
 
 function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
@@ -1374,10 +1381,21 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
      ends. */
   const LR_Y = AXIS_FS + 2;
   const LR_BAND = LR_Y + 3;
-  const lr = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
-      y2="${G.SH-6}" stroke="var(--baseline)" stroke-width="1"/>
-    <text x="${xOf(latestDay)-3}" y="${LR_Y}" text-anchor="end"
-      font-size="${AXIS_FS}" fill="var(--muted)">latest report</text>`;
+  /* SPLIT, because the rule and its label want opposite paint orders. The rule
+     belongs UNDER the series — a baseline drawn over the data competes with it.
+     The label belongs OVER them, or the lines run through the words, which they
+     did: a gridline and the dashed crossover rule both crossed it.
+
+     Worth being explicit, because a halo alone does not fix this. paint-order
+     only orders stroke against fill WITHIN one element; it cannot lift that
+     element above a path drawn later in the document. Haloing this while it
+     was still emitted before the series changed the rendered output not at all
+     — the frames were pixel-identical. */
+  const lrRule = `<line x1="${xOf(latestDay)}" x2="${xOf(latestDay)}" y1="4"
+      y2="${G.SH-6}" stroke="var(--baseline)" stroke-width="1"/>`;
+  const lrLab = `<text x="${xOf(latestDay)-3}" y="${LR_Y}" text-anchor="end"
+      font-size="${AXIS_FS}" ${halo(AXIS_FS)}
+      fill="var(--muted)">latest report</text>`;
 
   /* prior years: thin, ordered blue ramp, drawn first so 2026 sits on top */
   let pri = "";
@@ -1397,8 +1415,9 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
     mk = `<line x1="${xOf(md)}" x2="${xOf(md)}" y1="4" y2="${G.SH-6}"
       stroke="var(--muted)" stroke-width="1" stroke-dasharray="2.5 3.5"/>
       ${y == null ? "" : `<circle cx="${xOf(md)}" cy="${yOf(y)}" r="3.4"
-        fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>`}
-      <text x="${xOf(md)+4}" y="${G.SH-9}" font-size="11"
+        fill="var(--now)" stroke="var(--chart-bg)" stroke-width="1.8"/>`}
+      <text x="${xOf(md)+4}" y="${G.SH-9}" font-size="${AXIS_FS}"
+        ${halo(AXIS_FS)}
         fill="var(--muted)">${dosLabel(md, CUR)}</text>`;
   }
   const cp = linePath(series[CUR]);
@@ -1416,10 +1435,18 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
   const above = yOf(ld) - 6;
   const flip = above - LAB_FS < LR_BAND;
   const labY = flip ? yOf(ld) + LAB_FS + 3 : above;
+  /* HALOED, because this label sits ON the series rather than beside it. All
+     four prior-year lines crossed it at every width — the lines converge on
+     the top of the plot in September and the 2026 endpoint sits under them,
+     so there is no position for this label that is clear of data. The gap
+     annotation two blocks up had the halo and this did not, which is why the
+     bracket's text read cleanly and the "2026" it points at did not.
+     The marker's ring is --chart-bg for the same reason it is on the text: at
+     --surface-1 it was ringed in the card colour while drawn on the page. */
   const lab = `<circle cx="${xOf(latestDay)}" cy="${yOf(ld)}" r="3.6"
-      fill="var(--now)" stroke="var(--surface-1)" stroke-width="2"/>
+      fill="var(--now)" stroke="var(--chart-bg)" stroke-width="2"/>
     <text x="${xOf(latestDay)-6}" y="${labY.toFixed(1)}" text-anchor="end"
-      font-size="${LAB_FS}" font-weight="700"
+      font-size="${LAB_FS}" font-weight="700" ${halo(LAB_FS)}
       fill="var(--now-text)">2026</text>`;
 
   /* ---- rainfall: a SEPARATE panel, on the ONE scale every strip shares,
@@ -1457,7 +1484,8 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
       fill="var(--now)" opacity="0.6"/>`;
   }
   const pk = Math.max(0, ...Object.values(rain[CUR] || {}).filter(v => v != null));
-  rr += `<text x="${G.W-G.PADR}" y="${rTop-1}" text-anchor="end" font-size="11"
+  rr += `<text x="${G.W-G.PADR}" y="${rTop-1}" text-anchor="end"
+    font-size="${AXIS_FS}" ${halo(AXIS_FS)}
     fill="var(--muted)">rain mm/day, regional mean · peak ${f1(pk)}</text>`;
   }
 
@@ -1476,7 +1504,7 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
       aria-label="Percent filling by day of season, 2026 against 2022 to 2025${
         showRain ? ", with daily rainfall below" : ""}${gapSaid}"
       data-id="${idPrefix}">
-    ${g}${ax}${lr}${pri}${cur}${mk}${lab}${rr}${gapAnn}
+    ${g}${ax}${lrRule}${pri}${cur}${mk}${lab}${lrLab}${rr}${gapAnn}
     <line class="xh" x1="0" x2="0" y1="4" y2="${hitH}" stroke="var(--text-secondary)"
       stroke-width="1" opacity="0" pointer-events="none"/>
     <rect class="hit" x="${G.PADL}" y="0" width="${G.W-G.PADL-G.PADR}" height="${hitH}"
@@ -1528,6 +1556,19 @@ function chartSVG(series, rain, cross, latestDay, idPrefix, showRain, opts){
    14, 27 and 34 were set against a 7.5-10.5px type scale and outlived it. */
 const AXIS_FS = 11;          // tick labels in both charts
 const AXIS_TITLE_FS = 13;    // axis titles in both charts
+/* ONE HALO, for every label that sits over the series rather than beside it.
+   paint-order="stroke" paints the stroke BEFORE the fill, so it reads as a
+   backing plate behind the glyphs instead of an outline on top of them, and
+   --chart-bg is whatever the chart is drawn on, so a chart moved between the
+   page and a card keeps a correct halo.
+
+   The width tracks the font size. 0.24em reproduces the 2.6 the gap annotation
+   was already using at 11px, so this generalises the value that was there
+   rather than inventing one; the sub-label's 2.4 becomes 2.64, which is the
+   only rendered change to anything that already had a halo. */
+const halo = fs =>
+  `stroke="var(--chart-bg)" stroke-width="${(fs * 0.24).toFixed(2)}" ` +
+  `paint-order="stroke" stroke-linejoin="round"`;
 /* Plot floor to x-axis tick baseline. An 11px label on the floor has a box
    reaching ~3px below its baseline, so the x band must start below that. */
 const X_TICK_DY = AXIS_FS + 8;
@@ -1599,8 +1640,14 @@ function regionsSVG(){
   // The zero line needs saying in words, or it reads as a plain axis. Not on
   // a narrow screen though: there it lands on top of the lines, and the
   // subtitle and the note below already say it.
+  /* Its own variable, emitted AFTER the series rather than appended to the
+     grid group. It labels the zero line by sitting on it, so it is over the
+     busiest part of the chart, and a halo on an element painted before the
+     five series does nothing — see the same split in chartSVG. */
+  let zeroLab = "";
   if(!narrow){
-    g += `<text x="${L+4}" y="${yp(0)-5}" font-size="11" fill="var(--muted)">
+    zeroLab = `<text x="${L+4}" y="${yp(0)-5}" font-size="${AXIS_FS}"
+        ${halo(AXIS_FS)} fill="var(--muted)">
         at its own prior four-year mean</text>`.replace(/\s+/g, " ");
   }
   /* x=2, not 0: a glyph's left side bearing can sit a pixel or two left of the
@@ -1660,15 +1707,18 @@ function regionsSVG(){
           y2="${e.y - 3.4}" stroke="${REGION_COL[e.d.code]}"
           stroke-width="1" opacity="0.6"/>`;
       }
+      /* Haloed too: the push-apart loop moves a label off its own line end,
+         which can land it on a neighbouring series or its own leader. The
+         stroke inherits to the tspan, so the name and the number both get it. */
       labels += `<text x="${e.x + 9}" y="${e.y}" font-size="${FS_REGLABEL}"
-        fill="var(--text-primary)">${esc(e.d.name)}
+        ${halo(FS_REGLABEL)} fill="var(--text-primary)">${esc(e.d.name)}
         <tspan fill="${REGION_COL[e.d.code]}" font-weight="700"
           style="font-variant-numeric:tabular-nums">${f1(e.v)}</tspan></text>`;
     }
   }
   return `<svg viewBox="0 0 ${W} ${H}" role="img"
     aria-label="Deviation from each region's own prior four-year mean, by day
-    of season, for all five regions in ${CUR}">${g}${lines}${labels}</svg>`;
+    of season, for all five regions in ${CUR}">${g}${lines}${zeroLab}${labels}</svg>`;
 }
 
 /* ---------------- CSV download ----------------
@@ -1837,10 +1887,14 @@ function schemeSpark(s, thin){
   lines += `<path d="${linePath(cur, xf, yf, thin)}" fill="none"
     stroke="var(--now)" stroke-width="2.2" stroke-linejoin="round"
     stroke-linecap="round"/>`;
+  /* Same halo as the state chart's direct label, for the same reason: the
+     prior years run above the 2026 endpoint here too. */
+  const SPK_FS = 11;
   lines += `<circle cx="${xf(latest)}" cy="${yf(cur[latest])}" r="3.2"
-      fill="var(--now)" stroke="var(--surface-1)" stroke-width="1.8"/>
+      fill="var(--now)" stroke="var(--chart-bg)" stroke-width="1.8"/>
     <text x="${xf(latest) - 5}" y="${yf(cur[latest]) - 6}" text-anchor="end"
-      font-size="11" font-weight="700" fill="var(--now-text)">${CUR}</text>`;
+      font-size="${SPK_FS}" font-weight="700" ${halo(SPK_FS)}
+      fill="var(--now-text)">${CUR}</text>`;
 
   return `<div class="spark">
     <svg viewBox="0 0 ${G.W} ${H}" role="img"
