@@ -68,6 +68,11 @@ COORDS_EX = Path("data/reference/dam_coordinates_excluded.csv")
 # three self-consistency checks. The excluded file records every rejection.
 CCA_FILE = Path("data/reference/scheme_command_area.csv")
 CCA_EX = Path("data/reference/scheme_command_area_excluded.csv")
+# Written by scripts/build_irrigation_mix.py from the 2011 census village
+# directory. How each district actually irrigates — the page monitors surface
+# reservoirs, and in most of the districts it covers they are not where the
+# water comes from.
+MIX_FILE = Path("data/reference/district_irrigation_mix.csv")
 SEASON_CAP = Path("data/processed/season_capacity.csv")
 MID = Path("data/processed/capacity_midseason_exceptions.csv")
 LEDGER = Path("data/interim/backfill_ledger.csv")
@@ -96,6 +101,20 @@ CROSSOVER_MIN_RUN = 5
 
 REGION_NAME = {"SG": "South Gujarat", "NG": "North Gujarat",
                "CG": "Central Gujarat", "Sau": "Saurashtra", "Kutch": "Kutch"}
+
+# WRD's current district names -> the 2011 census district containing them.
+# Post-2011 districts map to the parent they were carved from. Duplicated from
+# build_irrigation_mix.py's own map deliberately: that script must run without
+# this one, and the two are checked against each other by the join failing
+# loudly if a district goes unmatched.
+DIST_TO_PC11 = {
+    "ahmedabad": "ahmadabad", "banaskantha": "banas kantha",
+    "chhotaudepur": "vadodara", "devbhumi dwarka": "jamnagar",
+    "gir somnath": "junagadh", "mahisagar": "kheda", "morbi": "rajkot",
+    "panchmahal": "panch mahals", "sabarkantha": "sabar kantha",
+    "botad": "bhavnagar", "arvalli": "sabar kantha",
+    "aravalli": "sabar kantha", "dahod": "dohad", "dang": "the dangs",
+}
 
 
 def day_of_season(d):
@@ -665,6 +684,63 @@ def main():
                   f"({cca_meta['cca_ha_total']:,} ha CCA); "
                   f"{len(mx)} carry a recorded maximum irrigated")
 
+    # ---- how each region actually irrigates --------------------------------
+    # Attached per region, and the state total, so the page can say what a
+    # shortfall means where it happens. In Saurashtra and North Gujarat the
+    # answer is mostly "the recharge did not happen", not "the canal will not
+    # open", and the page had no way to say so.
+    mix_meta = {"available": False}
+    if MIX_FILE.exists():
+        mdf = pd.read_csv(MIX_FILE)
+        mdf = mdf[mdf["has_monitored_dam"].astype(str).str.lower() == "true"]
+        by_region = {}
+        for code, grp in mdf[mdf["region"] != "multiple"].groupby("region"):
+            canal = float(grp["canal_ha"].sum())
+            well = float(grp["well_tubewell_ha"].sum())
+            irr = float(grp["irrigated_ha"].sum())
+            sown = float(grp["net_sown_ha"].sum())
+            by_region[code] = {
+                "n_districts": int(len(grp)),
+                "canal_ha": round(canal), "well_ha": round(well),
+                "irrigated_ha": round(irr), "net_sown_ha": round(sown),
+                "canal_pct_of_irrigated": round(100 * canal / max(irr, 1), 1),
+                "well_pct_of_irrigated": round(100 * well / max(irr, 1), 1),
+                "well_to_canal": round(well / max(canal, 1), 2),
+            }
+        for r in regions:
+            if r["code"] in by_region:
+                r["irrigation_mix"] = by_region[r["code"]]
+        t_canal = float(mdf["canal_ha"].sum())
+        t_well = float(mdf["well_tubewell_ha"].sum())
+        t_irr = float(mdf["irrigated_ha"].sum())
+        t_sown = float(mdf["net_sown_ha"].sum())
+        # How many of the monitored schemes sit in a district where canals are
+        # a minor share. This is the sentence the caveat leads with.
+        thin = set(mdf[mdf["canal_pct_of_irrigated"] < 15]["district_name"])
+        n_thin = sum(1 for s in schemes
+                     if DIST_TO_PC11.get(s["district"].strip().lower(),
+                                         s["district"].strip().lower()) in thin)
+        mix_meta = {
+            "available": True,
+            "source": ("2011 Census Village Directory (SHRUG 2.2, "
+                       "Development Data Lab), district totals"),
+            "census_year": 2011,
+            "n_districts": int(len(mdf)),
+            "canal_ha": round(t_canal), "well_ha": round(t_well),
+            "irrigated_ha": round(t_irr), "net_sown_ha": round(t_sown),
+            "canal_pct_of_irrigated": round(100 * t_canal / max(t_irr, 1), 1),
+            "well_pct_of_irrigated": round(100 * t_well / max(t_irr, 1), 1),
+            "well_to_canal": round(t_well / max(t_canal, 1), 2),
+            "n_schemes_in_thin_canal_districts": int(n_thin),
+            "thin_canal_threshold_pct": 15,
+            "by_region": by_region,
+        }
+        print(f"irrigation mix: {len(mdf)} districts; statewide wells "
+              f"{mix_meta['well_pct_of_irrigated']}% vs canals "
+              f"{mix_meta['canal_pct_of_irrigated']}% of irrigated area; "
+              f"{n_thin} of {len(schemes)} schemes sit where canals are "
+              f"under 15%")
+
     # ---- coordinates, if anyone has supplied them --------------------------
     coords, coords_meta = {}, {
         "available": False, "n_placed": 0, "n_schemes": int(len(tod)),
@@ -795,6 +871,7 @@ def main():
         "coords": coords,
         "coords_meta": coords_meta,
         "cca_meta": cca_meta,
+        "irrigation_mix": mix_meta,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(doc, separators=(",", ":")), encoding="utf-8")

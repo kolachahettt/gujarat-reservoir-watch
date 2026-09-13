@@ -188,6 +188,31 @@ The figures are old. Maximum-irrigation years run 1979-80 to 2007-08 and the
 department's statewide season-wise table ends 2007-08, so the command areas
 predate the SAUNI transfers into Saurashtra.
 
+## How each district actually irrigates
+
+The page monitors surface reservoirs; in most of the districts it covers they
+are not where the irrigation comes from. This builds the district-level mix
+from the 2011 census village directory already in `data/raw/` for the
+polygons:
+
+```bash
+python scripts/build_irrigation_mix.py
+```
+
+Writes `data/reference/district_irrigation_mix.csv` — per district: net area
+sown, irrigated total, and irrigated by canal / well-or-tubewell /
+tank-or-lake / waterfall / other, in hectares, plus the wells-to-canals ratio
+and which WRD region the district's monitored dams belong to.
+
+The script **refuses to write** if the five per-source columns do not sum to
+the "all sources" total within 0.1%. They currently agree exactly (worst
+district 0.0000%), which is the best available evidence the columns mean what
+they are labelled.
+
+Read the caveats in PROJECT_BRIEF.md section 27 before using it: it is not
+command area, "by canals" includes the Narmada network which none of these 206
+dams feeds, and it is 2011 so it predates the SAUNI transfers into Saurashtra.
+
 ## The archived basis-risk project
 
 `archive/` holds the predecessor project, finished and kept separate. Its source data

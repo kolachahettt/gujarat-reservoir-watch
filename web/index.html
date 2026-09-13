@@ -863,6 +863,32 @@ table.dt td.dev{text-align:right;font-variant-numeric:tabular-nums;
 .cmd-none{margin-top:15px;padding-top:12px;border-top:1px solid var(--border);
   font-size:var(--t-sm);color:var(--muted);line-height:var(--lh-body)}
 .cmd-none a{color:inherit}
+
+/* ---- "What a shortfall means depends on where it is" ----
+   A caveat on the finding above it, so it is set as prose at the text measure
+   rather than as a figure. Left rule like the quotation in stage 2, which is
+   the page's established mark for "this is a stated qualification, not a
+   result". */
+/* --rule-strong is 2.20:1 against the page, under the 3:1 of WCAG 1.4.11, and
+   that is deliberate for this rule and the quotation's. 1.4.11 covers
+   graphics REQUIRED to understand the content; these rules are redundant with
+   text cues — the quotation has its marks and its attribution footer, this
+   block has a heading — and they use the same token as the page's own .stage
+   separators. Darkening them would make a blockquote's rule more prominent
+   than the page's primary structural divisions. Anything that ENCODES a value
+   still gets the 3:1 sweep of §22; a typographic rule is not that. */
+.mix{margin:22px 0 4px;max-width:var(--measure);
+  padding-left:15px;border-left:3px solid var(--rule-strong)}
+.mix-h{font-family:var(--ff-display);font-weight:600;font-size:var(--t-lg);
+  line-height:var(--lh-tight);color:var(--text-primary);margin-bottom:9px}
+.mix-p{margin:0 0 9px;font-size:var(--t-md);line-height:var(--lh-body);
+  color:var(--text-secondary)}
+.mix-p b{color:var(--text-primary);font-weight:700}
+/* The provenance and the three things this number is not. Quieter, and ruled
+   off, because it is the limit of the claim rather than the claim. */
+.mix-note{margin:0;padding-top:9px;border-top:1px solid var(--rule-hair);
+  font-size:var(--t-sm);line-height:var(--lh-body);color:var(--muted)}
+.mix-note b{color:var(--text-secondary);font-weight:700}
 .spark{margin:11px 0 2px;max-width:520px}
 .spark svg{display:block;width:100%;height:auto}
 .sparkcap{font-size:var(--t-xs);color:var(--muted);line-height:var(--lh-data);margin-top:3px}
@@ -1093,6 +1119,11 @@ code{overflow-wrap:anywhere;word-break:break-word}
     <div class="scat fig"><div id="regPlot"></div>
       <div class="reglegend" id="regLegend"></div></div>
     <div class="cross" id="regNote"></div>
+    <!-- What a shortfall MEANS depends on where it happens, and the page had
+         no way to say so. Generated, because the numbers and the ranking come
+         from the data; placed here rather than in the methodology because it
+         qualifies the finding directly above it. -->
+    <aside class="mix" id="mixNote"></aside>
   </section>
 
   <section class="stage" id="stage-depth" aria-labelledby="depthTitle">
@@ -2445,6 +2476,68 @@ function downloadCsv(btn){
    third day to keep the JSON small, and the marker rule is "five CONSECUTIVE
    evaluable days". A thinned series cannot evaluate that rule, and drawing a
    marker from data that cannot support it would be worse than omitting it. */
+/* ---- what a shortfall means where it happens ----
+   The page watches 206 surface reservoirs, which invites the reading that
+   reservoirs are where Gujarat's irrigation comes from. In most of the
+   districts it covers they are not: wells and tubewells water roughly three
+   hectares for every one the canals do, and in Saurashtra it is eight to one.
+
+   So the same empty reservoir means different things in different places.
+   Where canals carry the water, it is a canal that will not open. Where wells
+   carry it, it is mostly a signal about the recharge that did not happen — the
+   same failed monsoon reaching the farmer through the water table instead.
+
+   Ranked from the data rather than asserted, so the two regions named are
+   whichever ones actually have the thinnest canal share. */
+function mixNote(d){
+  const mx = d.irrigation_mix;
+  if(!mx || !mx.available) return "";
+  const byReg = mx.by_region || {};
+  const named = (d.regions || [])
+    .filter(r => byReg[r.code])
+    .map(r => ({name: r.name, ...byReg[r.code]}))
+    .sort((a, b) => a.canal_pct_of_irrigated - b.canal_pct_of_irrigated);
+  if(!named.length) return "";
+  const thinnest = named[0], second = named[1];
+  const fattest = named[named.length - 1];
+  const ratio = v => `<b>${v.well_to_canal.toFixed(v.well_to_canal < 10 ? 1 : 0)
+    } hectares from wells for every one from canals</b>`;
+  return `<div class="mix-h">What a shortfall means depends on where it is</div>
+    <p class="mix-p">These reservoirs are not where most of this water comes
+      from. Across the ${mx.n_districts} districts that hold the 206, the 2011
+      census counted <b>${fInt(mx.well_ha)} ha</b> irrigated by wells and
+      tubewells against <b>${fInt(mx.canal_ha)} ha</b> by canals — wells water
+      ${mx.well_pct_of_irrigated}% of the irrigated area and canals
+      ${mx.canal_pct_of_irrigated}%. <b>${mx.n_schemes_in_thin_canal_districts}
+      of the ${d.meta.n_schemes}</b> dams on this page sit in districts
+      where canals supply under
+      ${mx.thin_canal_threshold_pct}% of the irrigated land.</p>
+    <p class="mix-p">It is most lopsided in the two regions this page most
+      often reports as worst. <b>${esc(thinnest.name)}</b> irrigates
+      ${ratio(thinnest)}${second ? `, <b>${esc(second.name)}</b> ${
+        second.well_to_canal.toFixed(second.well_to_canal < 10 ? 1 : 0)} to one`
+        : ""}. In <b>${esc(fattest.name)}</b>, where canals carry
+      ${fattest.canal_pct_of_irrigated}% of the irrigated area, the
+      relationship is the other way round.</p>
+    <p class="mix-p"><b>So a shortfall in
+      ${esc(thinnest.name)}${second ? " or " + esc(second.name) : ""} is a
+      recharge signal, not a canal-closure signal.</b> An empty reservoir where
+      canals carry the water means a canal that will not open. Where wells
+      carry it, the reservoir and the water table are both fed by the same
+      rain, and the reservoir is the part of it that gets measured daily. This
+      page measures the part that is published, not the part most of the land
+      depends on.</p>
+    <p class="mix-note">Irrigated area by source from the
+      ${esc(mx.source)}. It is <b>not</b> command area and cannot be used as
+      one: it counts where water is applied, not which scheme supplied it, and
+      "by canals" includes the Narmada network, which none of these
+      ${d.meta.n_schemes} dams feeds. Aggregation stops at the district because
+      a command follows the canal, not the contour. Being
+      ${mx.census_year}, it also predates fifteen years of Narmada extension
+      and the SAUNI transfers into Saurashtra, both of which have moved canal
+      water into districts that had little.</p>`;
+}
+
 /* ---- the land this reservoir waters ----
    For the 40 schemes whose command area survived verification (§26), the
    detail panel says what the daily report never does: how much cultivable land
@@ -3325,6 +3418,7 @@ function render(d){
 
 function renderRegionsView(){
   document.getElementById("regPlot").innerHTML = regionsSVG();
+  document.getElementById("mixNote").innerHTML = mixNote(DATA);
 
   const rows = REGION_ORDER
     .map(c => DATA.regions.find(r => r.code === c)).filter(Boolean)

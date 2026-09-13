@@ -1782,3 +1782,74 @@ still gross `pct_filling`. The series is now live too, using **each row's own**
 published `design_live_mcm` — exactly as `pct_filling` uses each row's own
 `design_gross_mcm` — so a capacity restatement still shows as a step, which
 §25.2's argument says is the honest behaviour on a single-scheme chart.
+
+## 27. The groundwater reframe — these reservoirs are not where the water comes from
+
+The page watches 206 surface reservoirs, which invites the reading that
+reservoirs are where Gujarat's irrigation comes from. In most of the districts
+it covers, they are not.
+
+From the 2011 Census Village Directory, across the **21 districts that hold the
+206**:
+
+| | ha | share of irrigated |
+|---|---:|---:|
+| Irrigated by wells and tubewells | **2,466,149** | **73.3%** |
+| Irrigated by canals | **695,844** | **20.7%** |
+
+and **110 of the 206** dams sit in districts where canals supply under 15% of
+the irrigated land. By region, hectares from wells per hectare from canals:
+
+| Region | well : canal | canals, % of irrigated |
+|---|---:|---:|
+| North Gujarat | **11.0 : 1** | 8.1% |
+| Saurashtra | **8.2 : 1** | 10.1% |
+| Kutch | 4.0 : 1 | 18.6% |
+| Central Gujarat | 1.7 : 1 | 34.8% |
+| South Gujarat | 0.6 : 1 | 58.9% |
+
+South Gujarat is the only region where canals carry most of the irrigation, and
+it is the region the page consistently reports as least short.
+
+### 27.1 Why this changes what the page means
+
+An empty reservoir where canals carry the water is a canal that will not open.
+Where wells carry it, the reservoir and the water table are fed by the same
+rain, and the reservoir is the part of it that gets measured daily. **So a
+shortfall in North Gujarat or Saurashtra is a recharge signal, not a
+canal-closure signal** — and the page had no way to say that.
+
+The department's own 2013-14 abstract says the same thing from the other side:
+private tubewells irrigated **1,914,000 ha** against **739,714 ha** for all
+major and medium canal projects combined.
+
+### 27.2 Three things it is not, stated on the page
+
+* **Not command area.** It counts where water is APPLIED, not which scheme
+  supplied it.
+* **Not attributable to these dams.** "By canals" includes the Narmada
+  network, which none of the 206 feeds. Aggregation stops at the district
+  because a command follows the canal, not the contour, so no dam is credited
+  with any hectare.
+* **Not current.** Being 2011 it predates fifteen years of Narmada extension
+  and the SAUNI transfers into Saurashtra, both of which moved canal water into
+  districts that had little.
+
+The five per-source columns sum to the "all sources" total **exactly** — worst
+district 0.0000% — which is the strongest available evidence the columns mean
+what they are labelled. `build_irrigation_mix.py` refuses to write the file if
+that check exceeds 0.1%.
+
+### 27.3 A contrast decision recorded rather than left implicit
+
+The left rules on this block and on §25's quotation use `--rule-strong`, which
+is **2.20:1** against the page — under the 3:1 of WCAG 1.4.11. Deliberate:
+1.4.11 covers graphics *required to understand the content*, and these rules
+are redundant with text cues (the quotation has its marks and attribution, this
+block has a heading). They also use the same token as the page's own `.stage`
+separators, so darkening them would make a blockquote's rule more prominent
+than the page's primary structural divisions. Anything that **encodes a value**
+still gets §22's 3:1 sweep; a typographic rule is not that.
+
+All text in the three new blocks passes at its own size: 18.42:1 at 20px,
+7.54:1 at 16px, 5.26:1 at 13px.
