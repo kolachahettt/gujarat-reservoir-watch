@@ -2601,6 +2601,19 @@ function whyNote(d){
 }
 
 /* Why there is no ratio here, said once, in place. */
+/* THE FIGURES IN HERE ARE DELIBERATELY STATIC. DO NOT WIRE THEM TO THE BUILD.
+   They justify a decision already taken — publish two deviations, not a ratio
+   — so they are a dated finding, not a standing fact. Recomputing them daily
+   would imply the decision is re-litigated daily, and would make the
+   paragraph's own argument unfalsifiable: the reader could no longer check the
+   claim against a fixed measurement. The last line states the measurement date
+   and the season count; if a sixth season is added, update that line, not
+   these numbers — or delete the section, because by then the decision is old
+   enough not to need defending.
+
+   Everything the page asserts as CURRENT is generated (seasonCoverage,
+   decisionCaveat, mixNote, whyNote, commandBlock). This is the one block that
+   is not, and it says so on its face. */
 function whyCaveat(d){
   const t = d.two_deviations;
   if(!t || !t.available) return "";
@@ -2636,7 +2649,13 @@ function whyCaveat(d){
       chart above shows two deviations and no arithmetic between them.
       Rainfall is read from page 3 of the daily report, the column that
       survived the integrity checks in
-      <a href="#stage-working">how this is built</a>.</p>`;
+      <a href="#stage-working">how this is built</a>.
+      <br><br>Every figure in this section was
+      <b>measured across the five seasons loaded as of 14 September 2026</b>
+      and is not recomputed daily. It justifies a decision already taken — to
+      publish two deviations rather than a ratio — so it is a dated finding
+      rather than a standing fact, and a sixth season would move the numbers
+      without changing the conclusion.</p>`;
 }
 
 /* ---- what a shortfall means where it happens ----

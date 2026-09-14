@@ -2041,3 +2041,24 @@ across 96.8% of dams and demonstrably wrong for Shetrunji, and command area
 survives verification for only 40 of 206 schemes. Rainfall is in the same
 document, on the same row, for the same date, for all 206 — no join, no name
 matching, no second source. That is the whole reason to prefer it.
+
+### 29.6 The figures in §29 are dated, not maintained
+
+Everything in this section — 8.5x, median CV 81%, 6 of 206, 128 of 205, 65%,
+147,290 values, 67.6% multiples of five, Machchhu-I 337 against Machchhu-II 450
+— was **measured across the five seasons loaded as of 14 September 2026** and
+is not recomputed. The page says so in the section's own last line.
+
+That is deliberate. These figures justify a decision already taken: publish two
+deviations rather than a ratio. Recomputing them daily would imply the decision
+is re-litigated daily, and would make the argument unfalsifiable — a reader
+could no longer check the claim against a fixed measurement. A sixth season
+will move the numbers without changing the conclusion.
+
+If a sixth season is loaded, update the date line rather than the numbers, or
+delete the section: by then the decision is old enough not to need defending.
+
+Every other figure the page asserts as current IS generated —
+`seasonCoverage`, `decisionCaveat`, `mixNote`, `whyNote`, `commandBlock`,
+`twoDevSVG`. §29's caveat is the single static block, and it is marked as such
+in the code and on the page.
