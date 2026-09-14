@@ -1853,3 +1853,191 @@ still gets §22's 3:1 sweep; a typographic rule is not that.
 
 All text in the three new blocks passes at its own size: 18.42:1 at 20px,
 7.54:1 at 16px, 5.26:1 at 13px.
+
+## 28. A season of rainfall was silently wrong, and nothing was checking
+
+The rainfall statement's first column was headed **`Scheme Id`** until 17 June
+2025, **`Sr No`** from 18 June to 14 October 2025, and `Scheme Id` again from
+15 October. `parse_rainfall` read column 0 as an identifier regardless of the
+header. Under `Sr No` it is a plain row counter, and **the rows are sorted by
+24-hour rainfall descending** — so every scheme was handed a different
+scheme's rainfall, in rank order.
+
+| | |
+|---|---:|
+| `Sr No` window | **2025-06-18 → 2025-10-14** (118 report dates cached) |
+| Scheme-days inside it that were wrong | **24,004 of 24,308 (98.7%)** |
+| Scheme-days outside it that were wrong | **0 of 126,690** |
+
+It reached the published page. On 2025-08-15 the regional rain strip showed
+Central Gujarat at **11.6 mm/day** when the sound column says **0.4** — 28×
+too high; North Gujarat 11.9 against 0.7; Saurashtra 0.62 against 3.53, 5.6×
+too *low*. Every value in the 2025 strip was some other region's weather.
+
+### 28.1 What found it, and what should have
+
+Not a check — a cross-source comparison done for a different reason. The same
+figures appear **twice in every report**: on page 3 beside the storage as `RF`
+and `CRF`, and in the statement on pages 17-23. Nothing had ever compared them.
+
+Three tests each catch it on their own, and all three are now
+`scripts/check_rainfall.py`, which halts the pipeline with **exit 3**:
+
+| Test | Sound data | Broken data |
+|---|---:|---:|
+| Cumulative total never falls | 18 of 147,290 (0.01%) | **10,908 (7.41%)**, worst fall 2,611 mm |
+| Page 3 agrees with the statement | 0.00% disagree | **15.90% disagree** |
+| Cumulative advances by the daily figure | 99.7% hold | **15.26% broken** |
+
+The gate was confirmed to trip on the known-bad data before the fix was
+applied. A gate that passes on data you know is wrong is not a gate.
+
+### 28.2 The fix, and why the repair is exact rather than approximate
+
+`parse_rainfall` now reads the header word and never the position. Under
+`Sr No` the row counter is discarded and the scheme is identified **by name
+against page 3 of the same document** — the same request, the same database,
+the same render, so the two strings differ only in where the renderer broke
+the line.
+
+That is verifiable, and was verified:
+
+* Scheme names are **unique across all 206** in every report checked.
+* A whitespace-squashed name key resolves **3,708 of 3,708 rows (100.00%)**
+  across 18 sampled dates. Squashing matters because pdfplumber inserts a
+  space where a cell wraps: the statement prints `Shedhabhadthar i` for the
+  scheme page 3 calls `Shedhabhadthari`.
+* On four control dates **outside** the window, where the id *is* printed, the
+  name join agrees with it on **206 of 206 rows**. The method is checked
+  against ground truth on every date that has ground truth.
+* Under a `Scheme Id` header the parser now **cross-checks** the printed id
+  against the name join and reports any row where they differ — the `Sr No`
+  failure appearing under a header that claims otherwise would be caught.
+* A header that is neither word yields **no rows and a loud failure**, rather
+  than a guess.
+
+After the fix, the in-window dates parse with **0 disagreement against page 3
+on all 206 rows** and no warnings.
+
+The per-day meaning of column 0 is now written to the ledger as `rain_col0`,
+so the window is a recorded fact rather than something to be rediscovered.
+
+### 28.3 The analysis uses page 3, not the statement
+
+Everything downstream reads `fact_storage.crf`. Not because the statement is
+still broken — it is repaired — but because page 3 is the column that carries
+the storage on the same row, so a rainfall figure and the storage it is
+compared against cannot come from different rows of different tables. Same
+document, same date, same row.
+
+## 29. Two deviations, and why the conversion ratio was dropped
+
+The obvious thing to build from per-scheme rainfall and per-scheme storage is a
+**conversion ratio** — millimetres of rain in, million cubic metres banked,
+"which catchments have stopped converting". It was built, tested against five
+seasons, and **dropped**. Three reasons, each sufficient alone.
+
+### 29.1 The rainfall is a point gauge, not a catchment average
+
+The report never says which. The data does:
+
+* **100.00% of 147,290 values are whole millimetres.** An areal average — a
+  weighted station mean or a grid integral — produces decimals.
+* **67.6% are multiples of 5** against a 20% chance, and **42.3% multiples of
+  10** against 10%. That is the signature of a hand-read gauge and a
+  hand-transcribed total.
+* The cumulative column is a **running total of the daily one**: it rises by
+  exactly the 24-hour figure on **99.7%** of consecutive-day steps, mean
+  absolute discrepancy **0.052 mm**. One instrument, not a catchment model.
+* Dams on the same river in the same taluka report totals far apart —
+  Machchhu-I **337 mm**, Machchhu-II **450**, Machchhu-III **449**; Und-I
+  **205**, Und-II **130**, Und-III **160**; Aji-I **220**, Aji-II **380**.
+  Nested catchments on one river do not receive areal totals 73% apart.
+
+Millimetres become cubic metres only through **catchment area**, which the
+report never gives. So the ratio is not comparable between schemes at all —
+only for one scheme across seasons, where the area is constant.
+
+### 29.2 Runoff is a threshold, not a line
+
+Which is where it fails even for one scheme across seasons:
+
+| | |
+|---|---:|
+| Median coefficient of variation of the ratio, per scheme across 5 seasons | **0.81** |
+| Schemes holding it within 25% (CV < 0.25) | **6 of 206 (2.9%)** |
+| Schemes varying by more than 50% | **173 (84.0%)** |
+| The ratio in a season the dam fills vs one it does not | **8.5× higher** |
+
+644 of 1,030 scheme-seasons reach ≥97% of live capacity, and 168 of 206
+schemes fill in some seasons and not others — so the "ratio" mostly measures
+**whether the dam filled**, which is a different question. The relationship is
+strongly nonlinear: below a rainfall threshold almost nothing runs off, above
+it a great deal does.
+
+The six stable schemes prove the mechanism rather than rescuing the method.
+Five are in South Gujarat (Chopadvav, Doswada, Damanganga, Jhuj, Kelia) plus
+Shetrunji, and all fill in 5 of 5 seasons. Sorted by the driest season on
+record, median CV is **0.19** for schemes whose worst season still exceeded
+1,000 mm and **1.02** for those under 100 mm. It is stable exactly where the
+threshold is never in play.
+
+### 29.3 The release integral is the weakest figure in the source
+
+A water balance needs the water that left. The report gives **one
+instantaneous cusec reading per day**; integrating it assumes the rate held for
+all 86,400 seconds, and there is nothing in the source to test that against.
+Only 28.7% of scheme-days carry any release at all, yet the integral
+**exceeds the level change in 611 of 939 scheme-seasons (65%)** — so the
+answer would be dominated by the least reliable input. Including it makes the
+ratio **less** stable for **128 of 205** schemes (median CV 0.81 with releases,
+0.65 without). It adds noise, not signal.
+
+### 29.4 What replaces it
+
+Each scheme against **its own** history, twice, on the same date:
+
+* rainfall as a **percentage** of its own four-year mean (no ceiling, so
+  proportional is the natural scale)
+* storage in **percentage points** against its own four-year mean (already a
+  percentage of capacity, so a proportional change on it would be a confusing
+  quantity)
+
+No catchment area, no linearity, no water balance, no arithmetic between the
+two axes. Bands stated on the page: **−20%** on rainfall, **−10 pp** on
+storage. ±20% is ordinary monsoon scatter at a single gauge; a tighter band
+would call normal variation a deficit.
+
+**2026, on day 104:**
+
+| | schemes |
+|---|---:|
+| Below their own average **and** short of rainfall | **132** |
+| Below their own average **despite** normal rainfall | **9** |
+| Rainfall short but storage held up | 32 |
+| Both near normal | 33 |
+
+So the shortfall is overwhelmingly a **rainfall** story — 94% of the low
+schemes are also dry. Regional median rainfall deviation tracks the storage
+ranking exactly: Kutch **−83%**, Saurashtra **−57%**, North Gujarat **−51%**,
+Central Gujarat **−45%**, South Gujarat **−9%**.
+
+And the nine are mostly not catchment failures either. **Releases cover the
+whole shortfall for 5 of the 9** and at least half for 6; only **3 released
+nothing at all**, and only those are candidates for a catchment that stopped
+converting. Machchhu-II released 206 MCM against a 16.8 MCM shortfall — 12×.
+A dam that is low because it was operated is not a dam whose catchment failed.
+
+The conclusion is not an artefact of the bands. Across a grid from −10% to
+−30% on rainfall and −5 to −20 points on storage, the share low despite
+rainfall stays between **1% and 10%**, and the page states that range.
+
+### 29.5 What this cost, and what it bought
+
+The agricultural framing this replaces — command area and the NRLD purpose
+field — is retained in §26 and the memory notes but **no longer leads**, on the
+grounds that both are too unreliable to carry a headline: purpose is uniform
+across 96.8% of dams and demonstrably wrong for Shetrunji, and command area
+survives verification for only 40 of 206 schemes. Rainfall is in the same
+document, on the same row, for the same date, for all 206 — no join, no name
+matching, no second source. That is the whole reason to prefer it.

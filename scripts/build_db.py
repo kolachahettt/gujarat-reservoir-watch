@@ -71,7 +71,14 @@ def main():
                 CAST(report_date AS DATE)   AS report_date,
                 CAST(scheme_id AS INTEGER)  AS scheme_id,
                 scheme_name, district, region_full,
-                cumm_rainfall_mm, rain_last_24h_mm, band_consistent
+                cumm_rainfall_mm, rain_last_24h_mm, band_consistent,
+                -- How the parser read column 0 of the rainfall statement for
+                -- this day: 'scheme_id' or 'sr_no'. NULL for days parsed
+                -- before that distinction existed. The report switched to a
+                -- row counter for four months of 2025 and misassigned every
+                -- row; carrying the meaning per row makes the window visible
+                -- in the data rather than only in a ledger. See §28.
+                rain_col0_meaning
             FROM read_parquet('{RAIN_GLOB}', union_by_name = true)
         """)
     else:

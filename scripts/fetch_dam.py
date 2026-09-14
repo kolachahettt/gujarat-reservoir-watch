@@ -556,7 +556,9 @@ def parse_detail(pdf):
 
 
 RAIN_COLS = [
-    "scheme_id", "scheme_name", "district", "region_full",
+    # Column 0 is NOT always the scheme id — see parse_rainfall. It is named
+    # col0 here so no caller can read it as an identifier by accident.
+    "col0", "scheme_name", "district", "region_full",
     "cumm_rainfall_mm", "rain_last_24h_mm",
     "band_0_25", "band_26_50", "band_51_75", "band_76_100",
     "band_101_150", "band_gt_150",
@@ -568,19 +570,56 @@ RAIN_BANDS = [("band_0_25", 0, 25), ("band_26_50", 25, 50), ("band_51_75", 50, 7
               ("band_gt_150", 150, float("inf"))]
 
 
-def parse_rainfall(pdf):
-    """Per-scheme rainfall, the 12-column table on pages 18-23 (§3).
+def _squash(s):
+    """Whitespace-free lowercase key.
 
-    Finer than IMD's district feed and free in the same file. The six band
-    columns are a one-hot histogram of the 24-hour value, so they are kept as a
-    self-check rather than as data: the value should land in exactly one band
-    consistent with its own magnitude.
+    pdfplumber inserts a space where a cell wraps mid-word, so the rainfall
+    statement prints 'Shedhabhadthar i' for the same scheme page 3 calls
+    'Shedhabhadthari'. Squashing whitespace makes the two comparable; it is not
+    fuzzy matching, because within ONE document both strings come from the same
+    database and differ only in where the renderer broke the line.
+    """
+    return re.sub(r"\s+", "", str(s or "")).lower()
+
+
+def parse_rainfall(pdf, detail=None):
+    """Per-scheme rainfall, the 12-column table on pages 17-23 (§3).
+
+    COLUMN 0 IS NOT ALWAYS THE SCHEME ID, AND THAT COST A SEASON OF DATA.
+
+    The report headed this column 'Scheme Id' until 17 June 2025, 'Sr No' from
+    18 June to 14 October 2025, and 'Scheme Id' again from 15 October. Under
+    'Sr No' it is a plain row counter, and the rows are sorted by 24-hour
+    rainfall DESCENDING — so reading it as an identifier assigns every
+    scheme someone else's rainfall. It silently corrupted 24,004 of 24,308
+    scheme-days (98.7%) inside that window, and 0 outside it; the page's 2025
+    rain strip showed Central Gujarat at 11.6 mm/day on a day it had 0.4.
+
+    So the header word decides, never the position:
+
+      'Scheme Id' -> use it, AND cross-check it against the name join below,
+                     reporting any row where the two disagree.
+      'Sr No'     -> ignore it and resolve the scheme by NAME against page 3
+                     of the same document.
+
+    The name join is exact and testable rather than hopeful. Scheme names are
+    unique across all 206 in every report checked, the squashed key resolves
+    100.00% of 3,708 rows over 18 sampled dates, and on all four control dates
+    outside the window it agrees with the printed Scheme Id on 206 of 206.
+
+    `detail` is the page-3 frame from parse_detail. Without it a 'Sr No'
+    document cannot be identified at all, and this returns no rows rather than
+    wrong ones.
+
+    The six band columns are a one-hot histogram of the 24-hour value, kept as
+    a self-check rather than as data.
 
     Note the `Region` here is spelled out in full ("South Gujarat") whereas the
     detail table uses codes ("SG"). Do not join on it; join on scheme_id.
     """
     rows, failures = [], []
     pages_used = []
+    col0_label = None
     for pno, page in enumerate(pdf.pages, start=1):
         for table in page.extract_tables():
             if not table or len(table[0]) != len(RAIN_COLS):
@@ -588,6 +627,10 @@ def parse_rainfall(pdf):
             hdr = " ".join(clean(c, False) or "" for c in table[0][:6]).lower()
             if "rainfall" not in hdr and "scheme" not in hdr:
                 continue
+            if col0_label is None:
+                col0_label = ("sr_no" if re.search(r"sr\.?\s*no", hdr)
+                              else "scheme_id" if re.search(r"scheme\s*id", hdr)
+                              else "unknown")
             for raw in table:
                 first = clean(raw[0], True)
                 if not first or not first.isdigit():
@@ -597,12 +640,80 @@ def parse_rainfall(pdf):
                     numeric = name not in RAIN_TEXT
                     s = clean(cell, numeric)
                     rec[name] = to_num(s) if numeric else s
-                rec["scheme_id"] = (int(rec["scheme_id"])
-                                    if rec["scheme_id"] is not None else None)
+                rec["col0"] = int(rec["col0"]) if rec["col0"] is not None else None
                 rows.append(rec)
             if pno not in pages_used:
                 pages_used.append(pno)
+
     df = pd.DataFrame(rows)
+    if df.empty:
+        return df, failures, pages_used
+
+    # ---- identify the scheme -------------------------------------------
+    if col0_label == "unknown":
+        failures.append({"scheme_id": None,
+                         "reason": "rainfall statement column 0 is headed "
+                                   "neither 'Scheme Id' nor 'Sr No'; refusing "
+                                   "to guess which it is"})
+        return pd.DataFrame(), failures, pages_used
+
+    name_to_id, ambiguous = {}, set()
+    if detail is not None and not detail.empty:
+        for r in detail.itertuples():
+            k = _squash(r.scheme_name)
+            if k in name_to_id and name_to_id[k] != int(r.scheme_id):
+                ambiguous.add(k)
+            name_to_id[k] = int(r.scheme_id)
+    for k in ambiguous:
+        name_to_id.pop(k, None)
+
+    by_name = df["scheme_name"].map(lambda s: name_to_id.get(_squash(s)))
+
+    if col0_label == "scheme_id":
+        df["scheme_id"] = df["col0"]
+        # Standing cross-check: where page 3 offers a name match, it must agree
+        # with the printed id. A disagreement here is the 'Sr No' failure
+        # appearing under a header that claims otherwise, and it must be loud.
+        both = df["scheme_id"].notna() & by_name.notna()
+        clash = both & (df["scheme_id"] != by_name)
+        for r in df[clash].itertuples():
+            failures.append({
+                "scheme_id": int(r.scheme_id),
+                "reason": (f"rainfall statement says Scheme Id {r.scheme_id} "
+                           f"for '{r.scheme_name}', but page 3 gives that name "
+                           f"scheme_id {int(by_name[r.Index])}")})
+    else:
+        # 'Sr No': column 0 is a row counter. The name is the only identifier.
+        if not name_to_id:
+            failures.append({
+                "scheme_id": None,
+                "reason": ("rainfall statement is headed 'Sr No' (a row "
+                           "counter, not an id) and no page-3 detail frame was "
+                           "supplied to resolve names against; no rainfall "
+                           "parsed for this date")})
+            return pd.DataFrame(), failures, pages_used
+        df["scheme_id"] = by_name
+        unresolved = df["scheme_id"].isna()
+        for r in df[unresolved].itertuples():
+            failures.append({
+                "scheme_id": None,
+                "reason": (f"rainfall row {r.col0} named '{r.scheme_name}' "
+                           f"({r.district}) could not be matched to any page-3 "
+                           f"scheme name under an 'Sr No' header")})
+        df = df[~unresolved]
+
+    df["rain_col0_meaning"] = col0_label
+    df = df.drop(columns=["col0"])
+    if df.empty:
+        return df, failures, pages_used
+    df["scheme_id"] = df["scheme_id"].astype(int)
+    dup = df["scheme_id"].duplicated(keep=False)
+    if dup.any():
+        for sid in sorted(df.loc[dup, "scheme_id"].unique()):
+            failures.append({"scheme_id": int(sid),
+                             "reason": "two rainfall rows resolved to the same "
+                                       "scheme_id"})
+        df = df[~dup]
     if not df.empty:
         # Self-check: does the flagged band match the 24-hour value?
         def band_ok(r):
@@ -622,6 +733,19 @@ def parse_rainfall(pdf):
             failures.append({"scheme_id": r.scheme_id,
                              "reason": "rainfall band inconsistent with 24h value "
                                        f"({r.rain_last_24h_mm})"})
+
+        # Within-document check: the cumulative figure is a running total of
+        # this same gauge, so it cannot be smaller than today's reading. The
+        # across-date monotonicity check cannot live here — one PDF is one day
+        # — and is in scripts/check_rainfall.py.
+        short = df[df["cumm_rainfall_mm"].notna()
+                   & df["rain_last_24h_mm"].notna()
+                   & (df["cumm_rainfall_mm"] < df["rain_last_24h_mm"] - 0.001)]
+        for r in short.itertuples():
+            failures.append({
+                "scheme_id": int(r.scheme_id),
+                "reason": (f"cumulative rainfall {r.cumm_rainfall_mm} is less "
+                           f"than the 24-hour figure {r.rain_last_24h_mm}")})
     return df, failures, pages_used
 
 

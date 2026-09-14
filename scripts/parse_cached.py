@@ -40,8 +40,9 @@ LEDGER = Path("data/interim/backfill_ledger.csv")
 DL_LOG = Path("data/interim/download_log.csv")
 
 LEDGER_COLS = ["report_date", "status", "http_status", "bytes", "sha256",
-               "pdf_date_line", "n_schemes", "n_rainfall", "verify",
-               "worst_residual", "residual_mcm", "note", "attempted_utc"]
+               "pdf_date_line", "n_schemes", "n_rainfall", "rain_col0",
+               "verify", "worst_residual", "residual_mcm", "note",
+               "attempted_utc"]
 
 
 def parse_one(pdf_path):
@@ -61,7 +62,10 @@ def parse_one(pdf_path):
             head = (pdf.pages[0].extract_text() or "").splitlines()[:1]
             date_line = head[0].strip() if head else None
             det, det_fail, _, _ = fd.parse_detail(pdf)
-            rain, _, _ = fd.parse_rainfall(pdf)
+            # `det` is required, not optional: the rainfall statement's first
+            # column was a plain row counter from 18 Jun to 14 Oct 2025, so the
+            # scheme is identified by name against page 3 of this same PDF.
+            rain, rain_fail, _ = fd.parse_rainfall(pdf, detail=det)
             # Page 1's grand total, read while the PDF is still open. This is
             # the only reason the abstract is parsed here at all, and it is
             # cheap — parse_abstract stops at the page carrying the marker.
@@ -139,15 +143,33 @@ def parse_one(pdf_path):
     if not rain.empty:
         rain.assign(report_date=d).to_parquet(RAIN_DIR / f"{d}.parquet", index=False)
 
-    base.update({"status": "ok" if not det_fail else "ok_with_warnings",
+    warn = list(det_fail) + list(rain_fail)
+    note = ""
+    if det_fail:
+        note = f"{len(det_fail)} field warnings"
+    if rain_fail:
+        # Named separately from the detail warnings. A rainfall identification
+        # failure is not a field warning — it means a row's scheme could not be
+        # established — and it must be visible in the ledger rather than
+        # folded into a count.
+        note = (note + "; " if note else "") + \
+            f"{len(rain_fail)} rainfall warnings: " + \
+            "; ".join(str(f.get("reason"))[:90] for f in rain_fail[:3])
+    base.update({"status": "ok" if not warn else "ok_with_warnings",
                  "n_schemes": len(det), "n_rainfall": len(rain),
+                 # How column 0 of the rainfall statement was interpreted, per
+                 # day, so the 'Sr No' window is a recorded fact rather than
+                 # something to be rediscovered.
+                 "rain_col0": (rain["rain_col0_meaning"].iloc[0]
+                               if not rain.empty
+                               and "rain_col0_meaning" in rain.columns else None),
                  # Both retained even when the day passes: the residual is the
                  # evidence that it reconciled, and a ledger that records only
                  # failures cannot show that a check actually ran.
                  "verify": verify,
                  "worst_residual": rec.get("worst_ratio"),
                  "residual_mcm": residual_mcm,
-                 "note": "" if not det_fail else f"{len(det_fail)} field warnings"})
+                 "note": note})
     return base
 
 
@@ -160,6 +182,19 @@ def main():
                          "Parsing is resumable — already-parsed days are "
                          "skipped — so a budgeted run can be repeated instead "
                          "of risking a hard kill part-way through a write.")
+    ap.add_argument("--only-existing", action="store_true",
+                    help="with --force, re-parse ONLY days that already have "
+                         "a parquet, ignoring newly cached PDFs. For fixing a "
+                         "parser bug in the current dataset without also "
+                         "ingesting a part-finished backfill of new dates.")
+    ap.add_argument("--from", dest="date_from", default=None,
+                    help="earliest report date to parse, ISO. With --force, "
+                         "re-parses a bounded window — a parser fix that "
+                         "affects a known date range does not need the other "
+                         "four years re-derived, and build_db unions parquet "
+                         "by name so a mixed schema is safe.")
+    ap.add_argument("--to", dest="date_to", default=None,
+                    help="latest report date to parse, ISO")
     args = ap.parse_args()
 
     existing = {}
@@ -182,6 +217,18 @@ def main():
         # whether the day is ok or ok_with_warnings, and it is cheap.
         return existing.get(d, {}).get("status") not in OK
 
+    if args.only_existing:
+        pdfs = [p for p in pdfs
+                if (DAY_DIR / f"{p.stem.replace('dam_', '')}.parquet").exists()]
+        print(f"--only-existing: restricted to the {len(pdfs)} day(s) already "
+              f"derived")
+    if args.date_from or args.date_to:
+        lo = args.date_from or "0000-00-00"
+        hi = args.date_to or "9999-99-99"
+        pdfs = [p for p in pdfs
+                if lo <= p.stem.replace("dam_", "") <= hi]
+        print(f"--from/--to: restricted to {len(pdfs)} day(s) in "
+              f"{lo} .. {hi}")
     todo = [p for p in pdfs if needs_parse(p)]
     stale = [p for p in todo
              if (DAY_DIR / f"{p.stem.replace('dam_', '')}.parquet").exists()]

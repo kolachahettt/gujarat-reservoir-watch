@@ -428,6 +428,12 @@ def main():
                -- above warns about; this is the one that closes.
                f.design_live_mcm,
                f.outflow_canal_cusecs, f.days_water_at_release, f.warning,
+               -- cumulative rainfall to date, from PAGE 3 of the report (CRF),
+               -- not from the rainfall statement on pages 17-23. Both print
+               -- the same figure and page 3 is the one that survived checking
+               -- (§28): the statement's first column was a row counter from
+               -- 18 Jun to 14 Oct 2025 and its rows were misassigned.
+               f.crf AS rain_mm,
                d.n_design_variants
         FROM fact_storage f JOIN dim_scheme d USING (scheme_id)
         WHERE f.report_date = DATE '{REPORT_DATE}'
@@ -447,7 +453,12 @@ def main():
                     THEN 100.0 * f.present_live_mcm / c.season_live_capacity_mcm
                END AS live_pct,
                c.live_capacity_class, c.season_live_capacity_mcm,
-               t.design_live_mcm AS lcap_today
+               t.design_live_mcm AS lcap_today,
+               -- the same scheme's cumulative rainfall on the same calendar
+               -- date in a prior year. No capacity test applies to rainfall:
+               -- a millimetre is a millimetre whatever the reservoir was
+               -- restated to, so every prior year counts.
+               f.crf AS rain_mm
         FROM fact_storage f
         JOIN today t USING (scheme_id)
         JOIN season_cap c ON c.scheme_id = f.scheme_id
@@ -478,6 +489,12 @@ def main():
     lbase = ann[lok].groupby("scheme_id").agg(
         live_mean_prior=("live_pct", "mean"),
         n_prior_live=("live_pct", "size")).reset_index()
+    # Rainfall baseline: every prior year with a reading, no capacity test.
+    rbase = ann[ann["rain_mm"].notna()].groupby("scheme_id").agg(
+        rain_mean_prior=("rain_mm", "mean"),
+        rain_min_prior=("rain_mm", "min"),
+        rain_max_prior=("rain_mm", "max"),
+        n_prior_rain=("rain_mm", "size")).reset_index()
     tod = con.execute("SELECT * FROM today").df()
     # Hazard 5, applied as a DERIVED fix rather than a re-parse: dim_scheme
     # takes district from the latest report, and on 2026-09-11 Kabarka's cell
@@ -545,12 +562,42 @@ def main():
                     on="scheme_id", how="left").sort_values("scheme_name")
     sch["dev_pp"] = sch["pct_filling"] - sch["mean_prior"]
     sch = sch.merge(lbase, on="scheme_id", how="left")
+    sch = sch.merge(rbase, on="scheme_id", how="left")
     # today's live percentage on today's live capacity, against the live
     # baseline. Both sides live, so the deviation is not part dead storage.
     sch["live_pct_today"] = pd.Series(
         100.0 * sch["present_live_mcm"] / sch["design_live_mcm"]
     ).where(sch["design_live_mcm"] > 0)
     sch["live_dev_pp"] = sch["live_pct_today"] - sch["live_mean_prior"]
+
+    # ---- the two deviations (§29) -------------------------------------
+    # Rainfall as a PERCENTAGE of its own prior mean, storage in PERCENTAGE
+    # POINTS against its own. Different units on purpose: rainfall has no
+    # ceiling so a proportional change is the natural scale, while storage is
+    # already a percentage of capacity and a proportional change on a
+    # percentage is a confusing quantity.
+    #
+    # Guarded: a scheme whose prior-year rainfall averages zero has no
+    # meaningful proportional deviation, and dividing would produce an
+    # infinity that would sit at the edge of the chart looking like data.
+    sch["rain_dev_pct"] = pd.Series(
+        100.0 * (sch["rain_mm"] / sch["rain_mean_prior"] - 1.0)
+    ).where(sch["rain_mean_prior"].fillna(0) > 0)
+    # Season release, integrated from the daily instantaneous rate. This is
+    # the weakest number on the page and is used ONLY to say whether a
+    # scheme released enough to account for its own shortfall — never to
+    # compute a water balance. 1 cusec = 0.0024466 MCM/day.
+    rel = con.execute(f"""
+        SELECT scheme_id,
+               sum(coalesce(outflow_canal_cusecs, 0)
+                   + coalesce(outflow_river_cusecs, 0)) * 0.0024466
+                   AS release_mcm_season
+          FROM fact_storage
+         WHERE EXTRACT(year FROM report_date) = {CURRENT_SEASON}
+           AND EXTRACT(month FROM report_date) IN ({months})
+         GROUP BY 1
+    """).df()
+    sch = sch.merge(rel, on="scheme_id", how="left")
 
     # ---- per-scheme five-year series, for the detail sparkline -------------
     # Uses fact_storage.pct_filling - the SAME basis as the figure printed
@@ -615,7 +662,10 @@ def main():
                          "design_live_mcm",
                          "outflow_canal_cusecs", "days_water_at_release",
                          "warning", "mean_prior", "n_prior", "dev_pp",
-                         "live_mean_prior", "n_prior_live", "live_dev_pp"])
+                         "live_mean_prior", "n_prior_live", "live_dev_pp",
+                         "rain_mm", "rain_mean_prior", "rain_min_prior",
+                         "rain_max_prior", "n_prior_rain", "rain_dev_pct",
+                         "release_mcm_season"])
     # Attach each scheme's own five-year series, and its live percentage.
     for row in schemes:
         row["series"] = series_by_scheme.get(row["scheme_id"], {})
@@ -626,6 +676,103 @@ def main():
         # one of them does not.
         row["live_pct"] = (round(100.0 * pl / dl, 1)
                            if dl and pl is not None and dl > 0 else None)
+
+    # ---- the two deviations, classified (§29) -----------------------------
+    # Bands stated on the page, not buried here. Rainfall within +/-20% of its
+    # own four-year mean is ordinary monsoon scatter at a single gauge; a
+    # tighter band would call normal variation a deficit. Storage 10 points
+    # below its own mean is the page's existing scale for a real shortfall.
+    RAIN_BAND, STOR_BAND = 20.0, 10.0
+
+    def classify(rd, sd, rain_band=RAIN_BAND, stor_band=STOR_BAND):
+        if rd is None or sd is None:
+            return None
+        low_r, low_s = rd < -rain_band, sd < -stor_band
+        if low_s:
+            return "rain_explains" if low_r else "low_despite_rain"
+        return "held_up" if low_r else "both_normal"
+
+    for row in schemes:
+        row["quadrant"] = classify(row.get("rain_dev_pct"),
+                                   row.get("live_dev_pp"))
+        # Does this scheme's own release account for its own shortfall? Only
+        # asked of the schemes that are low despite normal rainfall, because
+        # that is the only group where the answer changes the reading. The
+        # shortfall is expressed as a volume against live capacity so the two
+        # are in the same units.
+        row["shortfall_mcm_vs_own_mean"] = None
+        row["release_covers_shortfall"] = None
+        sd, dl = row.get("live_dev_pp"), row.get("design_live_mcm")
+        if sd is not None and sd < 0 and dl:
+            short = -sd / 100.0 * dl
+            row["shortfall_mcm_vs_own_mean"] = round(short, 2)
+            relv = row.get("release_mcm_season")
+            if relv is not None and short > 0:
+                row["release_covers_shortfall"] = round(relv / short, 2)
+
+    counts = {}
+    for row in schemes:
+        q = row["quadrant"]
+        counts[q] = counts.get(q, 0) + 1
+    n_low = counts.get("rain_explains", 0) + counts.get("low_despite_rain", 0)
+    desp = [r for r in schemes if r["quadrant"] == "low_despite_rain"]
+    # Of the schemes low despite rainfall, how many released enough to account
+    # for it themselves? This is what stops "stopped converting" being claimed
+    # for a dam that was simply operated.
+    rel_all = sum(1 for r in desp
+                  if (r.get("release_covers_shortfall") or 0) >= 1.0)
+    rel_half = sum(1 for r in desp
+                   if (r.get("release_covers_shortfall") or 0) >= 0.5)
+    rel_none = sum(1 for r in desp
+                   if (r.get("release_mcm_season") or 0) <= 0.01)
+
+    # The split across a grid, so the page can say it is not an artefact of
+    # where the two lines were drawn.
+    grid = []
+    for rb in (10.0, 15.0, 20.0, 25.0, 30.0):
+        for sb in (5.0, 10.0, 15.0, 20.0):
+            qs = [classify(r.get("rain_dev_pct"), r.get("live_dev_pp"), rb, sb)
+                  for r in schemes]
+            lo = sum(1 for q in qs if q in ("rain_explains", "low_despite_rain"))
+            dp = sum(1 for q in qs if q == "low_despite_rain")
+            grid.append({"rain_band": rb, "storage_band": sb,
+                         "n_low": lo, "n_despite": dp,
+                         "pct_despite": round(100.0 * dp / max(lo, 1), 1)})
+    two_dev = {
+        "available": bool(n_low),
+        "rain_band_pct": RAIN_BAND, "storage_band_pp": STOR_BAND,
+        "n_classified": sum(counts.get(k, 0) for k in
+                            ("rain_explains", "low_despite_rain", "held_up",
+                             "both_normal")),
+        "counts": counts, "n_low": n_low,
+        "n_rain_explains": counts.get("rain_explains", 0),
+        "n_low_despite_rain": counts.get("low_despite_rain", 0),
+        "n_held_up": counts.get("held_up", 0),
+        "n_both_normal": counts.get("both_normal", 0),
+        "despite_release_covers_all": rel_all,
+        "despite_release_covers_half": rel_half,
+        "despite_no_release": rel_none,
+        "grid": grid,
+        "grid_pct_despite_min": min(g["pct_despite"] for g in grid),
+        "grid_pct_despite_max": max(g["pct_despite"] for g in grid),
+        "rain_source": ("page 3 of the daily report (CRF), cross-checked "
+                        "against the separate rainfall statement"),
+        "region_median_rain_dev": {},
+    }
+    for code in {r["region"] for r in schemes}:
+        vals = sorted(r["rain_dev_pct"] for r in schemes
+                      if r["region"] == code and r.get("rain_dev_pct") is not None)
+        if vals:
+            two_dev["region_median_rain_dev"][code] = round(
+                vals[len(vals) // 2], 1)
+    print(f"two deviations: {n_low} schemes low — "
+          f"{two_dev['n_rain_explains']} explained by rainfall, "
+          f"{two_dev['n_low_despite_rain']} despite it "
+          f"(releases cover {rel_all} of those fully, {rel_half} at least "
+          f"half, {rel_none} released nothing); "
+          f"{two_dev['n_held_up']} held up on low rainfall; "
+          f"grid range {two_dev['grid_pct_despite_min']}–"
+          f"{two_dev['grid_pct_despite_max']}%")
 
     # ---- command area, for the schemes where it is verified ----------------
     # Written by scripts/build_command_area.py from the NWRWS Data Bank, which
@@ -872,6 +1019,7 @@ def main():
         "coords_meta": coords_meta,
         "cca_meta": cca_meta,
         "irrigation_mix": mix_meta,
+        "two_deviations": two_dev,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(doc, separators=(",", ":")), encoding="utf-8")

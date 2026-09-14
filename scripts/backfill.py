@@ -203,7 +203,9 @@ def process_day(d, delay, ctx, force=False):
             head = (pdf.pages[0].extract_text() or "").splitlines()[:1]
             date_line = head[0].strip() if head else None
             det, det_fail, _, _ = fd.parse_detail(pdf)
-            rain, _, _ = fd.parse_rainfall(pdf)
+            # See parse_cached.py: page 3 is what identifies a rainfall row
+            # whenever the statement's first column is a row counter.
+            rain, _, _ = fd.parse_rainfall(pdf, detail=det)
     except Exception as e:                           # noqa: BLE001
         return {"status": "malformed", "note": f"parse_error:{type(e).__name__}",
                 "bytes": nbytes, "sha256": sha, "http_status": code,

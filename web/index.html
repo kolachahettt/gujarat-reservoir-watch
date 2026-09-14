@@ -686,6 +686,12 @@ main:focus{outline:none}
    three ragged columns. */
 .legend .txt{display:inline}
 .sw{width:17px;height:0;border-top-style:solid;display:inline-block}
+/* A filled dot, for legends describing points rather than lines. The scatter
+   draws circles, so a line swatch would key the wrong mark. Ringed in
+   --dot-edge like the points themselves, so a fill near the paper colour is
+   still locatable. */
+.dotsw{width:11px;height:11px;border-radius:50%;display:inline-block;
+  border:1px solid var(--dot-edge);vertical-align:-1px}
 .sw.thick{border-top-width:3px}
 .sw.thin{border-top-width:2px}
 .sw.bar{height:10px;border:0;width:9px;border-radius:2px}
@@ -1103,6 +1109,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
     <div class="mininav-in">
       <a href="#stage-proof">The state of it</a>
       <a href="#stage-breadth">Which region</a>
+      <a href="#stage-why">Why they are low</a>
       <a href="#stage-depth">Inside the regions</a>
       <a href="#stage-lookup">Look up a reservoir</a>
       <a href="#stage-working">How this is built</a>
@@ -1124,6 +1131,21 @@ code{overflow-wrap:anywhere;word-break:break-word}
          from the data; placed here rather than in the methodology because it
          qualifies the finding directly above it. -->
     <aside class="mix" id="mixNote"></aside>
+  </section>
+
+  <!-- Why they are low. The region stage says which regions are short; this
+       says whether the rain explains it, scheme by scheme, each against its
+       own history. -->
+  <section class="stage" id="stage-why" aria-labelledby="whyTitle">
+    <p class="eyebrow">Why they are low</p>
+    <h2><span id="whyTitle">Low rainfall, or low despite it</span>
+      <span class="q">Every scheme measured twice against its own four-year
+        history on this date: cumulative rainfall, and storage. Two
+        deviations, not a ratio between them.</span></h2>
+    <div class="scat fig"><div id="whyPlot"></div>
+      <div class="reglegend" id="whyLegend"></div></div>
+    <div class="cross" id="whyNote"></div>
+    <aside class="mix" id="whyCaveat"></aside>
   </section>
 
   <section class="stage" id="stage-depth" aria-labelledby="depthTitle">
@@ -2476,6 +2498,98 @@ function downloadCsv(btn){
    third day to keep the JSON small, and the marker rule is "five CONSECUTIVE
    evaluable days". A thinned series cannot evaluate that rule, and drawing a
    marker from data that cannot support it would be worse than omitting it. */
+/* ---- Title: why they are low ----
+   Branches on what the data says rather than asserting this year's shape. In
+   2026 the rain explains almost all of it; a year where it did not would read
+   differently and the title has to be able to say so. */
+function whyTitle(d, inSeason){
+  const t = d.two_deviations;
+  if(!t || !t.available) return {branch: "Z",
+    text: "Rainfall against storage, each scheme against its own history"};
+  const is = inSeason ? "is" : "was";
+  const are = inSeason ? "are" : "were";
+  const e = t.n_rain_explains, dp = t.n_low_despite_rain, lo = t.n_low;
+  if(!lo) return {branch: "Y",
+    text: `No scheme ${is} more than ${t.storage_band_pp} points below its own `
+        + `four-year average for this date`};
+  if(dp === 0) return {branch: "A",
+    text: `All <b>${lo}</b> schemes below their own average also had less `
+        + `rainfall than their own average`};
+  if(e / lo >= 0.75) return {branch: "B",
+    text: `<b>${e}</b> of the ${lo} schemes below their own average also had `
+        + `less rainfall than usual — <b>${dp}</b> ${are} low despite it`};
+  return {branch: "C",
+    text: `<b>${dp}</b> of the ${lo} schemes below their own average had `
+        + `normal rainfall, so storage alone does not explain them`};
+}
+
+/* The sentence under the chart: the counts, the bands, the release test, and
+   the grid. Everything a reader needs to disagree with it. */
+function whyNote(d){
+  const t = d.two_deviations;
+  if(!t || !t.available) return "";
+  const rel = t.despite_release_covers_all,
+        relh = t.despite_release_covers_half,
+        none = t.despite_no_release, dp = t.n_low_despite_rain;
+  const bands = `A scheme counts as short of rainfall below <b>−${
+    t.rain_band_pct}%</b> of its own four-year mean for this date, and short of
+    water below <b>−${t.storage_band_pp} points</b> of its own.`;
+  let releaseSentence = "";
+  if(dp){
+    releaseSentence = ` Of the ${dp} low despite rainfall, <b>${rel}</b> `
+      + `released more water over the season than their whole shortfall, and `
+      + `<b>${relh}</b> released at least half of it — so most of that group `
+      + `was operated, not starved. <b>${none}</b> released nothing at all, `
+      + `and only those are candidates for a catchment that stopped `
+      + `converting.`;
+  }
+  return `<b>${t.n_rain_explains} of ${t.n_low}</b> schemes below their own `
+    + `average are also short of rainfall.${releaseSentence} ${bands} `
+    + `The split holds across the bands: over a grid from −10% to −30% on `
+    + `rainfall and −5 to −20 points on storage, the share low despite `
+    + `rainfall stays between <b>${t.grid_pct_despite_min}%</b> and `
+    + `<b>${t.grid_pct_despite_max}%</b>.`;
+}
+
+/* Why there is no ratio here, said once, in place. */
+function whyCaveat(d){
+  const t = d.two_deviations;
+  if(!t || !t.available) return "";
+  return `<div class="mix-h">Why this is two measurements and not one
+      ratio</div>
+    <p class="mix-p">The obvious thing to build from rainfall and storage is a
+      conversion ratio — millimetres in, million cubic metres banked. It was
+      built, tested against five seasons, and dropped. Three reasons, each
+      sufficient on its own.</p>
+    <p class="mix-p"><b>The rainfall is a point gauge, not a catchment
+      average.</b> Every one of 147,290 published values is a whole
+      millimetre, 68% are multiples of five, and the cumulative column is a
+      running total of the daily one to within 0.05 mm. Dams on the same river
+      in the same taluka report totals far apart — Machchhu-I 337 mm against
+      Machchhu-II 450 mm. Millimetres become cubic metres only through
+      catchment area, which this report never gives, so the ratio is not
+      comparable between schemes.</p>
+    <p class="mix-p"><b>Runoff is a threshold, not a line.</b> For the same
+      scheme the implied ratio is <b>8.5 times higher</b> in a season the
+      reservoir fills than in one it does not. Across five seasons it moves by
+      a median of <b>81%</b> of its own mean, and only <b>6 of 206</b> schemes
+      hold it within 25% — five of them in South Gujarat, where the driest
+      season on record still delivered over 970 mm and the threshold is always
+      passed.</p>
+    <p class="mix-p"><b>The release integral is the weakest figure in the
+      source.</b> A water balance needs the water that left, and the report
+      gives one instantaneous cusec reading per day. Integrating it assumes
+      the rate held for all 86,400 seconds. It exceeds the level change in
+      65% of scheme-seasons, and including it makes the ratio <i>less</i>
+      stable for 128 of 205 schemes — it adds noise, not signal.</p>
+    <p class="mix-note">Comparing a scheme with its own past needs none of
+      that: no catchment area, no linearity, no water balance. That is why the
+      chart above shows two deviations and no arithmetic between them.
+      Rainfall is read from page 3 of the daily report, the column that
+      survived the integrity checks in
+      <a href="#stage-working">how this is built</a>.</p>`;
+}
+
 /* ---- what a shortfall means where it happens ----
    The page watches 206 surface reservoirs, which invites the reading that
    reservoirs are where Gujarat's irrigation comes from. In most of the
@@ -2788,6 +2902,127 @@ const capR = v => (CAP_BINS.find(b => v < b.max) || CAP_BINS[4]).r;
 
 let FILTER = "ALL";
 
+/* ---- the two deviations (§29) ----
+   Rainfall on x, storage on y, one point per scheme, each measured against
+   THAT SCHEME'S OWN four-year history on the same date. Two independent
+   deviations, so the quadrant a scheme lands in is a statement about it
+   rather than a comparison with other schemes.
+
+   THIS IS NOT A CONVERSION RATIO, and §29 records why the ratio was dropped:
+   the rainfall is a point gauge and not a catchment average, runoff is
+   threshold-shaped rather than linear (the implied ratio is 8.5x higher in a
+   season the dam fills), and the release integral that a water balance would
+   need is the least reliable figure in the source. None of that stops each
+   scheme being compared with its own past, which is all this chart does.
+
+   Quadrant colours come from the existing deviation ramp plus --now for the
+   group that is the finding. No new tokens. */
+/* COLOUR IS REDUNDANT HERE, DELIBERATELY. The quadrant is a deterministic
+   function of WHERE a point sits relative to the two dashed band lines, so a
+   reader who cannot separate the fills reads the group off the axes, and the
+   legend carries the counts. That matters because the fills are close in
+   luminance: --now against --d-pos1 is 1.27:1, which is hue alone.
+
+   So the group that is the finding gets a second, non-colour channel — a
+   heavier ring in the darker --now-text. Ring weight survives any colour
+   deficiency and any greyscale print. The other three keep the page's
+   established deviation semantics: brown below, teal above, grey neutral. */
+const QUAD = {
+  rain_explains:    {fill: "var(--d-neg1)", label: "low, and rainfall was low"},
+  low_despite_rain: {fill: "var(--now)",    label: "low DESPITE normal rainfall",
+                     ring: "var(--now-text)", ringMul: 2.2},
+  held_up:          {fill: "var(--d-pos1)", label: "held up on low rainfall"},
+  both_normal:      {fill: "var(--d-zero)", label: "both near normal"},
+};
+
+function twoDevSVG(list){
+  const td = DATA.two_deviations || {};
+  const RB = td.rain_band_pct || 20, SB = td.storage_band_pp || 10;
+  const narrow = isNarrow();
+  const W2 = G.SW, H2 = narrow ? 430 : 420;
+  const L = narrow ? 40 : 52, R = narrow ? 14 : 20;
+  const T = narrow ? 34 : 30;
+  const B = Math.max(narrow ? 46 : 42, X_TITLE_DY + 6);
+  // Clamped to the data's actual reach, rounded outward, so nothing is drawn
+  // on the frame edge pretending to be at the limit.
+  const xs = [-100, 60], ys = [-100, 60];
+  const xp = v => L + (v - xs[0]) / (xs[1] - xs[0]) * (W2 - L - R);
+  const yp = v => H2 - B - (v - ys[0]) / (ys[1] - ys[0]) * (H2 - T - B);
+  const cl = (v, a) => Math.max(a[0], Math.min(a[1], v));
+
+  let g = "";
+  for(const v of (narrow ? [-100,-50,0,50] : [-100,-75,-50,-25,0,25,50])){
+    g += `<line x1="${xp(v)}" x2="${xp(v)}" y1="${T}" y2="${H2-B}"
+      stroke="${v===0?"var(--baseline)":"var(--grid)"}" stroke-width="1"/>`;
+    g += `<text x="${xp(v)}" y="${H2-B+X_TICK_DY}" text-anchor="middle"
+      font-size="${AXIS_FS}" fill="var(--muted)"
+      style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
+  }
+  for(const v of (narrow ? [-100,-50,0,50] : [-100,-75,-50,-25,0,25,50])){
+    g += `<line x1="${L}" x2="${W2-R}" y1="${yp(v)}" y2="${yp(v)}"
+      stroke="${v===0?"var(--baseline)":"var(--grid)"}" stroke-width="1"/>`;
+    g += `<text x="${L-6}" y="${yp(v)+3.2}" text-anchor="end"
+      font-size="${AXIS_FS}" fill="var(--muted)"
+      style="font-variant-numeric:tabular-nums">${v>0?"+":""}${v}</text>`;
+  }
+  /* The two band lines ARE the classification, so they are drawn as the only
+     dashed rules on the chart and labelled with their own values — the page
+     says where it drew the line rather than leaving the reader to infer it. */
+  g += `<line x1="${xp(-RB)}" x2="${xp(-RB)}" y1="${T}" y2="${H2-B}"
+    stroke="var(--rule-strong)" stroke-width="1" stroke-dasharray="4 3"/>`;
+  g += `<line x1="${L}" x2="${W2-R}" y1="${yp(-SB)}" y2="${yp(-SB)}"
+    stroke="var(--rule-strong)" stroke-width="1" stroke-dasharray="4 3"/>`;
+  g += `<text x="${xp(-RB)-4}" y="${T+AXIS_FS}" text-anchor="end"
+    font-size="${AXIS_FS}" fill="var(--text-secondary)" ${halo(AXIS_FS)}
+    >−${RB}% rain</text>`;
+  g += `<text x="${W2-R-3}" y="${yp(-SB)-4}" text-anchor="end"
+    font-size="${AXIS_FS}" fill="var(--text-secondary)" ${halo(AXIS_FS)}
+    >−${SB} pp storage</text>`;
+
+  g += `<text x="${xp(0)}" y="${H2-B+X_TITLE_DY}" text-anchor="middle"
+    font-size="${AXIS_TITLE_FS}" fill="var(--text-secondary)">${narrow
+      ? "rainfall vs its own mean, %"
+      : "cumulative rainfall against this scheme's own four-year mean, %"}</text>`;
+  g += `<text x="2" y="${T-Y_TITLE_UP}" text-anchor="start"
+    font-size="${AXIS_FS}" fill="var(--text-secondary)">${narrow
+      ? "storage vs its own mean, pp"
+      : "storage against its own four-year mean, percentage points"}</text>`;
+
+  /* The quadrant that is the finding gets a standing label, because a reader
+     who takes nothing else from the chart should take this. */
+  const nD = td.n_low_despite_rain;
+  if(nD){
+    g += `<text x="${xp(-RB)+6}" y="${H2-B-6}" font-size="${AXIS_FS}"
+      fill="var(--now-text)" ${halo(AXIS_FS)}>${narrow
+        ? nD + " low despite rain" : nD + " low despite normal rainfall"}</text>`;
+  }
+
+  const pts = [...list]
+    .filter(s => s.rain_dev_pct != null && s.live_dev_pp != null)
+    .sort((a, b) => b.design_live_mcm - a.design_live_mcm)
+    .map(s => {
+      const q = QUAD[s.quadrant] || QUAD.both_normal;
+      const r = capR(s.design_live_mcm);
+      const sw = Math.min(1.3, r * 0.34) * (q.ringMul || 1);
+      return `<circle cx="${xp(cl(s.rain_dev_pct, xs)).toFixed(1)}"
+        cy="${yp(cl(s.live_dev_pp, ys)).toFixed(1)}" r="${r}"
+        fill="${q.fill}" stroke="${q.ring || "var(--dot-edge)"}"
+        stroke-width="${sw.toFixed(2)}"
+        class="pt fx" data-region="${s.region}" data-id="${s.scheme_id}"
+        style="cursor:pointer"><title>${esc(s.scheme_name)} — ${
+        esc(s.district)} — rainfall ${s.rain_dev_pct>0?"+":""}${
+        f1(s.rain_dev_pct)}% of its own mean (${fInt(s.rain_mm)} of ${
+        fInt(s.rain_mean_prior)} mm), storage ${s.live_dev_pp>0?"+":""}${
+        f1(s.live_dev_pp)} pp</title></circle>`;
+    }).join("");
+
+  return `<svg viewBox="0 0 ${W2} ${H2}" role="img"
+    aria-label="Each scheme as one point: rainfall against its own four-year
+    mean on the horizontal axis, storage against its own on the vertical.
+    ${td.n_rain_explains} are low with low rainfall, ${nD} are low despite
+    normal rainfall.">${g}${pts}</svg>`;
+}
+
 function scatterSVG(list){
   // Portrait on a phone rather than a squeezed landscape. At 0.4 scale the
   // landscape version's labels land near 4px and nothing on it can be read;
@@ -3066,6 +3301,7 @@ function render(d){
   }
   setTitle("stTitle", stateChartTitle(d, inSeason));
   setTitle("regTitle", regionsTitle(d, inSeason));
+  setTitle("whyTitle", whyTitle(d, inSeason));
   setTitle("depthTitle", depthTitle(d, inSeason));
   document.getElementById("kicker").textContent =
     `Gujarat Reservoir Watch · ${m.report_date}`;
@@ -3419,6 +3655,23 @@ function render(d){
 function renderRegionsView(){
   document.getElementById("regPlot").innerHTML = regionsSVG();
   document.getElementById("mixNote").innerHTML = mixNote(DATA);
+
+  /* ---- why they are low ---- */
+  const td = DATA.two_deviations || {};
+  document.getElementById("whyPlot").innerHTML = twoDevSVG(DATA.schemes || []);
+  document.getElementById("whyNote").innerHTML = whyNote(DATA);
+  document.getElementById("whyCaveat").innerHTML = whyCaveat(DATA);
+  /* Legend carries the count per quadrant, so the chart's colours are
+     readable as a result and not just as a key. Ordered worst-first, the same
+     convention the facets use. */
+  document.getElementById("whyLegend").innerHTML =
+    ["rain_explains", "low_despite_rain", "held_up", "both_normal"]
+      .filter(k => (td.counts || {})[k])
+      .map(k => `<span class="ri"><span class="dotsw"
+           style="background:${QUAD[k].fill}${QUAD[k].ring
+             ? `;border-color:${QUAD[k].ring};border-width:2px` : ""}"></span>
+         <b>${td.counts[k]}</b> <span class="rs">${QUAD[k].label}</span></span>`)
+      .join("");
 
   const rows = REGION_ORDER
     .map(c => DATA.regions.find(r => r.code === c)).filter(Boolean)

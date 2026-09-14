@@ -114,6 +114,35 @@ def main():
     if code != 0:
         sys.exit(code)
 
+    # The rainfall gate. Separate from the capacity gate and with its own exit
+    # code, because it protects a different thing: the capacity gate stops a
+    # restated denominator breaking a percentage, this stops a misassigned
+    # rainfall row being published as a scheme's own. It exists because that
+    # failure reached the live page and nothing was checking (§28).
+    code = run(["scripts/check_rainfall.py"],
+               "3b/6  RAINFALL GATE (exit 3 = halt)", allow_fail=True)
+    if code == 3:
+        msg = (
+            "RAINFALL INTEGRITY GATE TRIPPED\n\n"
+            "One of three tests failed: the cumulative series falls somewhere, "
+            "or page 3\ndisagrees with the rainfall statement, or the "
+            "cumulative figure does not advance\nby the daily one.\n\n"
+            "The most likely cause is the report changing the first column of "
+            "the rainfall\nstatement again. It was 'Scheme Id' until 17 June "
+            "2025, 'Sr No' (a row counter,\nsorted by rainfall) until 14 "
+            "October 2025, and 'Scheme Id' since. parse_rainfall\nkeys on that "
+            "header word; a third spelling would need handling there.\n\n"
+            "See the gate output above, data/processed/rainfall_integrity.csv, "
+            "and brief §28.\n")
+        HALT.parent.mkdir(parents=True, exist_ok=True)
+        HALT.write_text(msg)
+        print("\n" + "!" * 88)
+        print(msg)
+        print("!" * 88)
+        sys.exit(3)
+    if code != 0:
+        sys.exit(code)
+
     run(["scripts/report_deviation.py", "--date", args.date,
          "--top", str(args.top)],
         "4/6 + 5/6  DEVIATION TABLES (both lists) AND DRIFT RE-CHECK")

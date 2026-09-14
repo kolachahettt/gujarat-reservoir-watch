@@ -213,6 +213,44 @@ Read the caveats in PROJECT_BRIEF.md section 27 before using it: it is not
 command area, "by canals" includes the Narmada network which none of these 206
 dams feeds, and it is 2011 so it predates the SAUNI transfers into Saurashtra.
 
+## Rainfall, and the integrity gate that guards it
+
+The report prints per-scheme rainfall twice — on page 3 beside the storage
+(`RF`, `CRF`) and as a statement on pages 17-23. **The statement's first
+column changed meaning mid-2025**: `Scheme Id` up to 2025-06-17, `Sr No` (a
+row counter, rows sorted by 24-hour rainfall descending) from 2025-06-18 to
+2025-10-14, and `Scheme Id` again after. Reading it as an identifier assigned
+every scheme someone else's rainfall for 118 report dates.
+
+`parse_rainfall` now keys on the header word and, under `Sr No`, identifies
+the scheme by name against page 3 of the same PDF. Verified: names are unique
+across all 206, the squashed-name key resolves 100% of rows, and on dates
+where the id is printed the name join agrees with it 206/206.
+
+```bash
+python scripts/check_rainfall.py
+```
+
+Three tests, exit 3 on failure, wired into `run_pipeline.py` as step 3b:
+
+1. a cumulative seasonal total can never fall
+2. page 3 must agree with the statement (this is the test that found it)
+3. the cumulative figure must advance by the daily figure
+
+Writes `data/processed/rainfall_integrity.csv`, one row per report date with
+the disagreement counts, and prints how column 0 was read per season from the
+ledger's `rain_col0`.
+
+**If this gate trips, the likeliest cause is the report changing that column
+again.** Handle the new spelling in `parse_rainfall`; do not widen the
+tolerances. The sound years sit at 0.01% backward steps and 0.00%
+disagreement, so anything near a tenth of a percent is a new fault.
+
+The analysis reads `fact_storage.crf`, not the statement — page 3 carries the
+rainfall on the same row as the storage it is compared against, so the two
+cannot come from different rows of different tables. See PROJECT_BRIEF
+sections 28 and 29.
+
 ## The archived basis-risk project
 
 `archive/` holds the predecessor project, finished and kept separate. Its source data
