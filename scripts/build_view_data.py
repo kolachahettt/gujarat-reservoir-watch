@@ -949,8 +949,18 @@ def main():
     # ---- provenance --------------------------------------------------------
     led = pd.read_csv(LEDGER, dtype={"report_date": str})
     row = led[led["report_date"] == REPORT_DATE]
-    cov = con.execute("""
+    # Two counts, both derived, because they are not the same number and the
+    # page said they were. It read "817 daily reports loaded, 1 June - 31
+    # October for 2022...2026" when 102 of those 817 were November-May dates
+    # fetched by the off-season backfill — the window contained 715 of them.
+    # The analysis was unaffected (every series filters to season_months) but
+    # the provenance claim was false. Deriving both means it cannot drift again
+    # as more off-season dates land.
+    cov = con.execute(f"""
         SELECT count(DISTINCT report_date) AS dates_loaded,
+               count(DISTINCT CASE WHEN EXTRACT(month FROM report_date)
+                                        IN ({months})
+                                   THEN report_date END) AS dates_in_season,
                min(report_date) AS first_date, max(report_date) AS last_date
         FROM fact_storage
     """).df().iloc[0]
@@ -992,6 +1002,9 @@ def main():
             "report_bytes": (int(row["bytes"].iloc[0])
                              if len(row) and pd.notna(row["bytes"].iloc[0]) else None),
             "dates_loaded": int(cov["dates_loaded"]),
+            # How many of those fall inside season_window. The page must print
+            # both or neither — see the query above.
+            "dates_in_season": int(cov["dates_in_season"]),
             "span": [str(cov["first_date"]), str(cov["last_date"])],
             "absent_upstream": absent,
             "seasons_prior": PRIOR_SEASONS,

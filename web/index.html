@@ -1090,14 +1090,11 @@ code{overflow-wrap:anywhere;word-break:break-word}
         is planned, so the figure above is not a status light — it is the
         quantity the decision is made on. The department's rotation schedule
         opens the first rabi canal run on <b>16 October</b>.</p>
-      <p class="decision-p decision-caveat">What this page cannot tell you is
-        how many hectares go unwatered. That conversion needs a water duty —
-        depth applied per hectare per season — and no published source carries
-        one per scheme. The honest ceiling is the department's own record of
-        the most each command has ever actually irrigated:
-        <b>131,988 of 243,867 hectares</b>, or 54%, across the 31 schemes that
-        report it. Even in its best year, about half of the commanded area
-        does not get water.</p>
+      <!-- Generated, not written. These four figures were typed in as
+           131,988 / 243,867 / 54% / 31 and they all exist computed in
+           cca_meta — they agreed on the day they were typed and nothing would
+           have told anyone when they stopped. -->
+      <p class="decision-p decision-caveat" id="decisionCaveat"></p>
     </aside>
   </section>
 
@@ -1375,6 +1372,54 @@ function priorStanding(pctNow, meanPrior, priorAtNow){
     aboveAll: pctNow > Math.max(...priors),
     level: Math.abs(gap) < 0.05,          // rounds to 0.0 at the shown precision
   };
+}
+
+/* ---- The ceiling this page will not exceed, computed ----
+   The only honest answer to "how many hectares go unwatered" is that this
+   page cannot say, and the nearest real bound is the department's own record
+   of the most each command has ever irrigated. Every figure in that sentence
+   comes from cca_meta, so it tracks the reference file.
+
+   Returns "" when no command area survived verification, because the sentence
+   is about a ceiling and there is no ceiling to state. */
+function decisionCaveat(d){
+  const cm = d.cca_meta;
+  const head = `What this page cannot tell you is how many hectares go
+    unwatered. That conversion needs a water duty — depth applied per hectare
+    per season — and no published source carries one per scheme.`;
+  if(!cm || !cm.available || !cm.n_with_max || !cm.cca_ha_of_those_with_max)
+    return head;
+  const share = cm.max_irrigated_ha_total / cm.cca_ha_of_those_with_max;
+  /* "about half" only while it is about half. Past a quarter either side the
+     wording would be doing the opposite of what this paragraph is for. */
+  const gloss = Math.abs(share - 0.5) < 0.08
+    ? "Even in its best year, about half of the commanded area does not get water."
+    : `Even in its best year, ${Math.round((1 - share) * 100)}% of the
+       commanded area does not get water.`;
+  return `${head} The honest ceiling is the department's own record of the most
+    each command has ever actually irrigated:
+    <b>${fInt(cm.max_irrigated_ha_total)} of
+    ${fInt(cm.cca_ha_of_those_with_max)} hectares</b>, or
+    ${Math.round(share * 100)}%, across the ${cm.n_with_max} schemes that
+    report it. ${gloss}`;
+}
+
+/* ---- How many reports, and how many of them are in the window ----
+   These are two different numbers and the page used to print one of them
+   under the other's label: "817 daily reports loaded, 1 June – 31 October"
+   when 102 of the 817 were off-season dates and only 715 were in that window.
+   Both come from the build now, so the sentence cannot drift as more
+   off-season dates are fetched.
+
+   Written as one helper because the two counts must never be formatted
+   separately — that is how they came apart in the first place. When they are
+   equal the shorter sentence is correct and the qualifier would be noise. */
+function seasonCoverage(m){
+  const tot = m.dates_loaded, ins = m.dates_in_season;
+  const win = esc(m.season_window);
+  if(ins == null || ins === tot)
+    return `${tot} daily reports loaded, ${win}`;
+  return `${tot} daily reports loaded, of which <b>${ins}</b> fall in ${win}`;
 }
 
 /* ---- Which basis is the page speaking in? ----
@@ -2400,6 +2445,10 @@ function buildCsv(){
     ["view_built_utc", m.built_utc],
     ["downloaded_utc", now],
     ["daily_reports_loaded", m.dates_loaded],
+    // Both, for the same reason the provenance line prints both: the loaded
+    // count includes off-season dates that no figure here is computed from.
+    ["daily_reports_in_season", m.dates_in_season == null
+      ? m.dates_loaded : m.dates_in_season],
     ["season_window", m.season_window],
     ["rows", DATA.schemes.length],
     ["capacity_tolerance_pct", m.capacity_tolerance_pct],
@@ -3277,7 +3326,7 @@ function render(d){
      <span class="age${stale ? " stale" : ""}">— data from
      ${ageWord(age)}</span> &nbsp;·&nbsp; source: ${esc(m.source)}
      &nbsp;·&nbsp; built <span class="nb">${esc(m.built_utc)}</span><br>
-     ${m.dates_loaded} daily reports loaded, ${esc(m.season_window)} for
+     ${seasonCoverage(m)} for
      ${m.seasons_prior.join(", ")} and ${m.season_current}`;
   /* The SHA-256 used to sit here, above the fold: a 64-character monospace
      string that was one of the most visually distinctive things on first
@@ -3371,6 +3420,7 @@ function render(d){
      calendar date${live ? ", live against live" : ""}. The weakest prior year
      on this date was <b>${weakest[0]}</b> at <b>${f2(weakest[1])}%</b> —
      2026 is ${f2(weakest[1]-pctNow)} points below even that.`;
+  document.getElementById("decisionCaveat").innerHTML = decisionCaveat(d);
   document.getElementById("stMeta").textContent =
     `day ${s.day_of_season} of the season · ${basisLabel()}`;
   const stSeries = seriesOf(s);
@@ -3621,10 +3671,20 @@ function render(d){
       <li><b>Three scheme-seasons published two capacities mid-season</b> and are
         excluded from that scheme's baseline entirely:<ul>${mid}</ul></li>
       <li><b>Coverage.</b> ${m.dates_loaded} daily reports,
-        ${esc(m.span[0]).slice(0,10)} to ${esc(m.span[1]).slice(0,10)}.
-        ${m.absent_upstream.length} dates are absent upstream, not failed
+        ${esc(m.span[0]).slice(0,10)} to ${esc(m.span[1]).slice(0,10)}${
+        m.dates_in_season != null && m.dates_in_season !== m.dates_loaded
+          ? `, of which <b>${m.dates_in_season}</b> fall inside
+             ${esc(m.season_window)} and are the only ones any figure on this
+             page is computed from — the other
+             ${m.dates_loaded - m.dates_in_season} are off-season reports held
+             for a later water-year view`
+          : ""}.
+        ${m.absent_upstream.length}
+        ${m.absent_upstream.length === 1 ? "date is" : "dates are"} absent
+        upstream, not failed
         downloads: ${m.absent_upstream.map(esc).join(", ")} — the server returns
-        a valid, empty response for those.</li>
+        a valid, empty response for ${m.absent_upstream.length === 1
+          ? "it" : "those"}.</li>
       <li><b>Days of water</b> appears only on a scheme's detail, is always
         labelled <em>at today's release rate</em>, and reads
         <em>no current release</em> for the ${m.n_no_release} of ${m.n_schemes}
@@ -3642,7 +3702,8 @@ function render(d){
      Retrieved from <code>${esc(m.source_url)}</code>${m.source_url_pattern
        ? ` &nbsp;·&nbsp; any other date: <code>${esc(m.source_url_pattern)}</code>`
        : ""}. Page built
-     ${esc(m.built_utc)} from ${m.dates_loaded} daily reports.
+     ${esc(m.built_utc)} from ${m.dates_in_season != null
+       ? m.dates_in_season : m.dates_loaded} in-season daily reports.
      <div class="nofc">Every figure on this page is a comparison of observed
      readings. Nothing here is a forecast, and no figure states what storage
      will be on any future date.</div>`;
